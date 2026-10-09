@@ -44,3 +44,6 @@ jobs:
 
       - name: Test isolated install, upgrades, disable and restore
         run: .\tests\Test-Deployment.ps1
+
+      - name: Test packaged guided setup and launcher (no game launch)
+        run: .\tests\Test-GuidedSetup.ps1
