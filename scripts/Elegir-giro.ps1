@@ -5,7 +5,7 @@ param(
     [string]$GameConfigRoot=(Join-Path $env:LOCALAPPDATA 'Boltgun\Saved\Config\WindowsNoEditor')
 )
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'tools\Paths.ps1')
+. (Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\Paths.ps1')
 if (Get-Process -Name 'Boltgun-Win64-Shipping' -ErrorAction SilentlyContinue) {
     throw 'Cierra Boltgun antes de cambiar el giro. No se modifica nada.'
 }
@@ -24,11 +24,11 @@ if (-not $Mode) {
     }
     if (-not $Mode) { return }
 }
-$manifestPath = Join-Path $PSScriptRoot 'deployment.json'
+$manifestPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'deployment.json'
 $entries = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $entry = $entries | Where-Object source -eq 'profile\config.txt'
-$sourcePath = Join-Path $PSScriptRoot $entry.source
-$resolvedEntry = Get-BoltgunDeployment -RepositoryRoot $PSScriptRoot -ProfileRoot $ProfileRoot -GameConfigRoot $GameConfigRoot | Where-Object source -eq 'profile\config.txt'
+$sourcePath = Join-Path (Split-Path -Parent $PSScriptRoot) $entry.source
+$resolvedEntry = Get-BoltgunDeployment -RepositoryRoot (Split-Path -Parent $PSScriptRoot) -ProfileRoot $ProfileRoot -GameConfigRoot $GameConfigRoot | Where-Object source -eq 'profile\config.txt'
 $installedTarget = $resolvedEntry.target
 $paths = @($sourcePath, $installedTarget)
 $texts = @()
@@ -41,7 +41,7 @@ foreach ($path in $paths) {
     }
     $texts += $text
 }
-$backupDir = Join-Path $PSScriptRoot ('backups\turn-' + [DateTime]::Now.ToString('yyyyMMdd-HHmmss-fff'))
+$backupDir = Join-Path (Split-Path -Parent $PSScriptRoot) ('backups\turn-' + [DateTime]::Now.ToString('yyyyMMdd-HHmmss-fff'))
 New-Item -ItemType Directory -Path $backupDir | Out-Null
 Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $backupDir 'deployment.json')
 Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $backupDir 'source-config.txt')

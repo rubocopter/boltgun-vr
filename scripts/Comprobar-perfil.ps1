@@ -3,7 +3,7 @@ param(
     [string]$GameConfigRoot=(Join-Path $env:LOCALAPPDATA 'Boltgun\Saved\Config\WindowsNoEditor'),
     [string]$SteamBindingRoot
 )
-. (Join-Path $PSScriptRoot 'tools\Paths.ps1')
+. (Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\Paths.ps1')
 if (-not $SteamBindingRoot) { $SteamBindingRoot = Resolve-BoltgunSteamBindingRoot }
 $ErrorActionPreference = 'Stop'
 # Read-only checks: never installs, repairs, starts SteamVR or injects UEVR.
@@ -12,10 +12,10 @@ function Check-Result([string]$Label, [bool]$Success) {
     if ($Success) { Write-Output "OK  $Label" }
     else { Write-Output "ERROR  $Label"; $script:failures++ }
 }
-$entries = Get-BoltgunDeployment -RepositoryRoot $PSScriptRoot -ProfileRoot $ProfileRoot -GameConfigRoot $GameConfigRoot
+$entries = Get-BoltgunDeployment -RepositoryRoot (Split-Path -Parent $PSScriptRoot) -ProfileRoot $ProfileRoot -GameConfigRoot $GameConfigRoot
 foreach ($entry in $entries) {
     if ($entry.disabled) { continue }
-    $source = Join-Path $PSScriptRoot $entry.source
+    $source = Join-Path (Split-Path -Parent $PSScriptRoot) $entry.source
     $sourceHash = if (Test-Path -LiteralPath $source -PathType Leaf) { (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash } else { '' }
     $targetHash = if (Test-Path -LiteralPath $entry.target -PathType Leaf) { (Get-FileHash -LiteralPath $entry.target -Algorithm SHA256).Hash } else { '' }
     Check-Result "Fuente: $($entry.source)" ($sourceHash -eq $entry.sha256)
@@ -25,7 +25,7 @@ foreach ($entry in $entries) {
 # runtime inputs rather than immutable deployed configuration.
 $previewEntry = $entries | Where-Object { $_.disabled -and $_.target.EndsWith('\scripts\boltgun_bolter3d.lua') }
 if ($previewEntry -and (Test-Path -LiteralPath $previewEntry.target -PathType Leaf)) {
-    $previewSource = Join-Path $PSScriptRoot $previewEntry.source
+    $previewSource = Join-Path (Split-Path -Parent $PSScriptRoot) $previewEntry.source
     Check-Result 'Fuente opcional: bolter 3D' ((Get-FileHash -LiteralPath $previewSource -Algorithm SHA256).Hash -eq $previewEntry.sha256)
     Check-Result 'Instalado opcional: bolter 3D' ((Get-FileHash -LiteralPath $previewEntry.target -Algorithm SHA256).Hash -eq $previewEntry.sha256)
     $previewData = Join-Path (Split-Path -Parent (Split-Path -Parent $previewEntry.target)) 'data'
@@ -36,15 +36,15 @@ if ($previewEntry -and (Test-Path -LiteralPath $previewEntry.target -PathType Le
 }
 $muzzleEntry = $entries | Where-Object { $_.disabled -and $_.target.EndsWith('\plugins\boltgun_muzzle.dll') }
 if ($muzzleEntry -and (Test-Path -LiteralPath $muzzleEntry.target -PathType Leaf)) {
-    Check-Result 'Fuente opcional: puente de boca de fuego' ((Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $muzzleEntry.source) -Algorithm SHA256).Hash -eq $muzzleEntry.sha256)
+    Check-Result 'Fuente opcional: puente de boca de fuego' ((Get-FileHash -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) $muzzleEntry.source) -Algorithm SHA256).Hash -eq $muzzleEntry.sha256)
     Check-Result 'Instalado opcional: puente de boca de fuego' ((Get-FileHash -LiteralPath $muzzleEntry.target -Algorithm SHA256).Hash -eq $muzzleEntry.sha256)
 }
-$chainswordPackagePath = Join-Path $PSScriptRoot 'manifests\chainsword3d.package.json'
+$chainswordPackagePath = Join-Path (Split-Path -Parent $PSScriptRoot) 'manifests\chainsword3d.package.json'
 $chainswordProfile = $ProfileRoot
 if (Test-Path -LiteralPath (Join-Path $chainswordProfile 'scripts\boltgun_chainsword.lua')) {
     $chainswordPackage = Get-Content -LiteralPath $chainswordPackagePath -Raw | ConvertFrom-Json
     foreach ($file in $chainswordPackage.files) {
-        $source = Join-Path $PSScriptRoot $file.source
+        $source = Join-Path (Split-Path -Parent $PSScriptRoot) $file.source
         $target = Join-Path $chainswordProfile $file.target
         $sourceHash = if (Test-Path -LiteralPath $source) { (Get-FileHash -LiteralPath $source).Hash } else { '' }
         $targetHash = if (Test-Path -LiteralPath $target) { (Get-FileHash -LiteralPath $target).Hash } else { '' }

@@ -3,8 +3,7 @@
 * whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 *.bgmesh binary
 *.png binary
-# Preserve imported baseline inputs and the upstream header verbatim.
+# Preserve shipped INI inputs and the upstream header verbatim.
 game-config/*.ini whitespace=blank-at-eol,-blank-at-eof,space-before-tab,cr-at-eol
-profile/baseline/**/*.ini whitespace=blank-at-eol,-blank-at-eof,space-before-tab,cr-at-eol
 dependencies/uevr/API.h -whitespace
 src/native/chainsword/boltgun_chainsword.cpp whitespace=blank-at-eol,-blank-at-eof,space-before-tab,cr-at-eol

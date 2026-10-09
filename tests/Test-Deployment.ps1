@@ -7,7 +7,7 @@ $game = Join-Path $sandbox 'game-config'
 $steam = Join-Path $sandbox 'steam'
 New-Item -ItemType Directory -Path $copy,$profile,$game,$steam -Force | Out-Null
 # Explicit source inventory: this copy has no research, private backups or Python bundle.
-foreach ($directory in @('src','profile','game-config','assets','manifests','dependencies')) {
+foreach ($directory in @('src','profile','game-config','assets','manifests','dependencies','scripts')) {
     Copy-Item -LiteralPath (Join-Path $repo $directory) -Destination $copy -Recurse
 }
 New-Item -ItemType Directory -Path (Join-Path $copy 'tools') -Force | Out-Null
@@ -25,10 +25,7 @@ function Expect-Rejection([scriptblock]$Action) {
     try { & $Action | Out-Null } catch { $rejected = $true }
     Assert $rejected 'Expected rejection did not happen.'
 }
-Copy-Item -LiteralPath (Join-Path $copy 'profile\baseline\uevr\config.txt') -Destination $profile
-foreach ($name in @('Engine.ini','Input.ini')) {
-    Copy-Item -LiteralPath (Join-Path $copy "profile\baseline\game-config\$name") -Destination $game
-}
+Copy-Item -LiteralPath (Join-Path $copy 'game-config\Engine.ini') -Destination $game
 $bindingPath = Join-Path $steam 'steam.app.2005010_oculus_touch_test_binding.json'
 $binding = @{ bindings = @{ '/actions/defaultopenxr' = @{ sources = @(@{
     path='/user/hand/left/input/menu'; mode='button';
@@ -38,45 +35,47 @@ $binding | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $bindingPath
 $settingsSource = Join-Path $copy 'profile\defaults\chainsword3d.default.settings'
 $settingsBytes = [IO.File]::ReadAllBytes($settingsSource)
 [IO.File]::WriteAllText($settingsSource, 'tampered_defaults=1')
-Expect-Rejection { & (Join-Path $copy 'Chainsword3D.ps1') -Mode install -ProfileRoot $profile }
+Expect-Rejection { & (Join-Path $copy 'scripts\Chainsword3D.ps1') -Mode install -ProfileRoot $profile }
 Assert (-not (Test-Path -LiteralPath (Join-Path $profile 'scripts\boltgun_chainsword.lua'))) 'Tampered defaults caused partial installation.'
 [IO.File]::WriteAllBytes($settingsSource, $settingsBytes)
-& (Join-Path $copy 'Install.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam
+& (Join-Path $copy 'scripts\Install.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam
 Assert ((Hash (Join-Path $profile 'config.txt')) -eq (Hash (Join-Path $copy 'profile\config.txt'))) 'Base installation failed.'
-& (Join-Path $copy 'Bolter3D.ps1') -Mode preview -ProfileRoot $profile -DryRun
+& (Join-Path $copy 'scripts\Bolter3D.ps1') -Mode preview -ProfileRoot $profile -DryRun
 Assert (-not (Test-Path -LiteralPath (Join-Path $profile 'scripts\boltgun_bolter3d.lua'))) 'DryRun wrote a module.'
-& (Join-Path $copy 'Bolter3D.ps1') -Mode preview -ProfileRoot $profile
-& (Join-Path $copy 'Chainsword3D.ps1') -Mode install -ProfileRoot $profile
-& (Join-Path $copy 'Comprobar-perfil.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam
+& (Join-Path $copy 'scripts\Bolter3D.ps1') -Mode preview -ProfileRoot $profile
+& (Join-Path $copy 'scripts\Chainsword3D.ps1') -Mode install -ProfileRoot $profile
+& (Join-Path $copy 'scripts\Comprobar-perfil.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam
 foreach ($name in @('bolter3d.settings','chainsword3d.settings')) {
     [IO.File]::WriteAllText((Join-Path $profile "data\$name"), 'custom_calibration=123')
 }
-& (Join-Path $copy 'Bolter3D.ps1') -Mode preview -ProfileRoot $profile
-& (Join-Path $copy 'Chainsword3D.ps1') -Mode install -ProfileRoot $profile
+& (Join-Path $copy 'scripts\Bolter3D.ps1') -Mode preview -ProfileRoot $profile
+& (Join-Path $copy 'scripts\Chainsword3D.ps1') -Mode install -ProfileRoot $profile
 foreach ($name in @('bolter3d.settings','chainsword3d.settings')) {
     Assert ([IO.File]::ReadAllText((Join-Path $profile "data\$name")) -eq 'custom_calibration=123') 'Custom calibration overwritten.'
 }
 $scriptPath = Join-Path $profile 'scripts\boltgun_bolter3d.lua'
 $known = [IO.File]::ReadAllBytes($scriptPath)
 [IO.File]::WriteAllText($scriptPath, 'unknown replacement')
-Expect-Rejection { & (Join-Path $copy 'Bolter3D.ps1') -Mode preview -ProfileRoot $profile }
+Expect-Rejection { & (Join-Path $copy 'scripts\Bolter3D.ps1') -Mode preview -ProfileRoot $profile }
 Assert ([IO.File]::ReadAllText($scriptPath) -eq 'unknown replacement') 'Unknown script overwritten.'
 [IO.File]::WriteAllBytes($scriptPath, $known)
-& (Join-Path $copy 'Bolter3D.ps1') -Mode off -ProfileRoot $profile
-& (Join-Path $copy 'Chainsword3D.ps1') -Mode off -ProfileRoot $profile
+& (Join-Path $copy 'scripts\Bolter3D.ps1') -Mode off -ProfileRoot $profile
+& (Join-Path $copy 'scripts\Chainsword3D.ps1') -Mode off -ProfileRoot $profile
 Assert ([IO.File]::ReadAllText((Join-Path $profile 'data\bolter3d.mode')).Trim() -eq 'off') 'Arsenal deactivation failed.'
 Assert ([IO.File]::ReadAllText((Join-Path $profile 'data\chainsword3d.mode')).Trim() -eq 'off') 'Sword deactivation failed.'
-& (Join-Path $copy 'Elegir-giro.ps1') -Mode Snap30 -ProfileRoot $profile -GameConfigRoot $game
+& (Join-Path $copy 'scripts\Elegir-giro.ps1') -Mode Snap30 -ProfileRoot $profile -GameConfigRoot $game
 Assert ([IO.File]::ReadAllText((Join-Path $profile 'config.txt')).Contains('VR_SnapturnTurnAngle=30')) 'Turn selection failed.'
-& (Join-Path $copy 'Restore.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam
-Assert ((Hash (Join-Path $profile 'config.txt')) -eq (Hash (Join-Path $copy 'profile\baseline\uevr\config.txt'))) 'Baseline restoration failed.'
+& (Join-Path $copy 'scripts\Restore.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam
+Assert (-not (Test-Path -LiteralPath (Join-Path $profile 'config.txt'))) 'Previously absent config not removed.'
+Assert ((Hash (Join-Path $game 'Engine.ini')) -eq (Hash (Join-Path $copy 'game-config\Engine.ini'))) 'Pre-existing INI not preserved.'
+Assert (-not (Test-Path -LiteralPath (Join-Path $game 'Input.ini'))) 'Previously absent INI not removed.'
 Assert (-not (Test-Path -LiteralPath $scriptPath)) 'Optional module survived baseline restoration.'
 # Reject traversal before any installation writes.
 $manifestPath = Join-Path $copy 'deployment.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $manifest[0].target = '${ProfileRoot}\..\outside.txt'
 $manifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath
-Expect-Rejection { & (Join-Path $copy 'Install.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam }
+Expect-Rejection { & (Join-Path $copy 'scripts\Install.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam }
 Assert (-not (Test-Path -LiteralPath (Join-Path $sandbox 'outside.txt'))) 'Traversal escaped the profile.'
-Write-Output 'Deployment checks passed: isolated installation, dry run, calibration, unknown-file refusal, off, turn, baseline and traversal.'
+Write-Output 'Deployment checks passed: isolated installation, dry run, calibration, unknown-file refusal, off, turn, snapshot restoration and traversal.'
 Write-Output "Temporary evidence retained at $sandbox"

@@ -48,5 +48,9 @@ jobs:
       - name: Test packaged guided setup and launcher (no game launch)
         run: .\tests\Test-GuidedSetup.ps1
 
+      - name: Test first-install snapshots and repeat/restore safety
+        shell: pwsh
+        run: .\tests\Test-InstallSnapshots.ps1
+
       - name: Test private reinstall backup in a temporary profile
         run: .\tests\Test-ReinstallBackup.ps1

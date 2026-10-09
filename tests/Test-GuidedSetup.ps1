@@ -26,15 +26,17 @@ try {
     Assert ($names -contains 'build/plugins/boltgun_chainsword.dll') 'Chainsword plugin missing from ZIP.'
     Assert ($names -contains 'build/plugins/boltgun_muzzle.dll') 'Muzzle plugin missing from ZIP.'
     Assert ($names -contains 'Instalar Boltgun VR.cmd') 'Installer shortcut missing.'
+    Assert ($names -contains 'scripts/Install.ps1') 'Deployment script missing.'
+    Assert ($names -contains 'tools/Snapshots.ps1') 'Restore snapshot tool missing.'
+    Assert (@($names | Where-Object { $_ -like '*baseline*' }).Count -eq 0) 'Legacy baseline leaked into package.'
     Assert ($names -contains 'docs/INSTALACION-FACIL.es.md') 'Spanish player instructions missing.'
+    Assert ($names -contains 'docs/history/2026-10-09-revision13.md') 'Linked arsenal guide missing.'
+    Assert ($names -contains 'docs/history/2026-10-09-revision15.md') 'Linked muzzle diagnostic guide missing.'
     Assert (@($names | Where-Object { $_ -match '(^|/)(superpowers|backups|research|diagnostics|\.git|UEVRInjector\.exe)(/|$)|\.(exe|pak|pdb|dmp)$' }).Count -eq 0) 'Forbidden/private content in player ZIP.'
 } finally { $archive.Dispose() }
 
 [IO.File]::WriteAllBytes($fakeInjector,[byte[]]@()) # Test stub, never started.
-Copy-Item -LiteralPath (Join-Path $player 'profile\baseline\uevr\config.txt') -Destination (Join-Path $profile 'config.txt')
-foreach ($name in @('Engine.ini','Input.ini')) {
-    Copy-Item -LiteralPath (Join-Path $player "profile\baseline\game-config\$name") -Destination (Join-Path $game $name)
-}
+Copy-Item -LiteralPath (Join-Path $player 'game-config\Engine.ini') -Destination (Join-Path $game 'Engine.ini')
 
 $bindingPath=Join-Path $steam 'steam.app.2005010_oculus_touch_test_binding.json'
 $binding=@{bindings=@{'/actions/defaultopenxr'=@{sources=@(@{
@@ -43,8 +45,8 @@ $binding=@{bindings=@{'/actions/defaultopenxr'=@{sources=@(@{
 })}}}
 $binding | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $bindingPath
 
-$setup=Join-Path $player 'Setup-BoltgunVR.ps1'
-$launcher=Join-Path $player 'Play-BoltgunVR.ps1'
+$setup=Join-Path $player 'scripts\Setup-BoltgunVR.ps1'
+$launcher=Join-Path $player 'scripts\Play-BoltgunVR.ps1'
 $setupParams=@{UevrInjectorPath=$fakeInjector;ProfileRoot=$profile;GameConfigRoot=$game;SteamBindingRoot=$steam;SettingsRoot=$settings}
 & $setup @setupParams -DryRun -EnableExperimental3D | Out-Null
 Assert (-not (Test-Path -LiteralPath $settings)) 'Setup dry run wrote launcher settings.'
@@ -84,5 +86,5 @@ Assert ([string]::Join(' ',@($wouldLaunch)).Contains('steam://rungameid/2005010'
 $saved.steamAppId=1
 $saved | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $settings 'launcher.json')
 Expect-Rejection { & $launcher -SettingsRoot $settings -DryRun } 'Launcher accepted wrong Steam game.'
-Write-Output 'Guided setup checks passed: curated ZIP, dry runs, unknown-file refusal, optional modules, saved launcher and game guard.'
+Write-Output 'Guided setup checks passed: curated ZIP, dry runs, fresh-profile installation, unknown-file refusal, optional modules, saved launcher and game guard.'
 Write-Output "Isolated test evidence retained at $sandbox"
