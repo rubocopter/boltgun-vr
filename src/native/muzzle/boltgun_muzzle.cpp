@@ -64,6 +64,18 @@ static ULONGLONG g_haptic_last{};
 static bool g_haptic_failed{};
 static bool g_recoil_dirty{};
 static std::atomic<bool> g_recoil_cancelled{};
+// Passive diagnostics: projectile hooks may run on another thread, while
+// visual/haptic callbacks run on the engine tick. No logging from detours.
+enum Feedback : size_t {
+    SpawnSucceeded, SpawnFailed, ShotQueued, ShotNoVisual, ShotCapped,
+    ShotDiscarded, ShotConsumed, RecoilApplied, RecoilUnavailable, RecoilFault,
+    RestoreApplied, RestoreUnavailable, RestoreFault, HapticSent, HapticNoAPI,
+    HapticNoSource, HapticThrottled, HapticFault, HapticDisabled, FeedbackCount
+};
+static std::atomic<unsigned long> g_feedback[FeedbackCount]{};
+static void track(Feedback event,unsigned long value=1) {
+    g_feedback[event].fetch_add(value,std::memory_order_relaxed);
+}
 static bool live(UEVR_UObjectHandle obj) {
     return obj&&g_api->sdk->uobject_hook->exists(obj);
 }
@@ -110,10 +122,16 @@ static RecoilWrite write_recoil(UEVR_UObjectHandle visual,UEVR_UObjectHandle own
     }
 }
 static bool reset_recoil() {
+    if(g_recoil_pending) track(ShotDiscarded,g_recoil_pending);
     g_recoil_amount=0;g_recoil_pending=0;
-    if(g_recoil_dirty&&
-       write_recoil(g_recoil_target,g_recoil_owner,g_recoil_base,g_recoil_rotation,0)==RecoilWrite::Fault)
-        return false; // Keep the exact target/base for a retry on the next tick.
+    if(g_recoil_dirty) {
+        const auto restored=write_recoil(g_recoil_target,g_recoil_owner,g_recoil_base,g_recoil_rotation,0);
+        if(restored==RecoilWrite::Fault) {
+            track(RestoreFault);
+            return false; // Keep the exact target/base for a retry on the next tick.
+        }
+        track(restored==RecoilWrite::Written?RestoreApplied:RestoreUnavailable);
+    }
     g_recoil_target=nullptr;g_recoil_owner=nullptr;
     g_recoil_dirty=false;return true;
 }
@@ -140,15 +158,24 @@ static void tick_recoil_inner(float delta) {
     g_recoil_amount=(g_recoil_amount+added>5.f)?5.f:g_recoil_amount+added;
     // Consume confirmed shots on the engine tick, coalescing pellet/burst
     // spawns and limiting automatic-fire pulses to at most 20 per second.
-    if(g_recoil_pending&&!g_haptic_failed&&g_api->vr->get_right_joystick_source&&
-       g_api->vr->trigger_haptic_vibration&&(!g_haptic_last||now-g_haptic_last>=50)) {
-        __try {
-            const auto source=g_api->vr->get_right_joystick_source();
-            if(source) {
-                g_api->vr->trigger_haptic_vibration(0,.04f,90.f,.65f,source);
-                g_haptic_last=now;
+    if(g_recoil_pending) {
+        track(ShotConsumed,g_recoil_pending);
+        if(g_haptic_failed) track(HapticDisabled);
+        else if(!g_api->vr->get_right_joystick_source||!g_api->vr->trigger_haptic_vibration)
+            track(HapticNoAPI);
+        else if(g_haptic_last&&now-g_haptic_last<50) track(HapticThrottled);
+        else {
+            __try {
+                const auto source=g_api->vr->get_right_joystick_source();
+                if(source) {
+                    g_api->vr->trigger_haptic_vibration(0,.04f,90.f,.65f,source);
+                    g_haptic_last=now;
+                    track(HapticSent);
+                } else track(HapticNoSource);
+            } __except(EXCEPTION_EXECUTE_HANDLER) {
+                g_haptic_failed=true;track(HapticFault);
             }
-        } __except(EXCEPTION_EXECUTE_HANDLER) {g_haptic_failed=true;}
+        }
     }
     g_recoil_pending=0;
     g_recoil_amount*=std::exp(-12.f*elapsed);
@@ -158,7 +185,10 @@ static void tick_recoil_inner(float delta) {
     // A setter may fail after the first offset was written. Mark before writing
     // so the base pose is also restored on that partially completed update.
     g_recoil_dirty=true;
-    if(write_recoil(g_recoil_target,g_recoil_owner,g_recoil_base,g_recoil_rotation,g_recoil_amount)!=RecoilWrite::Written)
+    const auto written=write_recoil(g_recoil_target,g_recoil_owner,g_recoil_base,g_recoil_rotation,g_recoil_amount);
+    track(written==RecoilWrite::Written?RecoilApplied:
+          written==RecoilWrite::Unavailable?RecoilUnavailable:RecoilFault);
+    if(written!=RecoilWrite::Written)
         reset_recoil();
 }
 static void tick_recoil(float delta) {
@@ -223,8 +253,13 @@ static UEVR_UObjectHandle spawn_detour(UEVR_UObjectHandle world,UEVR_UClassHandl
     updated.rotation=original->rotation;
     g_spawn_redirected.fetch_add(1,std::memory_order_relaxed);
     const auto spawned=g_spawn_original(world,cls,data,&updated,weapon);
-    if(spawned&&g_lease.visual&&g_recoil_pending<8)
-        ++g_recoil_pending;
+    if(!spawned) track(SpawnFailed);
+    else {
+        track(SpawnSucceeded);
+        if(!g_lease.visual) track(ShotNoVisual);
+        else if(g_recoil_pending>=8) track(ShotCapped);
+        else { ++g_recoil_pending;track(ShotQueued); }
+    }
     return spawned;
 }
 [[maybe_unused]] static Transform* detour(UEVR_UObjectHandle weapon,Transform* out,float x,float y,void* rng,bool uniform) {
@@ -468,6 +503,19 @@ static void on_tick(UEVR_UGameEngineHandle,float delta) {
     g_api->functions->log_info("[Boltgun muzzle 3D] Projectile spawn diagnostic %u: calls=%lu redirected=%lu",
         g_diagnostic_windows,g_spawn_calls.exchange(0,std::memory_order_relaxed),
         g_spawn_redirected.exchange(0,std::memory_order_relaxed));
+    g_api->functions->log_info("[Boltgun muzzle 3D] Shot feedback: spawned=%lu null=%lu queued=%lu noVisual=%lu capped=%lu discarded=%lu consumed=%lu",
+        g_feedback[SpawnSucceeded].exchange(0),g_feedback[SpawnFailed].exchange(0),
+        g_feedback[ShotQueued].exchange(0),g_feedback[ShotNoVisual].exchange(0),
+        g_feedback[ShotCapped].exchange(0),g_feedback[ShotDiscarded].exchange(0),
+        g_feedback[ShotConsumed].exchange(0));
+    g_api->functions->log_info("[Boltgun muzzle 3D] Visual feedback: applied=%lu unavailable=%lu fault=%lu restored=%lu restoreUnavailable=%lu restoreFault=%lu",
+        g_feedback[RecoilApplied].exchange(0),g_feedback[RecoilUnavailable].exchange(0),
+        g_feedback[RecoilFault].exchange(0),g_feedback[RestoreApplied].exchange(0),
+        g_feedback[RestoreUnavailable].exchange(0),g_feedback[RestoreFault].exchange(0));
+    g_api->functions->log_info("[Boltgun muzzle 3D] Haptic feedback: sent=%lu noAPI=%lu noSource=%lu throttled=%lu fault=%lu disabled=%lu",
+        g_feedback[HapticSent].exchange(0),g_feedback[HapticNoAPI].exchange(0),
+        g_feedback[HapticNoSource].exchange(0),g_feedback[HapticThrottled].exchange(0),
+        g_feedback[HapticFault].exchange(0),g_feedback[HapticDisabled].exchange(0));
     g_api->functions->log_info("[Boltgun muzzle 3D] Niagara flash: atLocation=%lu attached=%lu exact=%lu moved=%lu attachedHeld=%lu fault=%d",
         g_flash_location_calls.exchange(0,std::memory_order_relaxed),
         g_flash_attached_calls.exchange(0,std::memory_order_relaxed),
@@ -543,6 +591,7 @@ static void event_inner(const char* text) {
         for(auto& counter : g_gate) counter.exchange(0,std::memory_order_relaxed);
         g_spawn_calls.exchange(0,std::memory_order_relaxed);
         g_spawn_redirected.exchange(0,std::memory_order_relaxed);
+        for(auto& counter : g_feedback) counter.exchange(0,std::memory_order_relaxed);
         g_api->functions->log_info("[Boltgun muzzle 3D] Owned firearm %d and Transform contract verified",profile);
     } else {
         g_lease.heartbeat=now;g_lease.muzzle={x,y,z};g_lease.ready=true;g_lease.profile=profile;

@@ -75,7 +75,7 @@
     "source": "build\\plugins\\boltgun_muzzle.dll",
     "target": "${ProfileRoot}\\plugins\\boltgun_muzzle.dll",
     "backup": null,
-    "sha256": "B00D0A7901EB70D41872745F3F63A1897B7279F3831C6131A63AE22E3A271A49",
+    "sha256": "245932B756A95AB5D8D43EA4C4B9A62859DF653123A8EBE26F5C22922AACD9D8",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional exact-build ten-firearm muzzle bridge; installed only by Bolter3D.ps1; included for original-profile restoration"

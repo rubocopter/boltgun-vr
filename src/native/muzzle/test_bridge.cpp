@@ -8,7 +8,10 @@ static Transform spawned{};
 static int flash_moves{};
 static int recoil_writes{};
 static int haptic_pulses{};
-static UEVR_InputSourceHandle right_source() {return reinterpret_cast<UEVR_InputSourceHandle>(1);}
+static bool source_available=true;
+static UEVR_InputSourceHandle right_source() {
+    return source_available?reinterpret_cast<UEVR_InputSourceHandle>(1):nullptr;
+}
 static void haptic(float delay,float duration,float frequency,float amplitude,UEVR_InputSourceHandle source) {
     assert(delay==0&&duration==.04f&&frequency==90.f&&amplitude==.65f&&source==right_source());
     ++haptic_pulses;
@@ -276,9 +279,9 @@ int main() {
     const int previous_logs=logs;
     g_diagnostics_since=GetTickCount64()-7000;
     on_tick(nullptr,0);
-    assert(logs==previous_logs+2&&g_gate[Called].load()==0);
+    assert(logs==previous_logs+5&&g_gate[Called].load()==0);
     on_tick(nullptr,0);
-    assert(logs==previous_logs+2); // No diagnostic flood on every tick.
+    assert(logs==previous_logs+5); // No diagnostic flood on every tick.
     on_event("boltgun.muzzle.v1","off");
     detour(id(2),&out,0,0,nullptr,true);assert(out.translation.x==500);
     assert(g_gate[Disabled].load()==1);
@@ -357,23 +360,29 @@ int main() {
     on_tick(nullptr,.016f);
     assert(haptic_pulses==pulses_before+1);
     assert(recoil_writes==1&&recoil_location.y<24&&recoil_rotation.x>0);
+    assert(g_feedback[SpawnSucceeded]==1&&g_feedback[ShotQueued]==1);
+    assert(g_feedback[ShotConsumed]==1&&g_feedback[RecoilApplied]==1);
+    assert(g_feedback[HapticSent]==1);
     assert(mesh_pose.translation.x==400); // Stable firing anchor never moves.
     g_haptic_last=GetTickCount64();
     spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
     on_tick(nullptr,0);
     assert(haptic_pulses==pulses_before+1); // Coalesce rapid confirmed shots.
+    assert(g_feedback[HapticThrottled]==1);
     g_haptic_last=GetTickCount64()-60;
     fail_spawn=true;
     spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
     on_tick(nullptr,0);
     assert(haptic_pulses==pulses_before+1); // Failed spawn never vibrates.
+    assert(g_feedback[SpawnFailed]==1&&g_feedback[ShotQueued]==2);
     fail_spawn=false;
     const float kicked=recoil_location.y;
     for(int i=0;i<60;++i) on_tick(nullptr,.016f);
     assert(recoil_location.y>kicked&&std::fabs(recoil_location.y-24)<.03f);
     // Rapid successive shots must accumulate with a hard upper bound.
-    for(int i=0;i<8;++i)
+    for(int i=0;i<9;++i)
         spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    assert(g_feedback[ShotCapped]==1&&g_recoil_pending==8);
     on_tick(nullptr,.016f);
     assert(recoil_location.y>=18&&recoil_location.y<24);
     on_event("boltgun.muzzle.v1","off");on_tick(nullptr,.016f);
@@ -398,6 +407,7 @@ int main() {
     g_engine_thread=GetCurrentThreadId();
     on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
     on_tick(nullptr,.016f);assert(recoil_writes==before_cancel);
+    assert(g_feedback[ShotDiscarded]>=1); // Revoked shot is not replayed.
     on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
     g_lease.created=GetTickCount64()-200;
     expired_object=id(1);
@@ -464,8 +474,34 @@ int main() {
     assert(recoil_location.y<24&&recoil_location.y>=19);
     on_event("boltgun.muzzle.v1","off");on_tick(nullptr,.016f);
     assert(std::fabs(recoil_rotation.z-.707107f)<.001f&&std::fabs(recoil_rotation.x)<.001f);
+    // Controlled diagnostic paths: missing source/API, unavailable motion
+    // state and a revoked lease must remain safe and observable.
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    g_lease.created=GetTickCount64()-200;g_haptic_last=0;
+    source_available=false;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,.016f);
+    assert(g_feedback[HapticNoSource]>=1);
+    source_available=true;
+    vr.trigger_haptic_vibration=nullptr;g_haptic_last=0;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,.016f);
+    assert(g_feedback[HapticNoAPI]>=1);
+    vr.trigger_haptic_vibration=haptic;
+    hook.get_motion_controller_state=nullptr;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,.016f);
+    assert(g_feedback[RecoilUnavailable]>=1&&g_feedback[RestoreUnavailable]>=1);
+    hook.get_motion_controller_state=motion_state;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    vr_active=false;on_tick(nullptr,.016f);
+    assert(g_feedback[ShotDiscarded]>=1);
+    vr_active=true;on_event("boltgun.muzzle.v1","off");on_tick(nullptr,.016f);
     g_lease={};on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53");
     assert(g_enabled&&g_lease.visual==nullptr); // Legacy six fields unchanged.
+    g_lease.created=GetTickCount64()-200;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    assert(g_feedback[ShotNoVisual]==1&&g_feedback[ShotQueued]==0);
     assert(!supported_file(L"missing-file-for-muzzle-test.exe"));
     wchar_t exe[32768]{};GetModuleFileNameW(nullptr,exe,32768);
     assert(!supported_file(exe));assert(!supported_module(reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))));
