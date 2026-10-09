@@ -1,0 +1,243 @@
+[
+  {
+    "pickup_class": "Boltgun/Content/Blueprints/Pickups/BP_WeaponPickup_Boltgun",
+    "weapon_type": "EWeaponType::WeaponOneBoltgun",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/Weapons/M_Pickups_Boltgun.M_Pickups_Boltgun",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\Weapons\\M_Pickups_Boltgun.glb",
+    "dlc": false,
+    "geometry": {
+      "vertices": 19149,
+      "triangles": 10601,
+      "accessor_extent": [
+        1.356282889842987,
+        0.8582727659959346,
+        0.3178788125514984
+      ],
+      "sha256": "2333e332c4d1284add6bda0206d22a763a14c94fc9665b2d7ce52a85906846b5"
+    },
+    "weapon_classes": [
+      "/Game/Blueprints/Weapons/Boltgun/BP_Boltgun.BP_Boltgun_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/Data/Weapons/Boltgun/BP_Boltgun_CoreData"
+    ]
+  },
+  {
+    "pickup_class": "Boltgun/Content/Blueprints/Pickups/BP_WeaponPickup_GravitonGun",
+    "weapon_type": "EWeaponType::WeaponEightGravitonGun",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/Weapons/M_GravgunPickup.M_GravgunPickup",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/Weapons/Materials/MI_Pickups_GravGun.MI_Pickups_GravGun",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\Weapons\\M_GravgunPickup.glb",
+    "dlc": false,
+    "geometry": {
+      "vertices": 68306,
+      "triangles": 38066,
+      "accessor_extent": [
+        1.8372106552124023,
+        0.9835572447627783,
+        0.3989902138710022
+      ],
+      "sha256": "5f1f2719bb29721ccdb106714e17347d0e968637a427e178d96c55bdea1898f7"
+    },
+    "weapon_classes": [
+      "/Game/Blueprints/Weapons/GravGun/BP_Gravgun.BP_Gravgun_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/Data/Weapons/GravGun/BP_GravGun_CoreData"
+    ]
+  },
+  {
+    "pickup_class": "Boltgun/Content/Blueprints/Pickups/BP_WeaponPickup_HeavyBolter",
+    "weapon_type": "EWeaponType::WeaponFourHeavyBolter",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/Weapons/M_HeavyBolterPickup.M_HeavyBolterPickup",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/Weapons/Materials/MI_Pickups_HeavyBolter.MI_Pickups_HeavyBolter",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\Weapons\\M_HeavyBolterPickup.glb",
+    "dlc": false,
+    "geometry": {
+      "vertices": 18606,
+      "triangles": 10474,
+      "accessor_extent": [
+        1.8740106225013733,
+        0.7600154131650925,
+        0.42685797810554504
+      ],
+      "sha256": "bb4d90784bab71c6d4b6b9cff4412eaca5b3e88ee44138a7a3dd775c5f8a4bf8"
+    },
+    "weapon_classes": [
+      "/Game/Blueprints/Weapons/HeavyBolter/BP_HeavyBolter.BP_HeavyBolter_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/Data/Weapons/HeavyBolter/BP_HeavyBolter_CoreData"
+    ]
+  },
+  {
+    "pickup_class": "Boltgun/Content/Blueprints/Pickups/BP_WeaponPickup_MeltaGun",
+    "weapon_type": "EWeaponType::WeaponSixMeltagun",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/Weapons/M_Meltagun_Pickup.M_Meltagun_Pickup",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/Weapons/Materials/MI_Meltagun_Pickup.MI_Meltagun_Pickup",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\Weapons\\M_Meltagun_Pickup.glb",
+    "dlc": false,
+    "geometry": {
+      "vertices": 13502,
+      "triangles": 7530,
+      "accessor_extent": [
+        1.513290524482727,
+        0.6585617363452911,
+        0.4203585386276245
+      ],
+      "sha256": "c351ac6cb971ed5ce06027a943b1c8b54137d84d9d095ac046b91ee73f6dbcea"
+    },
+    "weapon_classes": [
+      "/Game/Blueprints/Weapons/Meltagun/BP_Meltagun.BP_Meltagun_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/Data/Weapons/Meltagun/BP_Meltagun_CoreData"
+    ]
+  },
+  {
+    "pickup_class": "Boltgun/Content/Blueprints/Pickups/BP_WeaponPickup_PlasmaGun",
+    "weapon_type": "EWeaponType::WeaponThreePlasmaGun",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/Weapons/M_PlasmaGunPickup.M_PlasmaGunPickup",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/Weapons/Materials/MI_Pickups_Plasma.MI_Pickups_Plasma",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\Weapons\\M_PlasmaGunPickup.glb",
+    "dlc": false,
+    "geometry": {
+      "vertices": 18994,
+      "triangles": 10568,
+      "accessor_extent": [
+        1.4044803977012634,
+        0.6587385982275009,
+        0.32315483689308167
+      ],
+      "sha256": "6553acb61f0767fcb3998b0c05ae4d46fe48c24b5399f4b61cfd5fee3d8a406b"
+    },
+    "weapon_classes": [
+      "/Game/Blueprints/Weapons/PlasmaGun/BP_Plasmagun.BP_Plasmagun_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/Data/Weapons/Plasmagun/BP_Plasmagun_CoreData"
+    ]
+  },
+  {
+    "pickup_class": "Boltgun/Content/Blueprints/Pickups/BP_WeaponPickup_Shotgun",
+    "weapon_type": "EWeaponType::WeaponTwoShotgun",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/Weapons/M_ShotgunPickup.M_ShotgunPickup",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/Weapons/Materials/MI_Pickups_Shotgun.MI_Pickups_Shotgun",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\Weapons\\M_ShotgunPickup.glb",
+    "dlc": false,
+    "geometry": {
+      "vertices": 34376,
+      "triangles": 19100,
+      "accessor_extent": [
+        1.6821802854537964,
+        0.8006532173603773,
+        0.2911466062068939
+      ],
+      "sha256": "b4c3b9cdc7f2bfa00cb031f0c13286f14e2d3d528c70e845d01b186536ecd216"
+    },
+    "weapon_classes": [
+      "/Game/Blueprints/Weapons/Shotgun/BP_Shotgun.BP_Shotgun_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/Data/Weapons/Shotgun/BP_Shotgun_CoreData"
+    ]
+  },
+  {
+    "pickup_class": "Boltgun/Content/Blueprints/Pickups/BP_WeaponPickup_VengeanceLauncher",
+    "weapon_type": "EWeaponType::WeaponFiveVengeanceLauncher",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/Weapons/M_VengeanceLauncher_Pickup.M_VengeanceLauncher_Pickup",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/Weapons/Materials/MI_VengeanceLauncher_Pickup1.MI_VengeanceLauncher_Pickup1",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\Weapons\\M_VengeanceLauncher_Pickup.glb",
+    "dlc": false,
+    "geometry": {
+      "vertices": 13845,
+      "triangles": 7741,
+      "accessor_extent": [
+        1.7551344633102417,
+        0.7365296706557274,
+        0.5798212885856628
+      ],
+      "sha256": "a15be64ccfc444b729625e5415b449cb68494619738e530653208f8442ca6ca6"
+    },
+    "weapon_classes": [
+      "/Game/Blueprints/Weapons/VengeanceLauncher/BP_VengeanceLauncher.BP_VengeanceLauncher_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/Data/Weapons/VengeanceLauncher/BP_VengeanceLauncher_CoreData"
+    ]
+  },
+  {
+    "pickup_class": "Boltgun/Content/Blueprints/Pickups/BP_WeaponPickup_VolkiteCaliver",
+    "weapon_type": "EWeaponType::WeaponSevenVolkiteCaliver",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/Weapons/M_VolkiteCaliverPickup.M_VolkiteCaliverPickup",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/Weapons/Materials/MI_Pickups_Volkite.MI_Pickups_Volkite",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\Weapons\\M_VolkiteCaliverPickup.glb",
+    "dlc": false,
+    "geometry": {
+      "vertices": 14773,
+      "triangles": 8169,
+      "accessor_extent": [
+        1.5297423601150513,
+        0.6638505011796951,
+        0.27419909834861755
+      ],
+      "sha256": "474a0391f17b5788e2547d8c0731bfe803a02de8f90a065a1c76faba0f124f8c"
+    },
+    "weapon_classes": [
+      "/Game/Blueprints/Weapons/VolkiteCaliver/BP_VolkiteCaliver.BP_VolkiteCaliver_C",
+      "/Game/Blueprints/Weapons/VolkiteCaliver/BP_VolkiteCaliver_MachineSpirit.BP_VolkiteCaliver_MachineSpirit_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/Data/Weapons/VolkiteCaliver/BP_VolkiteCaliver_CoreData"
+    ]
+  },
+  {
+    "pickup_class": "Boltgun/Content/DLC/Pickups/BP_WeaponPickup_MissileLauncher",
+    "weapon_type": "EWeaponType::WeaponTenMissileLauncher",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/_DLC/MissleLauncher/M_Pickup_MissileLauncher.M_Pickup_MissileLauncher",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/_DLC/MissleLauncher/MI_MissileLauncher_Pickup.MI_MissileLauncher_Pickup",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\_DLC\\MissleLauncher\\M_Pickup_MissileLauncher.glb",
+    "dlc": true,
+    "geometry": {
+      "vertices": 21603,
+      "triangles": 12119,
+      "accessor_extent": [
+        3.688836455345154,
+        2.1950100883841515,
+        1.1889638900756836
+      ],
+      "sha256": "114287609c8eb930e6f8ddf7a83a570914943d83bc73461225f186af6db61a96"
+    },
+    "weapon_classes": [
+      "/Game/DLC/Weapons/Missile_Launcher/BP_MissileLauncher.BP_MissileLauncher_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/DLC/Weapons/Missile_Launcher/Data/BP_MissileLauncher_CoreData"
+    ]
+  },
+  {
+    "pickup_class": "Boltgun/Content/DLC/Pickups/BP_WeaponPickup_MultiMelta",
+    "weapon_type": "EWeaponType::WeaponNineMultiMelta",
+    "mesh_object": "StaticMesh /Game/Art/Pickups/_DLC/MultiMelta/M_Pickup_MultiMelta.M_Pickup_MultiMelta",
+    "material_object": "MaterialInstanceConstant /Game/Art/Pickups/_DLC/MultiMelta/MI_MultiMelta_Weapon_Pickup.MI_MultiMelta_Weapon_Pickup",
+    "glb": "original_game_inspection\\Boltgun\\Content\\Art\\Pickups\\_DLC\\MultiMelta\\M_Pickup_MultiMelta.glb",
+    "dlc": true,
+    "geometry": {
+      "vertices": 51027,
+      "triangles": 28561,
+      "accessor_extent": [
+        1.7399999499320984,
+        1.0699999332427979,
+        0.3900000751018524
+      ],
+      "sha256": "3ea86e583fcb3108fd0dd5e22f1ece36953aa6d71700df1787bd65352b2c1320"
+    },
+    "weapon_classes": [
+      "/Game/DLC/Weapons/Multi_Melta/BP_MultiMelta.BP_MultiMelta_C"
+    ],
+    "core_data": [
+      "Boltgun/Content/DLC/Weapons/Multi_Melta/Data/BP_MultiMelta_CoreData"
+    ]
+  }
+]

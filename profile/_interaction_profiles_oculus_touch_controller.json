@@ -1,0 +1,97 @@
+{
+  "vector2_associations": [],
+  "bindings": [
+    {
+      "path": "/user/hand/left/input/aim/pose",
+      "action": "pose"
+    },
+    {
+      "path": "/user/hand/left/input/grip/pose",
+      "action": "grippose"
+    },
+    {
+      "path": "/user/hand/left/input/trigger/value",
+      "action": "trigger"
+    },
+    {
+      "path": "/user/hand/left/input/squeeze/value",
+      "action": "grip"
+    },
+    {
+      "path": "/user/hand/left/input/thumbstick",
+      "action": "joystick"
+    },
+    {
+      "path": "/user/hand/left/input/thumbstick/click",
+      "action": "joystickclick"
+    },
+    {
+      "path": "/user/hand/left/output/haptic",
+      "action": "haptic"
+    },
+    {
+      "path": "/user/hand/right/input/aim/pose",
+      "action": "pose"
+    },
+    {
+      "path": "/user/hand/right/input/grip/pose",
+      "action": "grippose"
+    },
+    {
+      "path": "/user/hand/right/input/trigger/value",
+      "action": "trigger"
+    },
+    {
+      "path": "/user/hand/right/input/squeeze/value",
+      "action": "grip"
+    },
+    {
+      "path": "/user/hand/right/input/thumbstick",
+      "action": "joystick"
+    },
+    {
+      "path": "/user/hand/right/input/thumbstick/click",
+      "action": "joystickclick"
+    },
+    {
+      "path": "/user/hand/right/output/haptic",
+      "action": "haptic"
+    },
+    {
+      "path": "/user/hand/right/input/a/click",
+      "action": "abuttonright"
+    },
+    {
+      "path": "/user/hand/right/input/b/click",
+      "action": "abuttonleft"
+    },
+    {
+      "path": "/user/hand/left/input/x/click",
+      "action": "bbuttonright"
+    },
+    {
+      "path": "/user/hand/left/input/y/click",
+      "action": "bbuttonleft"
+    },
+    {
+      "path": "/user/hand/right/input/a/touch",
+      "action": "abuttontouchright"
+    },
+    {
+      "path": "/user/hand/right/input/b/touch",
+      "action": "abuttontouchleft"
+    },
+    {
+      "path": "/user/hand/left/input/x/touch",
+      "action": "bbuttontouchright"
+    },
+    {
+      "path": "/user/hand/left/input/y/touch",
+      "action": "bbuttontouchleft"
+    },
+    {
+      "path": "/user/hand/left/input/menu/click",
+      "action": "systembutton"
+    }
+  ]
+}

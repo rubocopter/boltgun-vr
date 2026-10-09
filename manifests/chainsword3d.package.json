@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "runtimeVerified": false,
+  "files": [
+    {
+      "source": "src\\lua\\boltgun_chainsword.lua",
+      "target": "scripts\\boltgun_chainsword.lua",
+      "sha256": "1985403F1A76DD9122EF2FE7465E05E06314043E4B443E94828A6630050096BB",
+      "upgradeFrom": [
+        "5A4E1BF39CFEB3774EFA2DE1AE1F66182A26C12176FC3472F3AF7C8E9F416B31",
+        "B89DE0252F5E8209EBA807C6995FCEA87ABE7888224DE828153338C34A2A6F8B"
+      ]
+    },
+    {
+      "source": "build\\plugins\\boltgun_chainsword.dll",
+      "target": "plugins\\boltgun_chainsword.dll",
+      "sha256": "299AA89DA0BFA3594BC07935A7FBCACA553F515C78884A42813505D1B818F409",
+      "upgradeFrom": [
+        "680BD5A67DBD4F78E55D35A00FFECCBED051BEFCB12776F2BF498622366A52BF"
+      ]
+    },
+    {
+      "source": "assets\\chainsword\\chainsword.bgmesh",
+      "target": "data\\chainsword3d\\chainsword.bgmesh",
+      "sha256": "CC8488C0841EA08C297320C2FC704AA35670043114BF000E264064131A415968",
+      "upgradeFrom": [
+        "95E9E61E5F38B179434799B31E3F2AC6CEA39A2509E886D05A9AF751A32EF52F"
+      ]
+    },
+    {
+      "source": "assets\\chainsword\\chainsword_color.png",
+      "target": "data\\chainsword3d\\chainsword_color.png",
+      "sha256": "5EED6697D11C510383A41194C081422CB254B9A5B7B0CF948D5BD4E5D2BD1C15"
+    },
+    {
+      "source": "assets\\chainsword\\CREDITS.txt",
+      "target": "data\\chainsword3d\\CREDITS.txt",
+      "sha256": "401109C7D8BA27901C40862EB66BC9F978D6E58528C7B557DCC8D5462A8D4FAD"
+    }
+  ]
+}

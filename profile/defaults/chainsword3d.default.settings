@@ -1,0 +1,11 @@
+# 95 cm sword, grip is the mesh origin; location offsets use UEVR's GLM axes.
+scale=1
+x=0
+y=0
+z=0
+pitch=0
+yaw=180
+roll=0
+# Keep the original 2D Codex animation at 65% size, restore on exit.
+book_enabled=1
+book_scale=0.65

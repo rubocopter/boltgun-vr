@@ -1,0 +1,12 @@
+Model Information:
+* title:	Wh-40k-chainsword
+* source:	https://sketchfab.com/3d-models/wh-40k-chainsword-2976e3debf33494a831253b160f7d2c9
+* author:	Kaiser-E (https://sketchfab.com/Kaiser-E)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Wh-40k-chainsword" (https://sketchfab.com/3d-models/wh-40k-chainsword-2976e3debf33494a831253b160f7d2c9) by Kaiser-E (https://sketchfab.com/Kaiser-E) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+Mod adaptations: 95 cm length, grip origin, Unreal axes, 2K color texture.
