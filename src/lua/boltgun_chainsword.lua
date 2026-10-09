@@ -6,7 +6,11 @@ local MODE, SETTINGS, JOURNAL = 'chainsword3d.mode', 'chainsword3d.settings', 'c
 local CLASS = 'Class /Script/ProceduralMeshComponent.ProceduralMeshComponent'
 local PLANE_CLASS = 'Class /Script/Engine.StaticMeshComponent'
 local MATERIAL = 'MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun'
-local TEXTURE = 'C:/Users/onita/AppData/Roaming/UnrealVRMod/Boltgun-Win64-Shipping/data/chainsword3d/chainsword_color.png'
+local function texture_path()
+    local directory = uevr.params.functions.get_persistent_dir()
+    assert(type(directory) == 'string' and directory ~= '', 'Game profile directory unavailable')
+    return directory:gsub('\\', '/'):gsub('/+$', '') .. '/data/chainsword3d/chainsword_color.png'
+end
 local required = {'SetHiddenInGame','SetVisibility','SetCollisionEnabled','SetGenerateOverlapEvents',
     'SetMobility','SetCastShadow','SetOwnerNoSee','SetOnlyOwnerSee','CreateDynamicMaterialInstance',
     'SetRelativeScale3D','K2_DestroyComponent','GetNumSections','GetMaterial'}
@@ -413,7 +417,7 @@ local function create(pawn)
     local rendering_class = api:find_uobject('Class /Script/Engine.KismetRenderingLibrary')
     assert(valid(rendering_class) and rendering_class:find_function('ImportFileAsTexture2D'), 'Texture import unavailable')
     local rendering = rendering_class:get_class_default_object();assert(valid(rendering),'Texture library unavailable')
-    local texture = rendering:ImportFileAsTexture2D(pawn,TEXTURE)
+    local texture = rendering:ImportFileAsTexture2D(pawn,texture_path())
     assert(valid(texture),'Chainsword color texture failed to load')
     local dmi = owned:CreateDynamicMaterialInstance(0,material,fname('BoltgunChainsword3D'))
     assert(valid(dmi),'Owned material creation failed')

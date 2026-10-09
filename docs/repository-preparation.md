@@ -22,3 +22,11 @@ leave project-wide licensing to the maintainer, preserving known third-party per
 
 No live profile changes, game launch, injection, remote creation or publication are part
 of this work. Headset verification remains separate from offline tests.
+
+Validation: 139 Python/Lua cases and three converter cases pass; all four native
+harnesses and both MSVC `/W4 /WX` builds pass. Source-only archive builds and isolated
+deployment checks pass without the private archive or bundled Python dependencies.
+Independent review found and corrected the chainsword texture's absolute path and
+missing settings hash validation. Regression tests failed before each correction.
+Chainsword package 3 records the portability change and recognises package 2 upgrades;
+its runtime verification flag remains false.

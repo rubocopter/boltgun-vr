@@ -9,7 +9,7 @@
 | Two-hand aim | Proximity/recovery tests | Accuracy and ergonomics; shipped off |
 | FMalloc workaround | Configured | Clean exit on hardware |
 
-The maintained suite contains 136 Python/Lua cases, three converter cases and four
+The maintained suite contains 139 Python/Lua cases, three converter cases and four
 C++ harnesses. These validate simulated contracts and geometry, not headset correctness.
 
 The muzzle bridge accepts executable SHA-256

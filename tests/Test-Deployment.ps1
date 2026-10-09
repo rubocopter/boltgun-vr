@@ -35,6 +35,12 @@ $binding = @{ bindings = @{ '/actions/defaultopenxr' = @{ sources = @(@{
     inputs=@{click=@{output='/actions/defaultopenxr/in/systembutton'}}
 }) } } }
 $binding | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $bindingPath
+$settingsSource = Join-Path $copy 'profile\defaults\chainsword3d.default.settings'
+$settingsBytes = [IO.File]::ReadAllBytes($settingsSource)
+[IO.File]::WriteAllText($settingsSource, 'tampered_defaults=1')
+Expect-Rejection { & (Join-Path $copy 'Chainsword3D.ps1') -Mode install -ProfileRoot $profile }
+Assert (-not (Test-Path -LiteralPath (Join-Path $profile 'scripts\boltgun_chainsword.lua'))) 'Tampered defaults caused partial installation.'
+[IO.File]::WriteAllBytes($settingsSource, $settingsBytes)
 & (Join-Path $copy 'Install.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam
 Assert ((Hash (Join-Path $profile 'config.txt')) -eq (Hash (Join-Path $copy 'profile\config.txt'))) 'Base installation failed.'
 & (Join-Path $copy 'Bolter3D.ps1') -Mode preview -ProfileRoot $profile -DryRun

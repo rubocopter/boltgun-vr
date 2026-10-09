@@ -12,6 +12,10 @@ class ChainswordTests(unittest.TestCase):
         self.lua=fixture.lua;self.tick=fixture.tick;self.component=fixture.component
         self.lua.execute('''
         ctx.engine_thread=true
+        ctx.profile_root='D:/VR Profiles/Player/Boltgun'
+        uevr.params.functions.get_persistent_dir=function()
+          engine_only();return ctx.profile_root
+        end
         files['chainsword3d.mode']='preview'
         proc_class=class('Class /Script/ProceduralMeshComponent.ProceduralMeshComponent')
         secondary.get_short_name=function() engine_only();return 'Secondary Render Plane' end
@@ -39,6 +43,7 @@ class ChainswordTests(unittest.TestCase):
         rendering=object('Default__KismetRenderingLibrary',1202,rendering_class)
         rendering.ImportFileAsTexture2D=function(self,pawn,path)
           engine_only();ctx.imports=(ctx.imports or 0)+1
+          ctx.texture_path=path
           return not ctx.fail_texture and texture or nil
         end
         rendering_class.get_class_default_object=function()return rendering end
@@ -84,6 +89,22 @@ class ChainswordTests(unittest.TestCase):
         for _ in range(3):self.tick(1)
 
     def test_load_is_inert_until_engine_tick(self):self.assertEqual(self.eval('ctx.queries'),0)
+    def test_texture_uses_current_game_profile(self):
+        self.start()
+        self.assertEqual(self.eval('ctx.texture_path'),
+                         'D:/VR Profiles/Player/Boltgun/data/chainsword3d/chainsword_color.png')
+
+    def test_texture_normalizes_windows_profile_separator(self):
+        self.lua.execute(r"ctx.profile_root=[[D:\VR Profiles\Jugador\Boltgun\]]")
+        self.start()
+        self.assertEqual(self.eval('ctx.texture_path'),
+                         'D:/VR Profiles/Jugador/Boltgun/data/chainsword3d/chainsword_color.png')
+
+    def test_unavailable_profile_directory_preserves_sprite(self):
+        self.lua.execute('ctx.profile_root=nil')
+        self.start()
+        self.assertFalse(self.eval('secondary.hidden'))
+        self.assertEqual(self.eval('ctx.imports or 0'),0)
     def test_left_hand_model_hides_only_sword_sprite(self):
         self.start()
         self.assertEqual(self.eval('ctx.created'),1)

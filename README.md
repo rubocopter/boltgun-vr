@@ -3,12 +3,12 @@
 <p align="center">
 <b>Warhammer 40,000: Boltgun with tracked weapons and motion-controller controls.</b><br>
 A UEVR mod with a weapon-group wheel, ten optional 3D firearms and a tracked chainsword.<br>
-Windows · UEVR / OpenXR · Developed with PS VR2 Sense
+Windows Â· UEVR / OpenXR Â· Developed with PS VR2 Sense
 </p>
 
 <p align="center">
-<a href="docs/INSTALL.md">Installation</a> · <a href="docs/CONTROLS.md">Controls</a> ·
-<a href="docs/TROUBLESHOOTING.md">Troubleshooting</a> · <a href="docs/README.es.md">Español</a>
+<a href="docs/INSTALL.md">Installation</a> Â· <a href="docs/CONTROLS.md">Controls</a> Â·
+<a href="docs/TROUBLESHOOTING.md">Troubleshooting</a> Â· <a href="docs/README.es.md">EspaÃ±ol</a>
 </p>
 
 ## What changes in VR
@@ -23,7 +23,7 @@ Start Boltgun normally and inject UEVR. Once installed, the mod needs no extra l
 
 ## Current status
 
-Development snapshot: **profile v7, arsenal revision 12, chainsword package 2**.
+Development snapshot: **profile v7, arsenal revision 12, chainsword package 3**.
 Earlier videos confirmed the Bolter replacement and chainsword appearance/tracking.
 The latest muzzle coordinates, chainsword yaw correction and Codex changes still need
 headset validation. See [validation and limitations](docs/STATUS.md).

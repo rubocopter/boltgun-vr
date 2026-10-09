@@ -14,3 +14,6 @@ attack logic is retained. Unreal operations remain on the engine tick.
 
 `manifests` declare exact inputs/upgrades. `deployment.json` uses portable root tokens
 resolved by `tools/Paths.ps1`. Generated runtime DLLs live in ignored `build/plugins`.
+
+Chainsword texture paths are resolved from UEVR's current game profile on the engine tick,
+using [get_persistent_dir](https://docs.uevr.io/plugins/lua/cwrappers/UEVR_PluginFunctions.html).

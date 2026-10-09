@@ -6,6 +6,10 @@ param(
 $ErrorActionPreference='Stop'
 $taskRoot=$PSScriptRoot
 $package=Get-Content -LiteralPath (Join-Path $taskRoot 'manifests\chainsword3d.package.json') -Raw | ConvertFrom-Json
+$settingsSource=Join-Path $taskRoot $package.settingsSource
+if((Get-FileHash -LiteralPath $settingsSource -Algorithm SHA256).Hash -ne $package.settingsSha256){
+    throw 'Los ajustes predeterminados de la espada han cambiado; no se instala sin verificar.'
+}
 $taskProfile=[IO.Path]::GetFullPath($ProfileRoot).TrimEnd('\')+'\'
 $taskMode=Join-Path $taskProfile 'data\chainsword3d.mode'
 $taskSettings=Join-Path $taskProfile 'data\chainsword3d.settings'
@@ -49,7 +53,7 @@ foreach($file in $pending){
 }
 New-Item -ItemType Directory -Path (Join-Path $taskProfile 'data') -Force | Out-Null
 if(!(Test-Path -LiteralPath $taskSettings)){
-    Copy-Item -LiteralPath (Join-Path $taskRoot 'profile\defaults\chainsword3d.default.settings') -Destination $taskSettings
+    Copy-Item -LiteralPath $settingsSource -Destination $taskSettings
 }
 [IO.File]::WriteAllText($taskMode,($(if($Mode -eq 'install'){'preview'}else{'off'}))+[Environment]::NewLine,[Text.UTF8Encoding]::new($false))
 Write-Output $(if($Mode -eq 'install'){'Chainsword preparada para la siguiente inyeccion normal de UEVR; sin lanzar SteamVR.'}else{'Chainsword desactivada; su script retira el modelo y restaura el sprite en el siguiente tick.'})
