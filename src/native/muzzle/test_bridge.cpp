@@ -7,6 +7,12 @@ static int spawn_calls{};
 static Transform spawned{};
 static int flash_moves{};
 static int recoil_writes{};
+static int haptic_pulses{};
+static UEVR_InputSourceHandle right_source() {return reinterpret_cast<UEVR_InputSourceHandle>(1);}
+static void haptic(float delay,float duration,float frequency,float amplitude,UEVR_InputSourceHandle source) {
+    assert(delay==0&&duration==.04f&&frequency==90.f&&amplitude==.65f&&source==right_source());
+    ++haptic_pulses;
+}
 static UEVR_Vector3f recoil_location{};
 static UEVR_Quaternionf recoil_rotation{};
 static UEVR_UObjectHandle expired_object{};
@@ -160,7 +166,7 @@ int main() {
     sdk.functions=&funcs;sdk.uobject_array=&array;sdk.ustruct=&structs;sdk.fproperty=&props;
     sdk.ffield=&fields;sdk.ffield_class=&field_classes;sdk.fname=&names;
     sdk.fstructproperty=&struct_props;sdk.uscriptstruct=&script_structs;
-    UEVR_VRData vr{};vr.is_hmd_active=active;vr.is_using_controllers=active;
+    UEVR_VRData vr{};vr.trigger_haptic_vibration=haptic;vr.get_right_joystick_source=right_source;vr.is_hmd_active=active;vr.is_using_controllers=active;
     UEVR_PluginFunctions functions{};functions.is_drawing_ui=drawing;
     functions.log_info=log_info;functions.log_warn=log_info;
     UEVR_PluginInitializeParam api{};api.sdk=&sdk;api.vr=&vr;api.functions=&functions;
@@ -322,6 +328,17 @@ int main() {
         on_event("boltgun.muzzle.v1","1|2|3|80|0|55");assert(!g_enabled);
         spoof_class=false;machine_spirit=false;
     }
+    for(int type=0;type<10;++type) {
+        selected_type=type;
+        on_event("boltgun.muzzle.v1","1|2|3|80|0|55|4|12|24|0|0|0|0|1");
+        assert(g_enabled&&g_lease.visual==id(4)&&g_lease.profile==type);
+        g_lease.created=GetTickCount64()-200;
+        spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+        on_tick(nullptr,.016f);
+        assert(recoil_location.y<22&&spawned.rotation.z==shot.rotation.z);
+        on_event("boltgun.muzzle.v1","off");on_tick(nullptr,.016f);
+        assert(std::fabs(recoil_location.y-24)<.001f);
+    }
     selected_type=0;
     // An extended Bolter lease has a stationary firing anchor (3) and a
     // distinct visual mesh (4). Only successful actual spawns kick the visual.
@@ -333,12 +350,24 @@ int main() {
     on_tick(nullptr,.016f);
     assert(recoil_writes==0);
     const auto before_recoil=spawn_calls;
+    const int pulses_before=haptic_pulses;g_haptic_last=0;
     spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
     assert(spawn_calls==before_recoil+1&&spawned.rotation.z==shot.rotation.z);
     assert(std::fabs(spawned.translation.x-433.90707f)<.002f);
     on_tick(nullptr,.016f);
+    assert(haptic_pulses==pulses_before+1);
     assert(recoil_writes==1&&recoil_location.y<24&&recoil_rotation.x>0);
     assert(mesh_pose.translation.x==400); // Stable firing anchor never moves.
+    g_haptic_last=GetTickCount64();
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,0);
+    assert(haptic_pulses==pulses_before+1); // Coalesce rapid confirmed shots.
+    g_haptic_last=GetTickCount64()-60;
+    fail_spawn=true;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,0);
+    assert(haptic_pulses==pulses_before+1); // Failed spawn never vibrates.
+    fail_spawn=false;
     const float kicked=recoil_location.y;
     for(int i=0;i<60;++i) on_tick(nullptr,.016f);
     assert(recoil_location.y>kicked&&std::fabs(recoil_location.y-24)<.03f);
@@ -355,7 +384,7 @@ int main() {
     assert(!g_enabled); // Invalid quaternion rejected.
     selected_type=1;
     on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
-    assert(!g_enabled); // Only the Bolter can opt in.
+    assert(g_enabled&&g_lease.profile==1); // Every catalog firearm can opt in.
     selected_type=0;
     // Off can be sent on the UI thread and followed by a fresh heartbeat
     // before the next native tick. Never replay a shot from the old session.

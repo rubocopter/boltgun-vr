@@ -60,6 +60,8 @@ static Vec3 g_recoil_base{};
 static Quat g_recoil_rotation{0,0,0,1};
 static float g_recoil_amount{};
 static unsigned g_recoil_pending{};
+static ULONGLONG g_haptic_last{};
+static bool g_haptic_failed{};
 static bool g_recoil_dirty{};
 static std::atomic<bool> g_recoil_cancelled{};
 static bool live(UEVR_UObjectHandle obj) {
@@ -117,7 +119,7 @@ static bool reset_recoil() {
 }
 static void tick_recoil_inner(float delta) {
     const auto now=GetTickCount64();
-    if(g_faulted.load()||!g_enabled.load()||!g_lease.ready||g_lease.profile!=0||!g_lease.visual||
+    if(g_faulted.load()||!g_enabled.load()||!g_lease.ready||!g_lease.visual||
        !may_override(true,now,g_lease.heartbeat,
                      reinterpret_cast<uintptr_t>(g_lease.weapon),
                      reinterpret_cast<uintptr_t>(g_lease.weapon),
@@ -134,8 +136,20 @@ static void tick_recoil_inner(float delta) {
     g_recoil_target=g_lease.visual;g_recoil_owner=g_lease.pawn;
     g_recoil_base=g_lease.base_location;g_recoil_rotation=g_lease.base_rotation;
     const float elapsed=std::isfinite(delta)?(delta<0?0:(delta>.1f?.1f:delta)):0;
-    const float added=static_cast<float>(g_recoil_pending)*1.1f;
+    const float added=static_cast<float>(g_recoil_pending)*2.8f;
     g_recoil_amount=(g_recoil_amount+added>5.f)?5.f:g_recoil_amount+added;
+    // Consume confirmed shots on the engine tick, coalescing pellet/burst
+    // spawns and limiting automatic-fire pulses to at most 20 per second.
+    if(g_recoil_pending&&!g_haptic_failed&&g_api->vr->get_right_joystick_source&&
+       g_api->vr->trigger_haptic_vibration&&(!g_haptic_last||now-g_haptic_last>=50)) {
+        __try {
+            const auto source=g_api->vr->get_right_joystick_source();
+            if(source) {
+                g_api->vr->trigger_haptic_vibration(0,.04f,90.f,.65f,source);
+                g_haptic_last=now;
+            }
+        } __except(EXCEPTION_EXECUTE_HANDLER) {g_haptic_failed=true;}
+    }
     g_recoil_pending=0;
     g_recoil_amount*=std::exp(-12.f*elapsed);
     if(g_recoil_amount<.003f) {
@@ -209,7 +223,7 @@ static UEVR_UObjectHandle spawn_detour(UEVR_UObjectHandle world,UEVR_UClassHandl
     updated.rotation=original->rotation;
     g_spawn_redirected.fetch_add(1,std::memory_order_relaxed);
     const auto spawned=g_spawn_original(world,cls,data,&updated,weapon);
-    if(spawned&&g_lease.profile==0&&g_lease.visual&&g_recoil_pending<8)
+    if(spawned&&g_lease.visual&&g_recoil_pending<8)
         ++g_recoil_pending;
     return spawned;
 }
@@ -498,7 +512,7 @@ static void event_inner(const char* text) {
     if(!mesh_data) return;std::memcpy(&asset,mesh_data,sizeof(asset));
     if(!live(asset)||asset!=g_api->sdk->uobject_array->find_uobject(weapon_profiles[profile].mesh)) return;
     if(has_visual) {
-        if(profile!=0||!visual||visual==mesh||!live(visual)||
+        if(!visual||visual==mesh||!live(visual)||
            g_api->sdk->uobject->get_outer(visual)!=pawn||
            !g_api->sdk->uobject->is_a(visual,g_mesh_class)) return;
         const auto visual_data=g_api->sdk->uobject->get_property_data(visual,L"StaticMesh");
@@ -612,6 +626,6 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
         reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))+0x10616a0,
         reinterpret_cast<void*>(spawn_detour),reinterpret_cast<void**>(&g_spawn_original));
     if(id<0) api->functions->log_warn("[Boltgun muzzle 3D] Hook unavailable; retaining native firing");
-    else api->functions->log_info("[Boltgun muzzle 3D] Revision 13: exact executable verified; ten-firearm muzzle bridge and isolated Bolter recoil prepared");
+    else api->functions->log_info("[Boltgun muzzle 3D] Revision 14: ten-firearm isolated visual recoil; successful-spawn feedback");
     return true;
 }

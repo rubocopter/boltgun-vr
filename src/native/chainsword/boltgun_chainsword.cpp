@@ -223,6 +223,19 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
     file.seekg(0);std::vector<unsigned char> bytes(static_cast<size_t>(size));
     file.read(reinterpret_cast<char*>(bytes.data()),size);
     if(!file||!chainsword::decode(bytes,mesh))return true;
+    // Lua fs.read accesses the same profile's data folder, but the Lua API
+    // has no get_persistent_dir. Supply a UTF-8 absolute filename only after
+    // the actual native mesh and packaged texture are present.
+    const auto root=std::filesystem::path(dir);
+    const auto texture=root/L"data/chainsword3d/chainsword_color.png";
+    if(!std::filesystem::is_regular_file(texture))return true;
+    const auto path=texture.generic_u8string();
+    if(path.empty()||path.find('\n')!=std::string::npos||path.find('\r')!=std::string::npos)return true;
+    std::ofstream hint(root/L"data/chainsword3d.texture_path",std::ios::binary|std::ios::trunc);
+    if(!hint)return true;
+    hint.write(path.data(),static_cast<std::streamsize>(path.size()));
+    hint.close();
+    if(!hint)return true;
     if(!teeth.prepare(mesh))api->functions->log_info("[Boltgun Chainsword 3D] Teeth not separable; static model retained");
     if(!api->sdk->callbacks->on_pre_engine_tick||!api->callbacks->on_custom_event)return true;
     api->sdk->callbacks->on_pre_engine_tick(tick);api->callbacks->on_custom_event(event);

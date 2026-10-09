@@ -491,7 +491,7 @@ local function create(pawn, mesh, material, weapon, profile)
     -- The static mesh already has its own authored material slots. An unloaded
     -- override must not prevent the geometry from appearing.
     if valid(material) then owned:SetMaterial(0, material) end
-    if profile.id == 'bolter' and settings.recoil_enabled == 1 and
+    if settings.recoil_enabled == 1 and
         settings.muzzle_enabled == 1 and uevr.params.functions.dispatch_custom_event ~= nil then
         anchor = api:add_component_by_class(pawn, class, false)
         assert(valid(anchor) and anchor ~= owned and anchor:get_outer() == pawn,
@@ -563,7 +563,7 @@ local function step(delta)
         cleanup()
         error('Preview owner changed; module disabled after restoring owned components')
     end
-    if owned ~= nil and profile.id == 'bolter' and
+    if owned ~= nil and
         (anchor ~= nil) ~= (settings.recoil_enabled == 1 and settings.muzzle_enabled == 1 and
             uevr.params.functions.dispatch_custom_event ~= nil) then cleanup() end
     if owned ~= nil then

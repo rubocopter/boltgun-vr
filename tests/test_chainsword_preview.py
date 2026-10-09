@@ -12,10 +12,9 @@ class ChainswordTests(unittest.TestCase):
         self.lua=fixture.lua;self.tick=fixture.tick;self.component=fixture.component
         self.lua.execute('''
         ctx.engine_thread=true
-        ctx.profile_root='D:/VR Profiles/Player/Boltgun'
-        uevr.params.functions.get_persistent_dir=function()
-          engine_only();return ctx.profile_root
-        end
+        -- Deliberately no Lua get_persistent_dir; the real backend lacks it.
+        uevr.params.functions.get_persistent_dir=nil
+        files['chainsword3d.texture_path']='D:/VR Profiles/Player/Boltgun/data/chainsword3d/chainsword_color.png'
         files['chainsword3d.mode']='preview'
         proc_class=class('Class /Script/ProceduralMeshComponent.ProceduralMeshComponent')
         secondary.get_short_name=function() engine_only();return 'Secondary Render Plane' end
@@ -95,16 +94,26 @@ class ChainswordTests(unittest.TestCase):
                          'D:/VR Profiles/Player/Boltgun/data/chainsword3d/chainsword_color.png')
 
     def test_texture_normalizes_windows_profile_separator(self):
-        self.lua.execute(r"ctx.profile_root=[[D:\VR Profiles\Jugador\Boltgun\]]")
+        self.lua.execute(r"files['chainsword3d.texture_path']=[[D:\VR Profiles\Jugador\Boltgun\data\chainsword3d\chainsword_color.png]]")
         self.start()
         self.assertEqual(self.eval('ctx.texture_path'),
                          'D:/VR Profiles/Jugador/Boltgun/data/chainsword3d/chainsword_color.png')
 
     def test_unavailable_profile_directory_preserves_sprite(self):
-        self.lua.execute('ctx.profile_root=nil')
+        self.lua.execute("files['chainsword3d.texture_path']=''")
         self.start()
         self.assertFalse(self.eval('secondary.hidden'))
         self.assertEqual(self.eval('ctx.imports or 0'),0)
+    def test_invalid_native_texture_hint_preserves_sprite(self):
+        for path in ('relative/data/chainsword3d/chainsword_color.png',
+                     'D:/wrong.png', 'D:/bad\n/data/chainsword3d/chainsword_color.png'):
+            with self.subTest(path=path):
+                self.setUp()
+                self.lua.globals().files['chainsword3d.texture_path'] = path
+                self.start()
+                self.assertFalse(self.eval('secondary.hidden'))
+                self.assertEqual(self.eval('ctx.imports or 0'), 0)
+
     def test_left_hand_model_hides_only_sword_sprite(self):
         self.start()
         self.assertEqual(self.eval('ctx.created'),1)

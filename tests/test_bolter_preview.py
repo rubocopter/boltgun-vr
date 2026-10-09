@@ -312,6 +312,31 @@ class BolterPreviewTests(unittest.TestCase):
         self.assertFalse(c.hidden)
         self.assertAlmostEqual(c.scale,.5)
 
+    def test_all_firearms_use_separate_recoil_anchor(self):
+        catalog = json.loads((ROOT / 'assets/catalog/original_weapon_catalog.json').read_text())
+        for item in catalog:
+            with self.subTest(weapon=item['weapon_type']):
+                self.setUp()
+                self.lua.globals().files['bolter3d.settings'] = 'recoil_enabled=1'
+                klass = 'BlueprintGeneratedClass ' + item['weapon_classes'][0]
+                mesh_name = item['mesh_object']
+                self.lua.execute(f"""weapon.get_class=function() engine_only();return class({json.dumps(klass)}) end
+                    mesh.get_full_name=function() engine_only();return {json.dumps(mesh_name)} end
+                    assets.GetAsset=function() engine_only();return mesh end""")
+                self.tick()
+                ctx = self.lua.globals().ctx
+                self.assertEqual(ctx.created, 2)
+                self.assertTrue(ctx.components[1].visible)
+                self.assertFalse(ctx.components[2].visible)
+                events = [e.data for e in ctx.events.values() if e.data != 'off']
+                parts = events[-1].split('|')
+                self.assertEqual(len(parts), 14)
+                self.assertNotEqual(parts[2], parts[6])
+                self.lua.globals().files['bolter3d.mode'] = 'off'
+                self.tick(1)
+                self.assertEqual(ctx.destroyed, 2)
+                self.assertTrue(self.lua.globals().primary.visible)
+
     def test_bolter_recoil_uses_hidden_stable_muzzle_reference(self):
         self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
         self.tick()

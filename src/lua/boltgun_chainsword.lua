@@ -7,9 +7,16 @@ local CLASS = 'Class /Script/ProceduralMeshComponent.ProceduralMeshComponent'
 local PLANE_CLASS = 'Class /Script/Engine.StaticMeshComponent'
 local MATERIAL = 'MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun'
 local function texture_path()
-    local directory = uevr.params.functions.get_persistent_dir()
-    assert(type(directory) == 'string' and directory ~= '', 'Game profile directory unavailable')
-    return directory:gsub('\\', '/'):gsub('/+$', '') .. '/data/chainsword3d/chainsword_color.png'
+    -- The native bridge resolves the active profile with the UEVR C API and
+    -- writes this hint into the same persistent data folder used by fs.read.
+    -- UEVR's Lua functions table does not expose get_persistent_dir.
+    local path = fs.read('chainsword3d.texture_path')
+    assert(type(path) == 'string', 'Native texture path unavailable')
+    path = path:gsub('\\', '/')
+    assert(path:match('^%a:/') and
+        path:sub(-#'/data/chainsword3d/chainsword_color.png') == '/data/chainsword3d/chainsword_color.png' and
+        not path:find('[\r\n]'), 'Native texture path unavailable')
+    return path
 end
 local required = {'SetHiddenInGame','SetVisibility','SetCollisionEnabled','SetGenerateOverlapEvents',
     'SetMobility','SetCastShadow','SetOwnerNoSee','SetOnlyOwnerSee','CreateDynamicMaterialInstance',
