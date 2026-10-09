@@ -71,7 +71,22 @@ script, siempre en el tick del motor y sobre identidades verificadas.
 
 Se mantienen L2, las reglas de ataque, los sonidos y los efectos del juego.
 No se aÃ±aden ataques por gestos ni se recolocan las chispas. El movimiento
-visible sigue el mando; la cadena todavÃ­a no tiene animaciÃ³n propia.
+visible sigue el mando. La malla externa carece de rig, pero el puente nativo
+identifica 24 piezas geomÃ©tricas independientes de la cadena, incluidas
+las de la punta, y aplica una oscilaciÃ³n progresiva de hasta 0,38 cm
+al mantener el gatillo izquierdo de UEVR (`/actions/default/in/Trigger`, L2).
+El movimiento de dientes se actualiza como mÃ¡ximo unas 25 veces por segundo
+mediante `UpdateMeshSection`, conservando la hoja, empuÃ±adura, normales,
+textura y ausencia de colisiones. Al soltar L2 se restaura la malla exacta.
+No se modifica la activaciÃ³n de la habilidad del juego.
+
+La actualizaciÃ³n usa el mismo control de hilo, pawn, propietario, tipo y
+parÃ¡metros reflejados del puente original. Un identificador izquierdo cero es
+vÃ¡lido en OpenXR. Si el modelo no contiene las piezas esperadas, falta la
+acciÃ³n o `UpdateMeshSection` no cumple el contrato, la espada permanece
+estÃ¡tica y se registra el motivo. La animaciÃ³n, sus tiempos y la sincronÃ­a
+visual con la habilidad **aÃºn deben probarse en PSVR2/UEVR**; los tests
+offline solo verifican transformaciÃ³n, reversibilidad y llamadas de puente.
 
 ## InstalaciÃ³n y ajustes
 

@@ -13,9 +13,18 @@ static const UEVR_PluginInitializeParam* api{};
 static std::atomic<DWORD> engine_thread{};
 static bool disabled{};
 static chainsword::Mesh mesh;
+static chainsword::ToothAnimation teeth;
+static UEVR_UObjectHandle animated_pawn{},animated_component{};
+static UEVR_ActionHandle left_trigger{};
+static bool animation_disabled{},animation_moving{},trigger_warning{};
+static float animation_phase{},animation_elapsed{};
 struct Array {void* data{};int32_t num{},max{};};
 static_assert(sizeof(Array)==16 && sizeof(chainsword::V3)==12 && sizeof(chainsword::V2)==8);
 static bool live(UEVR_UObjectHandle obj){return obj&&api->sdk->uobject_hook->exists(obj);}
+static bool owned_component(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component){
+    return live(pawn)&&live(component)&&pawn==api->sdk->functions->get_local_pawn(0)&&
+        api->sdk->uobject->get_outer(component)==pawn;
+}
 static bool field_type(UEVR_FPropertyHandle p,const wchar_t* expected) {
     if(!p)return false;
     auto cls=api->sdk->ffield->get_class(reinterpret_cast<UEVR_FFieldHandle>(p));
@@ -54,8 +63,7 @@ struct EngineArrays {
     }
 };
 static bool fill(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component) {
-    if(!live(pawn)||!live(component)||pawn!=api->sdk->functions->get_local_pawn(0)||
-       api->sdk->uobject->get_outer(component)!=pawn)return false;
+    if(!owned_component(pawn,component))return false;
     const auto cls=reinterpret_cast<UEVR_UClassHandle>(api->sdk->uobject_array->find_uobject(
         L"Class /Script/ProceduralMeshComponent.ProceduralMeshComponent"));
     if(!live(reinterpret_cast<UEVR_UObjectHandle>(cls))||api->sdk->uobject->get_class(component)!=cls)return false;
@@ -91,11 +99,88 @@ static bool fill(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component) {
     api->sdk->uobject->process_event(component,fn,params.data());
     return true;
 }
-static void tick(UEVR_UGameEngineHandle,float){engine_thread.store(GetCurrentThreadId());}
+static bool update_section(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component){
+    if(!owned_component(pawn,component))return false;
+    const auto cls=reinterpret_cast<UEVR_UClassHandle>(api->sdk->uobject_array->find_uobject(
+        L"Class /Script/ProceduralMeshComponent.ProceduralMeshComponent"));
+    if(!live(reinterpret_cast<UEVR_UObjectHandle>(cls))||api->sdk->uobject->get_class(component)!=cls)return false;
+    const auto fn=api->sdk->ustruct->find_function(reinterpret_cast<UEVR_UStructHandle>(cls),L"UpdateMeshSection");
+    if(!live(reinterpret_cast<UEVR_UObjectHandle>(fn))||!(api->sdk->ufunction->get_function_flags(fn)&0x400))return false;
+    const int size=api->sdk->ustruct->get_properties_size(reinterpret_cast<UEVR_UStructHandle>(fn));
+    if(size<88||size>256)return false;
+    int section{};
+    if(!offset(fn,L"SectionIndex",L"IntProperty",4,section))return false;
+    const wchar_t* names[]={L"Vertices",L"Normals",L"UV0",L"VertexColors",L"Tangents"};
+    const wchar_t* types[]={L"Vector",L"Vector",L"Vector2D",L"Color",L"ProcMeshTangent"};
+    const int sizes[]={12,12,8,4,16};
+    std::array<int,5> offsets{};
+    for(size_t i=0;i<5;++i){
+        auto p=property(fn,names[i]);
+        if(!offset(fn,names[i],L"ArrayProperty",16,offsets[i])||
+           !(api->sdk->fproperty->get_property_flags(p)&2)||!api->sdk->fproperty->is_reference_param(p))return false;
+        auto inner=api->sdk->farrayproperty->get_inner(reinterpret_cast<UEVR_FArrayPropertyHandle>(p));
+        if(!struct_type(inner,types[i],sizes[i]))return false;
+    }
+    auto allocator=api->sdk->malloc->get();if(!allocator)return false;
+    alignas(16) std::array<unsigned char,256> params{};
+    EngineArrays storage;storage.allocator=allocator;
+    const Array values[]={storage.copy(mesh.positions,0),storage.copy(mesh.normals,1),storage.copy(mesh.uvs,2)};
+    for(size_t i=0;i<3;++i)std::memcpy(params.data()+offsets[i],&values[i],16);
+    api->sdk->uobject->process_event(component,fn,params.data());
+    return true;
+}
+static void tick(UEVR_UGameEngineHandle,float delta){
+    engine_thread.store(GetCurrentThreadId());
+    if(disabled||animation_disabled||!animated_pawn||!animated_component||teeth.teeth.empty())return;
+    __try{
+        if(!owned_component(animated_pawn,animated_component)){
+            animated_pawn=nullptr;animated_component=nullptr;animation_moving=false;return;
+        }
+        const bool ready=api->vr->is_hmd_active()&&api->vr->is_using_controllers()&&
+            !api->functions->is_drawing_ui();
+        if(ready&&!left_trigger){
+            left_trigger=api->vr->get_action_handle("/actions/default/in/Trigger");
+            if(!left_trigger&&!trigger_warning){
+                trigger_warning=true;
+                api->functions->log_info("[Boltgun Chainsword 3D] Left trigger action unavailable; static geometry retained");
+            }
+        }
+        const auto left=ready?api->vr->get_left_joystick_source():nullptr;
+        // OpenXR's left-hand source can legitimately be the zero handle.
+        const bool pressed=ready&&left_trigger&&(left||api->vr->is_openxr())&&
+            api->vr->is_action_active(left_trigger,left);
+        const float seconds=std::isfinite(delta)?(std::min)(.1f,(std::max)(0.f,delta)):0.f;
+        if(pressed){
+            animation_phase=std::fmod(animation_phase+seconds*6.2831853f*6.f,6.2831853f);
+            animation_elapsed+=seconds;
+            if(animation_elapsed<.04f)return; // ~25 geometry updates/sec, no collision rebuild.
+            animation_elapsed=0;
+            teeth.pose(mesh,animation_phase);
+        }else{
+            if(!animation_moving)return;
+            teeth.reset(mesh);animation_elapsed=0;
+        }
+        if(!update_section(animated_pawn,animated_component)){
+            animation_disabled=true;teeth.reset(mesh);
+            api->functions->log_info("[Boltgun Chainsword 3D] UpdateMeshSection unavailable; static geometry retained");
+            return;
+        }
+        animation_moving=pressed;
+    }__except(EXCEPTION_EXECUTE_HANDLER){
+        animation_disabled=true;
+        teeth.reset(mesh);
+        api->functions->log_error("[Boltgun Chainsword 3D] Tooth update disabled after native API fault");
+    }
+}
 static void event_inner(const char* data) {
     unsigned long long owner{},component{};int consumed{};
     if(!data||sscanf_s(data,"%llu|%llu%n",&owner,&component,&consumed)!=2||data[consumed])return;
-    const bool ok=fill(reinterpret_cast<UEVR_UObjectHandle>(owner),reinterpret_cast<UEVR_UObjectHandle>(component));
+    teeth.reset(mesh);
+    animation_moving=false;animation_elapsed=0;
+    const auto pawn=reinterpret_cast<UEVR_UObjectHandle>(owner);
+    const auto visual=reinterpret_cast<UEVR_UObjectHandle>(component);
+    const bool ok=fill(pawn,visual);
+    animated_pawn=ok?pawn:nullptr;animated_component=ok?visual:nullptr;
     api->functions->log_info(ok?"[Boltgun Chainsword 3D] Geometry submitted (7814 source faces, double-sided)":
                               "[Boltgun Chainsword 3D] Runtime contract unavailable; sprite retained");
 }
@@ -138,6 +223,7 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
     file.seekg(0);std::vector<unsigned char> bytes(static_cast<size_t>(size));
     file.read(reinterpret_cast<char*>(bytes.data()),size);
     if(!file||!chainsword::decode(bytes,mesh))return true;
+    if(!teeth.prepare(mesh))api->functions->log_info("[Boltgun Chainsword 3D] Teeth not separable; static model retained");
     if(!api->sdk->callbacks->on_pre_engine_tick||!api->callbacks->on_custom_event)return true;
     api->sdk->callbacks->on_pre_engine_tick(tick);api->callbacks->on_custom_event(event);
     api->functions->log_info("[Boltgun Chainsword 3D] External mesh bridge loaded; no native hooks installed");

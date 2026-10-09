@@ -93,7 +93,7 @@
     "source": "build\\plugins\\boltgun_chainsword.dll",
     "target": "${ProfileRoot}\\plugins\\boltgun_chainsword.dll",
     "backup": null,
-    "sha256": "299AA89DA0BFA3594BC07935A7FBCACA553F515C78884A42813505D1B818F409",
+    "sha256": "9CEA66F61F16B67DE5BAA89C652B9D501FA5D1B2965436499C57F53A2528F8A9",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional external Chainsword; installed by Chainsword3D.ps1, removed by original restoration"
