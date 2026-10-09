@@ -26,6 +26,6 @@ these credits with the assets. Retain them with redistributed copies.
 Original game assets belong to their rights holders. Firearm meshes/materials resolve
 from the owned game's runtime; only technical identifiers/metadata are supplied here.
 No extracted game models, textures, executable or PAK files are included.
-The baseline profile is retained for existing restore semantics; establish its original
-authorship before claiming a project-wide license over it.
+The original starter profile is not bundled. Installation backs up the actual
+user files (or records their absence) to a private SHA-256-verified snapshot.
 Lupa/Pillow are installed by developers through pip, not redistributed here.

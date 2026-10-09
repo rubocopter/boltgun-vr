@@ -5,12 +5,12 @@ de armas, diez armas 3D opcionales, espada sierra izquierda y ajuste del Codex.
 Puedes abrir Boltgun y el inyector oficial con el nuevo acceso directo local;
 la inyección en UEVR todavía requiere un clic en cada partida.
 
-La revisión 13 añade retroceso visual al Bolter al disparar y necesita comprobarlo
-en visor, junto con los últimos ajustes del arsenal. Las pruebas verifican
-lógica y contratos, no la alineación real de todas las armas. No hay versión pública
-todavía. Se puede generar un ZIP local con las DLL ya compiladas para facilitar
-las pruebas. El instalador guiado exige primero generar el perfil original
-mediante UEVR; no incluye ni descarga el inyector.
+La revisión 15 incorpora diagnósticos de los efectos del arsenal. El retroceso,
+la vibración y la alineación necesitan una nueva comprobación en visor.
+Las pruebas automatizadas verifican contratos, no la colocación real de las armas.
+Todavía no hay una versión pública; se puede generar un ZIP local con las DLL
+compiladas. El instalador admite perfiles vacíos y guarda una copia exacta
+del estado previo. UEVR se obtiene por separado y no se descarga automáticamente.
 
 - [Instalación fácil paso a paso](INSTALACION-FACIL.es.md)
 - [Instalación y recuperación](INSTALL.md)

@@ -7,10 +7,12 @@ no published release. Keep Boltgun closed during installation/restoration.
 
 ## Base profile
 
-Run `Install.ps1` or `Reinstalar mejoras.cmd` from the repository. It accepts only
-recognised original/current hashes and rejects missing original `config.txt`, `Engine.ini`
-or `Input.ini`, preserving unknown modifications. It is not yet a general fresh-profile
-installer. Do not overwrite your configuration with the bundled baseline to bypass checks.
+Run `scripts/Install.ps1` from the repository (or the guided installer below).
+Missing profile and game INI files are supported on a fresh Windows installation.
+Existing files are replaced only if their hashes match an accepted known state;
+unknown edits are preserved and block installation. The installer records exact
+pre-install bytes, including which files did not previously exist, in a private
+`backups/install/<profile-key>/` snapshot before writing anything.
 
 Defaults follow the current Windows user:
 
@@ -25,19 +27,19 @@ Oculus Touch binding once for the Sense Options/Create patch. Binding backups ar
 under `backups/steamvr-runtime`. For custom locations:
 
 ```powershell
-.\Install.ps1 -ProfileRoot 'D:\VR\Boltgun' -GameConfigRoot 'D:\Config\Boltgun' -SteamBindingRoot 'D:\Steam\config\openxr'
+.\scripts\Install.ps1 -ProfileRoot 'D:\VR\Boltgun' -GameConfigRoot 'D:\Config\Boltgun' -SteamBindingRoot 'D:\Steam\config\openxr'
 ```
 
 The base installer does not activate optional 3D modules. `Instalar Boltgun VR.cmd`
-asks whether to enable them and calls `Setup-BoltgunVR.ps1`, which checks the
+asks whether to enable them and calls `scripts/Setup-BoltgunVR.ps1`, which checks the
 user-provided official UEVR path and the current installation before saving
 launcher settings. The launcher opens Steam and UEVR; injection remains manual.
 
 ## Optional 3D modules
 
 ```powershell
-.\Bolter3D.ps1 -Mode preview -DryRun
-.\Chainsword3D.ps1 -Mode install -DryRun
+.\scripts\Bolter3D.ps1 -Mode preview -DryRun
+.\scripts\Chainsword3D.ps1 -Mode install -DryRun
 # Remove -DryRun to install, with the game closed.
 ```
 
@@ -51,19 +53,20 @@ Start the game and inject UEVR normally. See [STATUS.md](STATUS.md) for validati
 ## Disable and restore
 
 ```powershell
-.\Bolter3D.ps1 -Mode off
-.\Chainsword3D.ps1 -Mode off
+.\scripts\Bolter3D.ps1 -Mode off
+.\scripts\Chainsword3D.ps1 -Mode off
 ```
 
 These commands leave files and calibration in place and set modules inactive.
-`Restore.ps1` / `Restaurar original.cmd` restore the **bundled recognised baseline**,
-not an arbitrary user's pre-install state. They replace declared original configs and
-remove declared added files, including optional settings. `Use-Baseline.ps1` /
-`Perfil base original.cmd` do the same and enable the FMalloc workaround.
-Back up custom calibration before either restoration. These commands do not restore
-SteamVR bindings; recover those separately from their backups.
+`scripts/Restore.ps1` uses the **actual pre-install snapshot**, verifies its SHA-256
+hashes, restores replaced files and removes only files absent before installation.
+It removes exact, unchanged optional modules, but keeps modified calibration and
+unknown files. The original-profile workaround and legacy batch wrappers were retired.
+Keep the original installer folder and its ignored `backups/` directory; without
+the snapshot, automated restoration cannot reconstruct a user's previous files.
+SteamVR bindings have separate backups under `backups/steamvr-runtime`.
 
-`Elegir-giro.ps1 -Mode Snap30`, `Snap45`, `Snap60` or `Smooth` changes the source and
+`scripts/Elegir-giro.ps1 -Mode Snap30`, `Snap45`, `Snap60` or `Smooth` changes the source and
 installed profile, updates the manifest and retains a backup. Run with the game closed.
-`Comprobar-perfil.ps1` checks installed hashes/binding without repairs. A mismatch is
+`scripts/Comprobar-perfil.ps1` checks installed hashes/binding without repairs. A mismatch is
 not permission to overwrite the file.

@@ -15,7 +15,7 @@ Los ajustes distribuidos incluyen `recoil_enabled=1`; `recoil_enabled=0` vuelve
 al modelo estático. La opción requiere `muzzle_enabled=1`. Si la configuración
 personalizada no tiene esta clave, sigue desactivada hasta añadirla. La revisión
 está preparada en el repositorio y pendiente de instalación/prueba en PS VR2.
-Consulta [los cambios y pruebas pendientes](2026-10-09-revision13.md).
+Consulta [los cambios y pruebas pendientes](history/2026-10-09-revision13.md).
 
 ## Arsenal y puente de origen
 
@@ -62,8 +62,8 @@ comprobar en VR quÃ© efectos quedan alineados en cada arma.
 
 La instalaciÃ³n mantiene `bolter3d.mode=preview` y el nombre heredado del
 script por compatibilidad con perfiles ya instalados. Se utiliza
-`Bolter3D.ps1 -Mode preview` o `Probar bolter 3D.cmd` una vez; en adelante
-solo hay que iniciar Boltgun e inyectar UEVR. `Bolter3D.ps1 -Mode off` desactiva
+`scripts/Bolter3D.ps1 -Mode preview` una vez; en adelante
+solo hay que iniciar Boltgun e inyectar UEVR. `scripts/Bolter3D.ps1 -Mode off` desactiva
 todo el arsenal. Se conserva una copia de seguridad de la versiÃ³n anterior
 en `backups/bolter3d/`.
 

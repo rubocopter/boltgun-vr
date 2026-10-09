@@ -5,7 +5,7 @@
 
 ## Revision 15: passive effect diagnostics
 
-For the current bridge, see the [diagnostic guide](2026-10-09-revision15.md).
+For the current bridge, see the [diagnostic guide](history/2026-10-09-revision15.md).
 Shot, recoil and haptic outcomes are logged for up to eight six-second
 windows after an owned firearm lease is acquired. No new firing hooks or
 effects are introduced. Reports from the previous headset run say gameplay
@@ -58,7 +58,7 @@ blocking new allocation. The record also survives expiry of the original pawn.
 
 Offline tests cover successful/failed spawns, stable firing origins, capped
 bursts, settling, cancellation, invalid events, expired pawns and simulated API
-faults. See [revision 13](2026-10-09-revision13.md) for the required headset checks.
+faults. See [revision 13](history/2026-10-09-revision13.md) for the required headset checks.
 All ten firearm profiles acquired this optional recoil path in revision 14.
 
 ## Revision 12: all ten firearms
@@ -254,7 +254,7 @@ muzzle_z=53
 Coordinates are unscaled mesh centimetres in UE axes. The landmark is
 estimated from real geometry, not a verified authored socket. Set
 `muzzle_enabled=0` to keep the 3D weapon with the previous native firing
-calculation; settings reload automatically. `Desactivar bolter 3D.cmd` retires
+calculation; settings reload automatically. `scripts/Bolter3D.ps1 -Mode off` retires
 the whole replacement. Install/update the DLL with the game closed.
 
 `Build.ps1` compiles/runs the real C++ geometry and detour harnesses, then

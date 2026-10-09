@@ -46,8 +46,9 @@ have not been validated. The muzzle bridge accepts one exact executable hash.
 
 There is no public release or download yet. Maintainers can build a local player
 ZIP with verified native DLLs via `tools/Package-Setup.ps1`. This package does
-not contain UEVR. The guided installer requires a recognised UEVR profile and
-game configuration, created by an initial manual UEVR injection.
+not contain UEVR. The guided installer can create files in an empty profile.
+The first injection is only needed to generate a real SteamVR controller
+binding; run the installer again afterwards for the Options/Create mapping.
 Read the [quick start](docs/EASY-SETUP.md) ([Español](docs/INSTALACION-FACIL.es.md))
 or [advanced installation](docs/INSTALL.md) before using it.
 
@@ -60,7 +61,7 @@ or [advanced installation](docs/INSTALL.md) before using it.
 | [Windows reinstall and profile backup](docs/REINSTALL.md) | [Source and notices](docs/SOURCE-AND-NOTICES.md) |
 | [Sense controls](docs/CONTROLS.md) | [Repository layout](docs/REPOSITORY.md) |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | [Native muzzle implementation](docs/NATIVE-MUZZLE.md) |
-| [Status and known limits](docs/STATUS.md) | [Revision 15 diagnostic guide](docs/2026-10-09-revision15.md) |
+| [Status and known limits](docs/STATUS.md) | [Revision 15 diagnostic guide](docs/history/2026-10-09-revision15.md) |
 | [Arsenal details](docs/ARSENAL.md) | [Release status](docs/STATUS.md) |
 | [Chainsword details](docs/CHAINSAW.md) | |
 

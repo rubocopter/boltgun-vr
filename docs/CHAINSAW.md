@@ -90,7 +90,7 @@ offline solo verifican transformaciÃ³n, reversibilidad y llamadas de puente.
 
 ## InstalaciÃ³n y ajustes
 
-Con el juego cerrado: `Chainsword3D.ps1 -Mode install`. DespuÃ©s abrir Boltgun
+Con el juego cerrado: `scripts/Chainsword3D.ps1 -Mode install`. DespuÃ©s abrir Boltgun
 e inyectar UEVR normalmente; no requiere lanzador durante cada partida.
 `-Mode status` comprueba hashes, y `-Mode off` permite desactivar. No borrar
 el script a mano mientras su modelo estÃ© en uso.

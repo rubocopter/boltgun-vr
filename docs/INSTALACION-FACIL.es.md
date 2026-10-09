@@ -4,16 +4,15 @@ Esta versión es un **paquete local de pruebas**, todavía sin publicación.
 El ZIP no incluye UEVR ni descarga herramientas externas por su cuenta.
 
 1. Descarga **UEVR** desde las [versiones oficiales de praydog](https://github.com/praydog/UEVR/releases). Extráelo en una carpeta permanente; necesitarás `UEVRInjector.exe`.
-2. Inicia tu copia de **Warhammer 40,000: Boltgun** desde Steam, prepara SteamVR/OpenXR para tu visor, abre el inyector oficial de UEVR y pulsa **Inject** con Boltgun seleccionado y **OpenXR** activado. Al terminar la primera inyección, **cierra por completo el juego**. Esto crea el perfil original que utiliza el instalador.
-3. Descomprime **todo** el ZIP de Boltgun VR. Ejecuta **`Instalar Boltgun VR.cmd`** y elige si quieres activar las armas y la espada 3D, que siguen en fase experimental. Selecciona en el explorador tu propio `UEVRInjector.exe`. El programa comprueba los archivos y se niega a sobrescribir configuraciones desconocidas.
-4. Para jugar, ejecuta **`Jugar Boltgun VR.cmd`**. Se abrirán el juego por Steam y tu propio inyector UEVR. Selecciona Boltgun, el entorno **OpenXR** y pulsa **Inject**. **De momento hay que pulsar Inject manualmente en cada partida.**
+2. Descomprime **todo** el ZIP de Boltgun VR. Ejecuta **`Instalar Boltgun VR.cmd`** y elige si quieres activar las armas y la espada 3D, que siguen en fase experimental. Selecciona tu propio `UEVRInjector.exe`. Se admiten perfiles nuevos sin archivos previos; el instalador guarda el estado anterior antes de modificarlo y rechaza archivos desconocidos.
+3. Prepara SteamVR/OpenXR para tu visor. Para jugar, ejecuta **`Jugar Boltgun VR.cmd`**. Se abrirán Boltgun por Steam y tu inyector UEVR. Selecciona Boltgun, **OpenXR** y pulsa **Inject**. **Hay que pulsar Inject manualmente en cada partida.**
+4. Si SteamVR aún no ha generado el binding de Boltgun, cierra el juego después de la primera inyección y ejecuta de nuevo **`Instalar Boltgun VR.cmd`** para ajustar los botones Options/Create. El binding debe generarlo SteamVR.
 
 El menú de UEVR dentro del visor comienza **oculto** y puedes mostrarlo con
 **Insert** o **L3+R3**. No se ha implantado ninguna inyección automática.
 
-**Si faltan `config.txt`, `Engine.ini` o `Input.ini`**, realiza primero el
-paso 2. Si falta el binding de mandos SteamVR, inicia el juego con los mandos,
-inyecta UEVR una vez, cierra Boltgun y vuelve a ejecutar el instalador.
+Si faltan `config.txt`, `Engine.ini` o `Input.ini`, el instalador crea
+los archivos declarados. Si faltan los controles de SteamVR, sigue el paso 4.
 Ante archivos modificados o errores de integridad, consulta
 [la guía técnica de instalación](INSTALL.md) antes de restaurar nada.
 

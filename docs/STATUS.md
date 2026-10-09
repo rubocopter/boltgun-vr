@@ -9,7 +9,7 @@
 | Two-hand aim | Proximity/recovery tests | Accuracy and ergonomics; shipped off |
 | FMalloc workaround | Configured | Clean exit on hardware |
 
-The maintained suite contains 151 Python/Lua cases, three converter cases and four
+The maintained suite contains 142 Python/Lua cases, three converter cases and four
 C++ harnesses. These validate simulated contracts and geometry, not headset correctness.
 
 The muzzle bridge accepts executable SHA-256
@@ -22,11 +22,12 @@ Firearm recoil uses a separate visual mesh; its stationary firing reference reta
 the prior projectile/flash origins. Packaged defaults enable it; custom settings
 without `recoil_enabled=1` retain the static model. Failed spawns,
 UEVR menus and inactive tracking do not trigger it. See the
-[revision 15 diagnostic guide](2026-10-09-revision15.md).
+[revision 15 diagnostic guide](history/2026-10-09-revision15.md).
 
 Meshes load from the owned game. No physical reloads or gesture-based damage are
 implemented. Codex scaling does not change physical distance to the headset.
-Fresh-profile installation and a project-wide licensing decision remain publication tasks.
+Fresh-profile installation is tested offline; a project-wide licensing decision
+and in-headset verification remain publication tasks.
 
 Revision 14 generalizes isolated recoil to all ten firearm profiles and adds confirmed-spawn haptics. Chainsword texture loading now uses a native profile path hint. All current changes require fresh headset verification; hitscan/beam paths outside the spawn helper may not produce feedback.
 
