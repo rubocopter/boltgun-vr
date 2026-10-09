@@ -7,7 +7,7 @@ UEVR settings/recovery. The profile supplies controller mapping and UObject atta
 owns its component and restores the sprite when preconditions fail. `src/native/muzzle`
 guards executable identity, equipped class, mesh ownership and tracking before changing
 supported projectile/flash origins; direction and spread remain native.
-With Bolter recoil enabled, Lua owns a visible mesh and an invisible tracked
+With firearm recoil enabled, Lua owns a visible mesh and an invisible tracked
 reference with identical grip calibration. The bridge reads projectile/flash
 origins from the reference, queues recoil only after a successful native spawn,
 and animates only the visible mesh's UEVR attachment offsets on engine ticks.
@@ -22,5 +22,13 @@ attack logic is retained. Unreal operations remain on the engine tick.
 `manifests` declare exact inputs/upgrades. `deployment.json` uses portable root tokens
 resolved by `tools/Paths.ps1`. Generated runtime DLLs live in ignored `build/plugins`.
 
-Chainsword texture paths are resolved from UEVR's current game profile on the engine tick,
-using [get_persistent_dir](https://docs.uevr.io/plugins/lua/cwrappers/UEVR_PluginFunctions.html).
+Chainsword texture paths are resolved through the native UEVR C API. After
+checking the mesh and texture, the bridge writes the absolute UTF-8 filename to
+`data/chainsword3d.texture_path`. Lua reads it with `fs.read`; the installed Lua
+functions table does not expose `get_persistent_dir`. Missing/invalid hints keep
+the original sprite visible. The hint is generated locally at runtime.
+
+Confirmed projectile spawns also queue firing vibration alongside visual recoil.
+The engine tick sends a right-controller pulse (40 ms, amplitude 0.65) at most
+once every 50 ms. Missing haptic functions retain visual recoil; haptic API faults
+disable pulses for that session. Actual Sense intensity requires headset testing.

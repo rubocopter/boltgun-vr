@@ -3,9 +3,9 @@
 
 # Arsenal 3D: native muzzle bridge, revision 13
 
-## Revision 13: isolated Bolter visual recoil
+## Revision 14: isolated firearm visual recoil
 
-`recoil_enabled=1` in `data/bolter3d.settings` creates two owned Bolter
+`recoil_enabled=1` in `data/bolter3d.settings` creates two owned firearm
 components with identical scale and grip calibration. The invisible reference
 remains stationary relative to the right controller and supplies the existing
 projectile/flash origin. Only the visible component receives procedural offsets.

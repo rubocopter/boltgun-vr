@@ -13,7 +13,7 @@ Windows Â· UEVR / OpenXR Â· Developed with PS VR2 Sense
 
 ## What changes in VR
 
-- **Tracked firearms.** Optional replacements load the original game's ten pickup meshes, with per-weapon muzzle origins for supported projectile and flash paths. The Bolter adds a small visual recoil on actual shots. Multi-Melta and Missile Launcher require the DLC.
+- **Tracked firearms.** Optional replacements load the original game's ten pickup meshes, with per-weapon muzzle origins for supported projectile and flash paths. All ten firearm profiles support stronger visual recoil and firing haptics on confirmed projectile spawns. Multi-Melta and Missile Launcher require the DLC.
 - **Tracked chainsword.** A separate procedural mesh follows the left controller. Original attack controls, sound and damage remain in use.
 - **Weapon selection.** Hold R3, tilt the stick and release to select a native weapon group. Return to the centre to cancel.
 - **Comfort and controls.** Head-oriented movement, configurable snap or smooth turning, pause/recenter mappings and graphics adjustments.
@@ -24,9 +24,9 @@ game and official injector together; injection still requires one manual click.
 
 ## Current status
 
-Development snapshot: **profile v7, arsenal revision 13, chainsword package 3**.
+Development snapshot: **profile v7, arsenal revision 14, chainsword package 4**.
 Earlier videos confirmed the Bolter replacement and chainsword appearance/tracking.
-The latest muzzle coordinates, Bolter recoil, chainsword teeth motion and Codex changes still need
+The latest muzzle coordinates, arsenal recoil, firing haptics, chainsword texture recovery, teeth motion and Codex changes still need
 headset validation. See [validation and limitations](docs/STATUS.md).
 
 Native firing direction and spread are preserved. Attached effects and beam/hitscan
@@ -55,7 +55,7 @@ or [advanced installation](docs/INSTALL.md) before using it.
 | [Sense controls](docs/CONTROLS.md) | [Source and notices](docs/SOURCE-AND-NOTICES.md) |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | [Repository layout](docs/REPOSITORY.md) |
 | [Status and known limits](docs/STATUS.md) | [Native muzzle implementation](docs/NATIVE-MUZZLE.md) |
-| [Arsenal details](docs/ARSENAL.md) | [Revision 13](docs/2026-10-09-revision13.md) |
+| [Arsenal details](docs/ARSENAL.md) | [Revision 14](docs/2026-10-09-revision14.md) |
 | [Chainsword details](docs/CHAINSAW.md) | [Release status](docs/STATUS.md) |
 
 Unofficial fan project. The game, injector and extracted game assets are not included.
