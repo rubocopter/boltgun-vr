@@ -17,5 +17,7 @@ Active files were copied out, preserving original research snapshots. The former
 and maintenance scripts are saved under `backups/repository-preparation`.
 
 No extracted game meshes, executable, PAK, dump or compiler products belong in Git.
-No remote/publication is configured during preparation. Before release, decide the code
-license, finish fresh-profile installation and record VR validation of current changes.
+GitHub and Git track source only; they do not contain user calibrations or Windows
+runtime settings. See [Windows reinstall and local snapshots](REINSTALL.md).
+Before a public release, decide the code license, finish fresh-profile installation
+and record VR validation of current changes.

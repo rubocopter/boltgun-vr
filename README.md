@@ -11,6 +11,10 @@ Windows Â· UEVR / OpenXR Â· Developed with PS VR2 Sense
 <a href="docs/TROUBLESHOOTING.md">Troubleshooting</a> Â· <a href="docs/README.es.md">EspaÃ±ol</a>
 </p>
 
+<p align="center">
+  <a href="https://ko-fi.com/onitaku"><img alt="Support development on Ko-fi" src="https://ko-fi.com/img/githubbutton_sm.svg"></a>
+</p>
+
 ## What changes in VR
 
 - **Tracked firearms.** Optional replacements load the original game's ten pickup meshes, with per-weapon muzzle origins for supported projectile and flash paths. All ten firearm profiles support stronger visual recoil and firing haptics on confirmed projectile spawns. Multi-Melta and Missile Launcher require the DLC.
@@ -53,11 +57,12 @@ or [advanced installation](docs/INSTALL.md) before using it.
 | --- | --- |
 | [Guided setup](docs/EASY-SETUP.md) · [Español](docs/INSTALACION-FACIL.es.md) | [Architecture](docs/ARCHITECTURE.md) |
 | [Installation and recovery](docs/INSTALL.md) | [Build and verification](docs/BUILD.md) |
-| [Sense controls](docs/CONTROLS.md) | [Source and notices](docs/SOURCE-AND-NOTICES.md) |
-| [Troubleshooting](docs/TROUBLESHOOTING.md) | [Repository layout](docs/REPOSITORY.md) |
-| [Status and known limits](docs/STATUS.md) | [Native muzzle implementation](docs/NATIVE-MUZZLE.md) |
-| [Arsenal details](docs/ARSENAL.md) | [Revision 15 diagnostic guide](docs/2026-10-09-revision15.md) |
-| [Chainsword details](docs/CHAINSAW.md) | [Release status](docs/STATUS.md) |
+| [Windows reinstall and profile backup](docs/REINSTALL.md) | [Source and notices](docs/SOURCE-AND-NOTICES.md) |
+| [Sense controls](docs/CONTROLS.md) | [Repository layout](docs/REPOSITORY.md) |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | [Native muzzle implementation](docs/NATIVE-MUZZLE.md) |
+| [Status and known limits](docs/STATUS.md) | [Revision 15 diagnostic guide](docs/2026-10-09-revision15.md) |
+| [Arsenal details](docs/ARSENAL.md) | [Release status](docs/STATUS.md) |
+| [Chainsword details](docs/CHAINSAW.md) | |
 
 Unofficial fan project. The game, injector and extracted game assets are not included.
 The external chainsword is credited to Kaiser-E under CC BY 4.0.

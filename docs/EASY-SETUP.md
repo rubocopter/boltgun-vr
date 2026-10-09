@@ -30,6 +30,8 @@ Do not delete the extracted mod folder after setup; its installers, recovery
 scripts and local binding backups live there. The launcher stores only the path
 to your injector under `%LOCALAPPDATA%\BoltgunVR\launcher.json`.
 
+For Windows reinstalls, see [backing up and recovering the active profile](REINSTALL.md).
+
 ## Maintainer: create the player ZIP locally
 
 After compiling the native plugins with `tools/Build.ps1` and verifying the

@@ -10,6 +10,7 @@ python -m venv .venv
 .\tools\Build.ps1
 .\tools\Check-Repository.ps1
 .\tests\Test-Deployment.ps1
+.\tests\Test-ReinstallBackup.ps1
 ```
 
 The build finds MSVC via `vswhere`; supply `-DevCmd` for a custom toolchain.
@@ -18,6 +19,7 @@ outputs under `build/muzzle` and `build/chainsword`. The build refreshes native 
 hashes and preserves recognised previous hashes. Review JSON changes before committing.
 
 Deployment tests use temporary repository copies/profiles, never the live installation.
+Reinstall-backup tests likewise use temporary fixtures and do not read the live profile.
 The prepared, credited sword mesh/texture are supplied under `assets/chainsword`;
 original downloads are not required. Its converter lives in `src/native/chainsword`.
 Git preserves exact runtime bytes because manifests depend on SHA-256.
