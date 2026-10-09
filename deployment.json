@@ -1,0 +1,146 @@
+[
+  {
+    "source": "profile\\config.txt",
+    "target": "${ProfileRoot}\\config.txt",
+    "backup": "profile\\baseline\\uevr\\config.txt",
+    "sha256": "93D6CECE9A05A1645919ADDB55D98F0BFD9FE715BA2BB15C657ECC59F0F67F6A",
+    "originalSha256": "8DB08AAD22F8F3E27086A33B76C08F268D846DD551F1414407CD2CB7C1550F77",
+    "acceptedBaseSha256": "1C69FA667ECAAD0D7BA40E964B12BFACB697BA34DA99CDEB6AAC5CA9414F6006"
+  },
+  {
+    "source": "profile\\_interaction_profiles_oculus_touch_controller.json",
+    "target": "${ProfileRoot}\\_interaction_profiles_oculus_touch_controller.json",
+    "backup": null,
+    "sha256": "E2C5287584DEEEF49F89290A88F51DF78E0866530E2EC4768CCA78716E7FC5E5",
+    "originalSha256": null
+  },
+  {
+    "source": "profile\\scripts\\boltgun_sense.lua",
+    "target": "${ProfileRoot}\\scripts\\boltgun_sense.lua",
+    "backup": null,
+    "sha256": "0BA255C6662661D84503637F19511C9407BEDE4EF0960672D52F485DBFC24A4C",
+    "originalSha256": null,
+    "acceptedBaseSha256": "3F21EC5667CDB53AC0F75EF60C6AAC946B0B0C70C735A6C4AB42CFDACC7C2720"
+  },
+  {
+    "source": "game-config\\Input.ini",
+    "target": "${GameConfigRoot}\\Input.ini",
+    "backup": "profile\\baseline\\game-config\\Input.ini",
+    "sha256": "99C1FB898F53C3F61F733621CF6FC2226FA86FEEC8C8CBF75D51486D3193EE24",
+    "originalSha256": "99C1FB898F53C3F61F733621CF6FC2226FA86FEEC8C8CBF75D51486D3193EE24"
+  },
+  {
+    "source": "game-config\\Engine.ini",
+    "target": "${GameConfigRoot}\\Engine.ini",
+    "backup": "profile\\baseline\\game-config\\Engine.ini",
+    "sha256": "CA301D309D3FE9BDCA7F08811443BB5CBB2E2CCBF87352DE81F597326A323CC7",
+    "originalSha256": "CE31A38CF81AF7C43DBB231AF93EC7A6C8375048E105774A3077896B48A07892",
+    "acceptedBaseSha256": "455C49A6FACF7F46129F62827FCA50DFA28333AFE2B98E0B5249C2BE61EF3945"
+  },
+  {
+    "source": "profile\\uobjecthook\\boltgun_left_hand_mc_state.json",
+    "target": "${ProfileRoot}\\uobjecthook\\boltgun_left_hand_mc_state.json",
+    "backup": null,
+    "sha256": "226AC96C811FA0A49477D7447D7594CDB1C5C418E4B6C0F9C5212B7802AEEBF9",
+    "originalSha256": null
+  },
+  {
+    "source": "src\\lua\\boltgun_bolter3d.lua",
+    "target": "${ProfileRoot}\\scripts\\boltgun_bolter3d.lua",
+    "backup": null,
+    "sha256": "1AB91949C645CD7CC75D5AAE31387A3EB29A7E53294A9924B90CCD2DC313AF5D",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional 10-firearm 3D replacement; installed/selected only by Bolter3D.ps1, included for original-profile restoration"
+  },
+  {
+    "source": "profile\\defaults\\bolter3d.default.settings",
+    "target": "${ProfileRoot}\\data\\bolter3d.settings",
+    "backup": null,
+    "sha256": "1078EEABF4D12455A7550EE6E26CF83CC6A4790EDA8A2ED562934B4BF4B294BF",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional bolter 3D prototype; installed/selected only by Bolter3D.ps1, included for original-profile restoration"
+  },
+  {
+    "source": "profile\\defaults\\bolter3d.default.mode",
+    "target": "${ProfileRoot}\\data\\bolter3d.mode",
+    "backup": null,
+    "sha256": "B470B84CF0CD3189E10615BFFEA7D5CBD9F61134BA1C2CFD513DDD45B776A5F6",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional bolter 3D prototype; installed/selected only by Bolter3D.ps1, included for original-profile restoration"
+  },
+  {
+    "source": "build\\plugins\\boltgun_muzzle.dll",
+    "target": "${ProfileRoot}\\plugins\\boltgun_muzzle.dll",
+    "backup": null,
+    "sha256": "1474E5E65320C46900F96C3F2336233D06CF35BA3E793CDDE010988B2BBE8698",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional exact-build ten-firearm muzzle bridge; installed only by Bolter3D.ps1; included for original-profile restoration"
+  },
+  {
+    "source": "src\\lua\\boltgun_chainsword.lua",
+    "target": "${ProfileRoot}\\scripts\\boltgun_chainsword.lua",
+    "backup": null,
+    "sha256": "1985403F1A76DD9122EF2FE7465E05E06314043E4B443E94828A6630050096BB",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional external Chainsword; installed by Chainsword3D.ps1, removed by original restoration"
+  },
+  {
+    "source": "build\\plugins\\boltgun_chainsword.dll",
+    "target": "${ProfileRoot}\\plugins\\boltgun_chainsword.dll",
+    "backup": null,
+    "sha256": "299AA89DA0BFA3594BC07935A7FBCACA553F515C78884A42813505D1B818F409",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional external Chainsword; installed by Chainsword3D.ps1, removed by original restoration"
+  },
+  {
+    "source": "assets\\chainsword\\chainsword.bgmesh",
+    "target": "${ProfileRoot}\\data\\chainsword3d\\chainsword.bgmesh",
+    "backup": null,
+    "sha256": "CC8488C0841EA08C297320C2FC704AA35670043114BF000E264064131A415968",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional external Chainsword; installed by Chainsword3D.ps1, removed by original restoration"
+  },
+  {
+    "source": "assets\\chainsword\\chainsword_color.png",
+    "target": "${ProfileRoot}\\data\\chainsword3d\\chainsword_color.png",
+    "backup": null,
+    "sha256": "5EED6697D11C510383A41194C081422CB254B9A5B7B0CF948D5BD4E5D2BD1C15",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional external Chainsword; installed by Chainsword3D.ps1, removed by original restoration"
+  },
+  {
+    "source": "assets\\chainsword\\CREDITS.txt",
+    "target": "${ProfileRoot}\\data\\chainsword3d\\CREDITS.txt",
+    "backup": null,
+    "sha256": "401109C7D8BA27901C40862EB66BC9F978D6E58528C7B557DCC8D5462A8D4FAD",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional external Chainsword; installed by Chainsword3D.ps1, removed by original restoration"
+  },
+  {
+    "source": "profile\\defaults\\chainsword3d.default.mode",
+    "target": "${ProfileRoot}\\data\\chainsword3d.mode",
+    "backup": null,
+    "sha256": "82FC410073BE3424185BC2CF6D8A4016D15251A69A015214DB9F2858FBD78BB1",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional editable Chainsword runtime setting, removed by original restoration"
+  },
+  {
+    "source": "profile\\defaults\\chainsword3d.default.settings",
+    "target": "${ProfileRoot}\\data\\chainsword3d.settings",
+    "backup": null,
+    "sha256": "BBFE5E6DA3F68E06B4E5DE03C1A094850932EC9C445DAE59CCE4E701E6579FF1",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional editable Chainsword runtime setting, removed by original restoration"
+  }
+]
