@@ -6,17 +6,35 @@ static int native_calls{},pose_calls{},logs{};
 static int spawn_calls{};
 static Transform spawned{};
 static int flash_moves{};
+static int recoil_writes{};
+static UEVR_Vector3f recoil_location{};
+static UEVR_Quaternionf recoil_rotation{};
+static UEVR_UObjectHandle expired_object{};
+static bool fail_recoil_rotation=false,fail_spawn=false;
+static bool fail_property_query=false;
 static Transform moved_flash{};
 static UEVR_UObjectHandle flash_parent{};
 static bool flash_parent_property_available=true;
 static const wchar_t* flash_name=L"NS_Boltgun_Muzzleflash_Standard";
 static UEVR_UObjectHandle spawn_native(UEVR_UObjectHandle,UEVR_UClassHandle,void*,const Transform* transform,UEVR_UObjectHandle) {
-    ++spawn_calls;spawned=*transform;return reinterpret_cast<UEVR_UObjectHandle>(99);
+    ++spawn_calls;spawned=*transform;return fail_spawn?nullptr:reinterpret_cast<UEVR_UObjectHandle>(99);
 }
 static bool vr_active=true, menu_open=false, objects_live=true;
 static Transform mesh_pose={{0,0,0,1},{400,500,600},0,{.5f,.5f,.5f},0};
 static UEVR_UObjectHandle id(uintptr_t n) { return reinterpret_cast<UEVR_UObjectHandle>(n); }
-static bool exists(UEVR_UObjectHandle o) { return o&&objects_live; }
+static bool exists(UEVR_UObjectHandle o) { return o&&objects_live&&o!=expired_object; }
+static UEVR_UObjectHookMotionControllerStateHandle motion_state(UEVR_UObjectHandle o) {
+    return o==id(4)?reinterpret_cast<UEVR_UObjectHookMotionControllerStateHandle>(44):nullptr;
+}
+static void set_recoil_location(UEVR_UObjectHookMotionControllerStateHandle state,const UEVR_Vector3f* value) {
+    assert(state==reinterpret_cast<UEVR_UObjectHookMotionControllerStateHandle>(44));
+    ++recoil_writes;recoil_location=*value;
+}
+static void set_recoil_rotation(UEVR_UObjectHookMotionControllerStateHandle state,const UEVR_Quaternionf* value) {
+    assert(state==reinterpret_cast<UEVR_UObjectHookMotionControllerStateHandle>(44));
+    if(fail_recoil_rotation) { fail_recoil_rotation=false;RaiseException(0xE0000001,0,0,nullptr); }
+    recoil_rotation=*value;
+}
 static UEVR_UObjectHandle outer(UEVR_UObjectHandle) { return id(1); }
 static bool active() { return vr_active; }
 static bool drawing() { return menu_open; }
@@ -38,15 +56,18 @@ static UEVR_UClassHandle klass(UEVR_UObjectHandle obj) {
 static UEVR_UObjectHandle local_pawn(int) { return id(1); }
 static bool is_a(UEVR_UObjectHandle obj,UEVR_UClassHandle cls) {
     const auto c=reinterpret_cast<uintptr_t>(cls);
-    return (obj==id(2)&&c==uintptr_t(20+selected_type*50))||(obj==id(3)&&c==21)||
+    return (obj==id(2)&&c==uintptr_t(20+selected_type*50))||
+        ((obj==id(3)||obj==id(4))&&c==21)||
         (obj==id(6)&&c==31)||(obj==id(7)&&c==32);
 }
 static void* property_data(UEVR_UObjectHandle obj,const wchar_t* name) {
+    assert(obj!=expired_object); // No reflection through an expired pawn/weapon.
+    if(fail_property_query) { fail_property_query=false;RaiseException(0xE0000002,0,0,nullptr); }
     static auto handler=id(5);static auto equipped=id(2);static auto flash_system=id(7);
     static auto mesh_asset=id(100);
     equipped=unequipped?id(9):id(2);
     mesh_asset=id(wrong_mesh_asset?999:100+selected_type);
-    if(obj==id(3)&&std::wcscmp(name,L"StaticMesh")==0) return &mesh_asset;
+    if((obj==id(3)||obj==id(4))&&std::wcscmp(name,L"StaticMesh")==0) return &mesh_asset;
     if(obj==id(1)&&std::wcscmp(name,L"WeaponHandlerComponent")==0) return &handler;
     if(obj==id(5)&&std::wcscmp(name,L"EquippedWeapon")==0) return &equipped;
     if(obj==id(6)&&std::wcscmp(name,L"Asset")==0) return &flash_system;
@@ -118,6 +139,10 @@ static Transform* native(UEVR_UObjectHandle,Transform* out,float x,float,void*,b
 }
 int main() {
     UEVR_UObjectHookFunctions hook{};hook.exists=exists;
+    hook.get_motion_controller_state=motion_state;
+    UEVR_UObjectHookMotionControllerStateFunctions states{};
+    states.set_location_offset=set_recoil_location;states.set_rotation_offset=set_recoil_rotation;
+    hook.mc_state=&states;
     UEVR_UObjectFunctions objects{};objects.get_outer=outer;objects.process_event=process;
     objects.get_class=klass;objects.get_property_data=property_data;objects.is_a=is_a;
     objects.get_fname=get_fname;
@@ -298,6 +323,120 @@ int main() {
         spoof_class=false;machine_spirit=false;
     }
     selected_type=0;
+    // An extended Bolter lease has a stationary firing anchor (3) and a
+    // distinct visual mesh (4). Only successful actual spawns kick the visual.
+    g_lease={};recoil_writes=0;
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    assert(g_enabled&&g_lease.mesh==id(3)&&g_lease.visual==id(4));
+    g_lease.created=GetTickCount64()-200;
+    g_flash_faulted.store(true);
+    on_tick(nullptr,.016f);
+    assert(recoil_writes==0);
+    const auto before_recoil=spawn_calls;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    assert(spawn_calls==before_recoil+1&&spawned.rotation.z==shot.rotation.z);
+    assert(std::fabs(spawned.translation.x-433.90707f)<.002f);
+    on_tick(nullptr,.016f);
+    assert(recoil_writes==1&&recoil_location.y<24&&recoil_rotation.x>0);
+    assert(mesh_pose.translation.x==400); // Stable firing anchor never moves.
+    const float kicked=recoil_location.y;
+    for(int i=0;i<60;++i) on_tick(nullptr,.016f);
+    assert(recoil_location.y>kicked&&std::fabs(recoil_location.y-24)<.03f);
+    // Rapid successive shots must accumulate with a hard upper bound.
+    for(int i=0;i<8;++i)
+        spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,.016f);
+    assert(recoil_location.y>=18&&recoil_location.y<24);
+    on_event("boltgun.muzzle.v1","off");on_tick(nullptr,.016f);
+    assert(std::fabs(recoil_location.y-24)<.001f&&std::fabs(recoil_rotation.w-1)<.001f);
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|3|12|24|0|0|0|0|1");
+    assert(!g_enabled); // Cannot animate the firing anchor itself.
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|999");
+    assert(!g_enabled); // Invalid quaternion rejected.
+    selected_type=1;
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    assert(!g_enabled); // Only the Bolter can opt in.
+    selected_type=0;
+    // Off can be sent on the UI thread and followed by a fresh heartbeat
+    // before the next native tick. Never replay a shot from the old session.
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    g_lease.created=GetTickCount64()-200;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    const int before_cancel=recoil_writes;
+    g_engine_thread=0;
+    on_event("boltgun.muzzle.v1","off");
+    assert(recoil_writes==before_cancel);
+    g_engine_thread=GetCurrentThreadId();
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    on_tick(nullptr,.016f);assert(recoil_writes==before_cancel);
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    g_lease.created=GetTickCount64()-200;
+    expired_object=id(1);
+    on_tick(nullptr,.016f); // Pawn destroyed between Lua heartbeat and native tick.
+    expired_object=nullptr;
+    on_event("boltgun.muzzle.v1","off");on_tick(nullptr,.016f);
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    g_lease.created=GetTickCount64()-200;
+    fail_spawn=true;
+    const int failed_before=recoil_writes;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,.016f);assert(recoil_writes==failed_before);
+    fail_spawn=false;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    fail_recoil_rotation=true;
+    on_tick(nullptr,.016f); // Partial offset write must not escape as a native fault.
+    assert(g_faulted&&!g_enabled);
+    on_tick(nullptr,.016f);
+    assert(std::fabs(recoil_location.y-24)<.001f);
+    g_faulted=false;
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    g_lease.created=GetTickCount64()-200;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,.016f);
+    fail_property_query=true;
+    on_tick(nullptr,.016f);
+    assert(g_faulted&&!g_enabled&&std::fabs(recoil_location.y-24)<.001f);
+    g_faulted=false;
+    fail_property_query=true;
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    assert(g_faulted&&!g_enabled);
+    g_faulted=false;
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    g_lease.created=GetTickCount64()-200;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,.016f);
+    on_event("boltgun.muzzle.v1","off");
+    fail_recoil_rotation=true;
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    assert(g_faulted&&!g_enabled); // Restore faults cannot enable a new lease.
+    on_tick(nullptr,.016f);
+    assert(std::fabs(recoil_rotation.x)<.001f&&std::fabs(recoil_rotation.w-1)<.001f);
+    g_faulted=false;
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1");
+    g_lease.created=GetTickCount64()-200;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,.016f);
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|15|30|2|0|0|0.707107|0.707107");
+    on_event("boltgun.muzzle.v1","off");on_tick(nullptr,.016f);
+    assert(std::fabs(recoil_location.y-30)<.001f&&std::fabs(recoil_location.x-15)<.001f);
+    assert(std::fabs(recoil_rotation.z-.707107f)<.001f);
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0.707107|0.707107");
+    g_lease.created=GetTickCount64()-200;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    on_tick(nullptr,.016f);
+    // UEVR applies H * inverse(offset). Compare mesh rotations in the
+    // calibrated local frame: inverse(A_base) * A_recoil = B * inverse(B').
+    const Quat actual_offset{recoil_rotation.x,recoil_rotation.y,recoil_rotation.z,recoil_rotation.w};
+    const Quat mesh_local=multiply({0,0,.70710678f,.70710678f},conjugate(actual_offset));
+    assert(mesh_local.x<0&&std::fabs(mesh_local.y)<.001f&&std::fabs(mesh_local.z)<.001f);
+    // Scale/grip compensation cancels at the tracked grip before adding the
+    // backward local offset. Calibration must not add lateral displacement.
+    assert(std::fabs(recoil_location.x-12)<.001f&&std::fabs(recoil_location.z)<.001f);
+    assert(recoil_location.y<24&&recoil_location.y>=19);
+    on_event("boltgun.muzzle.v1","off");on_tick(nullptr,.016f);
+    assert(std::fabs(recoil_rotation.z-.707107f)<.001f&&std::fabs(recoil_rotation.x)<.001f);
+    g_lease={};on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53");
+    assert(g_enabled&&g_lease.visual==nullptr); // Legacy six fields unchanged.
     assert(!supported_file(L"missing-file-for-muzzle-test.exe"));
     wchar_t exe[32768]{};GetModuleFileNameW(nullptr,exe,32768);
     assert(!supported_file(exe));assert(!supported_module(reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))));

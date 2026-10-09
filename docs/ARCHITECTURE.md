@@ -7,6 +7,13 @@ UEVR settings/recovery. The profile supplies controller mapping and UObject atta
 owns its component and restores the sprite when preconditions fail. `src/native/muzzle`
 guards executable identity, equipped class, mesh ownership and tracking before changing
 supported projectile/flash origins; direction and spread remain native.
+With Bolter recoil enabled, Lua owns a visible mesh and an invisible tracked
+reference with identical grip calibration. The bridge reads projectile/flash
+origins from the reference, queues recoil only after a successful native spawn,
+and animates only the visible mesh's UEVR attachment offsets on engine ticks.
+Its optional fourteen-field lease carries the visual identity and base offsets;
+the six-field protocol remains supported. The v3 ownership journal recovers both
+components after script reset and still accepts v1/v2 journals.
 
 `src/lua/boltgun_chainsword.lua` and `src/native/chainsword` create the credited external
 mesh through the procedural-mesh API and manage temporary Codex scale. Native game

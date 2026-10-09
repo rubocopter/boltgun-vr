@@ -12,6 +12,8 @@ muzzle_enabled=1
 muzzle_x=67.81414
 muzzle_y=0
 muzzle_z=53
+# Visual recoil on actual Bolter projectile spawns; 0 keeps the static model.
+recoil_enabled=1
 # Per-weapon mesh-local muzzle centimetres. Projectiles and eligible flashes
 # share each point. Bolter retains its existing muzzle_x/y/z calibration.
 shotgun_muzzle_enabled=1

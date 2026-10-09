@@ -50,8 +50,18 @@ struct Lease {
     ULONGLONG heartbeat{},created{};
     bool ready{};
     int profile{};
+    UEVR_UObjectHandle visual{};
+    Vec3 base_location{};
+    Quat base_rotation{0,0,0,1};
 };
 static Lease g_lease{};
+static UEVR_UObjectHandle g_recoil_target{},g_recoil_owner{};
+static Vec3 g_recoil_base{};
+static Quat g_recoil_rotation{0,0,0,1};
+static float g_recoil_amount{};
+static unsigned g_recoil_pending{};
+static bool g_recoil_dirty{};
+static std::atomic<bool> g_recoil_cancelled{};
 static bool live(UEVR_UObjectHandle obj) {
     return obj&&g_api->sdk->uobject_hook->exists(obj);
 }
@@ -63,6 +73,88 @@ static bool equipped_weapon(UEVR_UObjectHandle pawn,UEVR_UObjectHandle weapon) {
     data=g_api->sdk->uobject->get_property_data(handler,L"EquippedWeapon");
     if(!data) return false;std::memcpy(&equipped,data,sizeof(equipped));
     return equipped==weapon;
+}
+// All motion-state API calls happen on the engine tick/event thread. An "off"
+// event from the UEVR menu merely revokes permission; the next tick restores.
+static bool write_recoil_inner(UEVR_UObjectHandle visual,UEVR_UObjectHandle owner,
+                         Vec3 base,Quat rotation,float amount) {
+    auto* hook=g_api->sdk->uobject_hook;
+    if(!visual||!live(visual)||!live(owner)||
+       g_api->sdk->uobject->get_outer(visual)!=owner||
+       !hook->get_motion_controller_state||!hook->mc_state||
+       !hook->mc_state->set_location_offset||!hook->mc_state->set_rotation_offset)
+        return false;
+    const auto state=hook->get_motion_controller_state(visual);
+    if(!state) return false;
+    const UEVR_Vector3f location{base.x,base.y-amount,base.z};
+    // UEVR applies H * inverse(offset). Pre-multiply the offset so the actual
+    // mesh gets a local X pitch after its configured grip rotation.
+    const float half_pitch=amount*.0125f;
+    const Quat tilted=multiply({std::sin(half_pitch),0,0,std::cos(half_pitch)},rotation);
+    const UEVR_Quaternionf angle{tilted.w,tilted.x,tilted.y,tilted.z};
+    hook->mc_state->set_location_offset(state,&location);
+    hook->mc_state->set_rotation_offset(state,&angle);
+    return true;
+}
+enum class RecoilWrite { Written, Unavailable, Fault };
+static RecoilWrite write_recoil(UEVR_UObjectHandle visual,UEVR_UObjectHandle owner,
+                         Vec3 base,Quat rotation,float amount) {
+    __try {
+        return write_recoil_inner(visual,owner,base,rotation,amount)?
+            RecoilWrite::Written:RecoilWrite::Unavailable;
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        g_enabled.store(false);g_faulted.store(true);return RecoilWrite::Fault;
+    }
+}
+static bool reset_recoil() {
+    g_recoil_amount=0;g_recoil_pending=0;
+    if(g_recoil_dirty&&
+       write_recoil(g_recoil_target,g_recoil_owner,g_recoil_base,g_recoil_rotation,0)==RecoilWrite::Fault)
+        return false; // Keep the exact target/base for a retry on the next tick.
+    g_recoil_target=nullptr;g_recoil_owner=nullptr;
+    g_recoil_dirty=false;return true;
+}
+static void tick_recoil_inner(float delta) {
+    const auto now=GetTickCount64();
+    if(g_faulted.load()||!g_enabled.load()||!g_lease.ready||g_lease.profile!=0||!g_lease.visual||
+       !may_override(true,now,g_lease.heartbeat,
+                     reinterpret_cast<uintptr_t>(g_lease.weapon),
+                     reinterpret_cast<uintptr_t>(g_lease.weapon),
+                     g_api->vr->is_hmd_active()&&g_api->vr->is_using_controllers(),
+                     g_api->functions->is_drawing_ui(),true)||
+       !live(g_lease.pawn)||!live(g_lease.weapon)||
+       !live(g_lease.visual)||!live(g_lease.mesh)||
+       g_api->sdk->uobject->get_outer(g_lease.visual)!=g_lease.pawn||
+       !equipped_weapon(g_lease.pawn,g_lease.weapon)) {
+        reset_recoil();return;
+    }
+    if(g_recoil_target&&g_recoil_target!=g_lease.visual&&!reset_recoil()) return;
+    if(!g_recoil_pending&&!g_recoil_dirty) return;
+    g_recoil_target=g_lease.visual;g_recoil_owner=g_lease.pawn;
+    g_recoil_base=g_lease.base_location;g_recoil_rotation=g_lease.base_rotation;
+    const float elapsed=std::isfinite(delta)?(delta<0?0:(delta>.1f?.1f:delta)):0;
+    const float added=static_cast<float>(g_recoil_pending)*1.1f;
+    g_recoil_amount=(g_recoil_amount+added>5.f)?5.f:g_recoil_amount+added;
+    g_recoil_pending=0;
+    g_recoil_amount*=std::exp(-12.f*elapsed);
+    if(g_recoil_amount<.003f) {
+        reset_recoil();return;
+    }
+    // A setter may fail after the first offset was written. Mark before writing
+    // so the base pose is also restored on that partially completed update.
+    g_recoil_dirty=true;
+    if(write_recoil(g_recoil_target,g_recoil_owner,g_recoil_base,g_recoil_rotation,g_recoil_amount)!=RecoilWrite::Written)
+        reset_recoil();
+}
+static void tick_recoil(float delta) {
+    __try {
+        if(g_recoil_cancelled.exchange(false)&&!reset_recoil()) return;
+        tick_recoil_inner(delta);
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        g_enabled.store(false);g_faulted.store(true);reset_recoil();
+    }
 }
 static int weapon_profile(UEVR_UObjectHandle weapon) {
     const auto cls=g_api->sdk->uobject->get_class(weapon);
@@ -116,7 +208,10 @@ static UEVR_UObjectHandle spawn_detour(UEVR_UObjectHandle world,UEVR_UClassHandl
     // class and collision behavior; call the native spawn exactly once.
     updated.rotation=original->rotation;
     g_spawn_redirected.fetch_add(1,std::memory_order_relaxed);
-    return g_spawn_original(world,cls,data,&updated,weapon);
+    const auto spawned=g_spawn_original(world,cls,data,&updated,weapon);
+    if(spawned&&g_lease.profile==0&&g_lease.visual&&g_recoil_pending<8)
+        ++g_recoil_pending;
+    return spawned;
 }
 [[maybe_unused]] static Transform* detour(UEVR_UObjectHandle weapon,Transform* out,float x,float y,void* rng,bool uniform) {
     count(Called);
@@ -342,8 +437,9 @@ static void prepare_flash_hooks(ULONGLONG now) {
     }
 }
 
-static void on_tick(UEVR_UGameEngineHandle,float) {
+static void on_tick(UEVR_UGameEngineHandle,float delta) {
     g_engine_thread.store(GetCurrentThreadId());
+    tick_recoil(delta);
     if(!g_enabled.load()||!g_lease.ready) {
         g_diagnostics_since=0;
         return;
@@ -365,19 +461,29 @@ static void on_tick(UEVR_UGameEngineHandle,float) {
         g_flash_moved.exchange(0,std::memory_order_relaxed),
         g_flash_attached_skipped.exchange(0,std::memory_order_relaxed),int(g_flash_faulted.load()));
 }
-static void on_event(const char* name,const char* text) {
-    if(!name||std::strcmp(name,"boltgun.muzzle.v1")!=0) return;
-    if(!text||std::strcmp(text,"off")==0) { g_enabled.store(false);return; }
-    if(g_faulted.load()) return; // One native/API fault disables this session.
-    if(GetCurrentThreadId()!=g_engine_thread.load()) return;
-    unsigned long long p{},w{},m{};float x{},y{},z{};int count{};
-    if(sscanf_s(text,"%llu|%llu|%llu|%f|%f|%f%n",&p,&w,&m,&x,&y,&z,&count)!=6||
-       text[count]!='\0'||!finite({x,y,z})||std::fabs(x)>200||std::fabs(y)>200||std::fabs(z)>200) {
+static void event_inner(const char* text) {
+    unsigned long long p{},w{},m{},v{};
+    float x{},y{},z{},bx{},by{},bz{},qx{},qy{},qz{},qw{};
+    int count{};
+    const int extended=sscanf_s(text,
+        "%llu|%llu|%llu|%f|%f|%f|%llu|%f|%f|%f|%f|%f|%f|%f%n",
+        &p,&w,&m,&x,&y,&z,&v,&bx,&by,&bz,&qx,&qy,&qz,&qw,&count);
+    const bool has_visual=extended==14&&text[count]=='\0';
+    count=0;
+    const bool legacy=!has_visual&&sscanf_s(text,"%llu|%llu|%llu|%f|%f|%f%n",
+        &p,&w,&m,&x,&y,&z,&count)==6&&text[count]=='\0';
+    Quat base_rotation{};
+    if((!has_visual&&!legacy)||!finite({x,y,z})||
+       std::fabs(x)>200||std::fabs(y)>200||std::fabs(z)>200||
+       (has_visual&&(!finite({bx,by,bz})||
+         std::fabs(bx)>300||std::fabs(by)>300||std::fabs(bz)>300||
+         !normalized({qx,qy,qz,qw},base_rotation)))) {
         g_enabled.store(false);return;
     }
     const auto pawn=reinterpret_cast<UEVR_UObjectHandle>(p);
     const auto weapon=reinterpret_cast<UEVR_UObjectHandle>(w);
     const auto mesh=reinterpret_cast<UEVR_UObjectHandle>(m);
+    const auto visual=reinterpret_cast<UEVR_UObjectHandle>(v);
     g_enabled.store(false);
     if(mesh==g_rejected_mesh) return;
     if(!live(pawn)||!live(weapon)||!live(mesh)||g_api->sdk->functions->get_local_pawn(0)!=pawn||
@@ -386,17 +492,28 @@ static void on_event(const char* name,const char* text) {
     if(profile<0) return;
     if(!live(reinterpret_cast<UEVR_UObjectHandle>(g_mesh_class))) g_mesh_class=reinterpret_cast<UEVR_UClassHandle>(g_api->sdk->uobject_array->find_uobject(
         L"Class /Script/Engine.StaticMeshComponent"));
-    if(!g_mesh_class||
-       !g_api->sdk->uobject->is_a(mesh,g_mesh_class)) return;
+    if(!g_mesh_class||!g_api->sdk->uobject->is_a(mesh,g_mesh_class)) return;
     const auto mesh_data=g_api->sdk->uobject->get_property_data(mesh,L"StaticMesh");
     UEVR_UObjectHandle asset{};
     if(!mesh_data) return;std::memcpy(&asset,mesh_data,sizeof(asset));
     if(!live(asset)||asset!=g_api->sdk->uobject_array->find_uobject(weapon_profiles[profile].mesh)) return;
+    if(has_visual) {
+        if(profile!=0||!visual||visual==mesh||!live(visual)||
+           g_api->sdk->uobject->get_outer(visual)!=pawn||
+           !g_api->sdk->uobject->is_a(visual,g_mesh_class)) return;
+        const auto visual_data=g_api->sdk->uobject->get_property_data(visual,L"StaticMesh");
+        UEVR_UObjectHandle visual_asset{};
+        if(!visual_data) return;
+        std::memcpy(&visual_asset,visual_data,sizeof(visual_asset));
+        if(visual_asset!=asset) return;
+    }
     // Verify actual equipped weapon using reflected object properties, never offsets.
     if(!equipped_weapon(pawn,weapon)) return;
     const auto now=GetTickCount64();
-    const bool changed=mesh!=g_lease.mesh||weapon!=g_lease.weapon||pawn!=g_lease.pawn;
+    const bool changed=mesh!=g_lease.mesh||weapon!=g_lease.weapon||pawn!=g_lease.pawn||
+                       visual!=g_lease.visual;
     if(changed||!g_lease.transform_fn) {
+        if(!reset_recoil()||g_faulted.load()) return;
         const auto cls=g_api->sdk->uobject->get_class(mesh);
         const auto fn=g_api->sdk->ustruct->find_function(reinterpret_cast<UEVR_UStructHandle>(cls),L"K2_GetComponentToWorld");
         const auto barrel=g_api->sdk->ustruct->find_function(
@@ -405,7 +522,8 @@ static void on_event(const char* name,const char* text) {
             g_api->functions->log_warn("[Boltgun muzzle 3D] Unexpected Transform ABI; retaining native firing");
             g_rejected_mesh=mesh;g_lease={};return;
         }
-        g_lease={pawn,weapon,mesh,fn,{x,y,z},now,now,true,profile};
+        g_lease={pawn,weapon,mesh,fn,{x,y,z},now,now,true,profile,
+                 visual,{bx,by,bz},has_visual?base_rotation:Quat{0,0,0,1}};
         g_diagnostics_since=0;
         g_diagnostic_windows=0;
         for(auto& counter : g_gate) counter.exchange(0,std::memory_order_relaxed);
@@ -414,8 +532,29 @@ static void on_event(const char* name,const char* text) {
         g_api->functions->log_info("[Boltgun muzzle 3D] Owned firearm %d and Transform contract verified",profile);
     } else {
         g_lease.heartbeat=now;g_lease.muzzle={x,y,z};g_lease.ready=true;g_lease.profile=profile;
+        g_lease.base_location={bx,by,bz};
+        g_lease.base_rotation=has_visual?base_rotation:Quat{0,0,0,1};
+        if(g_recoil_target==visual&&g_recoil_owner==pawn) {
+            g_recoil_base=g_lease.base_location;g_recoil_rotation=g_lease.base_rotation;
+        }
     }
-    g_enabled.store(true);
+    g_enabled.store(!g_faulted.load());
+}
+static void on_event(const char* name,const char* text) {
+    if(!name||std::strcmp(name,"boltgun.muzzle.v1")!=0) return;
+    if(!text||std::strcmp(text,"off")==0) {
+        g_enabled.store(false);g_recoil_cancelled.store(true);return;
+    }
+    if(g_faulted.load()) return; // One native/API fault disables this session.
+    if(GetCurrentThreadId()!=g_engine_thread.load()) return;
+    __try {
+        if(g_recoil_cancelled.exchange(false)&&!reset_recoil()) return;
+        if(g_faulted.load()) return;
+        event_inner(text);
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        g_enabled.store(false);g_faulted.store(true);reset_recoil();
+    }
 }
 
 static bool supported_file(const wchar_t* path) {
@@ -473,6 +612,6 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
         reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))+0x10616a0,
         reinterpret_cast<void*>(spawn_detour),reinterpret_cast<void**>(&g_spawn_original));
     if(id<0) api->functions->log_warn("[Boltgun muzzle 3D] Hook unavailable; retaining native firing");
-    else api->functions->log_info("[Boltgun muzzle 3D] Revision 12: exact executable verified; ten-firearm projectile and Niagara bridge prepared");
+    else api->functions->log_info("[Boltgun muzzle 3D] Revision 13: exact executable verified; ten-firearm muzzle bridge and isolated Bolter recoil prepared");
     return true;
 }

@@ -48,7 +48,7 @@
     "source": "src\\lua\\boltgun_bolter3d.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_bolter3d.lua",
     "backup": null,
-    "sha256": "1AB91949C645CD7CC75D5AAE31387A3EB29A7E53294A9924B90CCD2DC313AF5D",
+    "sha256": "470BAB4288F37D07E7D68D6BD99C441D4FE962683A35C6DD344DFBCBF3DF3E04",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional 10-firearm 3D replacement; installed/selected only by Bolter3D.ps1, included for original-profile restoration"
@@ -57,7 +57,7 @@
     "source": "profile\\defaults\\bolter3d.default.settings",
     "target": "${ProfileRoot}\\data\\bolter3d.settings",
     "backup": null,
-    "sha256": "1078EEABF4D12455A7550EE6E26CF83CC6A4790EDA8A2ED562934B4BF4B294BF",
+    "sha256": "A6C6ADDAFA7041A17B52817A96968711DCAB310B0ADE9D85FC72943587AB925F",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional bolter 3D prototype; installed/selected only by Bolter3D.ps1, included for original-profile restoration"
@@ -75,7 +75,7 @@
     "source": "build\\plugins\\boltgun_muzzle.dll",
     "target": "${ProfileRoot}\\plugins\\boltgun_muzzle.dll",
     "backup": null,
-    "sha256": "1474E5E65320C46900F96C3F2336233D06CF35BA3E793CDDE010988B2BBE8698",
+    "sha256": "19ECE38E28A431D36D7BB44A526AA61491865281B911DC262521AF98D8E8114B",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional exact-build ten-firearm muzzle bridge; installed only by Bolter3D.ps1; included for original-profile restoration"

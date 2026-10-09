@@ -312,9 +312,161 @@ class BolterPreviewTests(unittest.TestCase):
         self.assertFalse(c.hidden)
         self.assertAlmostEqual(c.scale,.5)
 
+    def test_bolter_recoil_uses_hidden_stable_muzzle_reference(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.tick()
+        ctx=self.lua.globals().ctx
+        self.assertEqual(ctx.created,2)
+        visual,anchor=ctx.components[1],ctx.components[2]
+        self.assertTrue(visual.visible)
+        self.assertFalse(anchor.visible)
+        self.assertTrue(anchor.hidden)
+        self.assertEqual(anchor.scale,visual.scale)
+        self.assertEqual(anchor.offset.y,visual.offset.y)
+        self.assertEqual(anchor.rotation.w,visual.rotation.w)
+        events=[e.data for e in ctx.events.values() if e.name=='boltgun.muzzle.v1' and e.data!='off']
+        self.assertEqual(len(events),1)
+        parts=events[0].split('|')
+        self.assertEqual(parts[:3],['1001','1003','2002'])
+        self.assertEqual(parts[6],'2001')
+        self.assertEqual(len(parts),14)
+        self.assertEqual(self.lua.globals().files['bolter3d.owned'].split('\n')[0],'v3')
+
+    def test_bolter_recoil_cleans_up_both_components_and_recovers(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.tick()
+        ctx=self.lua.globals().ctx
+        self.reload()
+        self.lua.globals().files['bolter3d.mode']='off'
+        self.tick()
+        self.assertEqual(ctx.destroyed,2)
+        self.assertFalse(self.lua.globals().primary.hidden)
+        self.assertEqual(self.lua.globals().files['bolter3d.owned'],'')
+
+    def test_bolter_recoil_recovers_anchor_even_if_visible_component_expired(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.tick()
+        ctx=self.lua.globals().ctx
+        ctx.components[1].valid=False
+        self.reload()
+        self.lua.globals().files['bolter3d.mode']='off'
+        self.tick()
+        self.assertEqual(ctx.destroyed,1)
+        self.assertFalse(ctx.components[2].valid)
+        self.assertFalse(self.lua.globals().primary.hidden)
+        self.assertEqual(self.lua.globals().files['bolter3d.owned'],'')
+
     def test_does_not_duplicate_component_on_repeated_ticks(self):
         for _ in range(10): self.tick()
         self.assertEqual(self.lua.globals().ctx.created,1)
+
+    def test_recoil_can_be_disabled_without_leaving_anchor_or_hidden_sprite(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.tick()
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=0'
+        self.tick(1.1)
+        ctx=self.lua.globals().ctx
+        self.assertEqual(ctx.destroyed,2)
+        self.assertEqual(ctx.created,3)
+        self.assertTrue(ctx.components[3].visible)
+        parts=[e.data for e in ctx.events.values() if e.data!='off'][-1].split('|')
+        self.assertEqual(len(parts),6)
+        self.lua.globals().files['bolter3d.mode']='off'
+        self.tick(1)
+        self.assertEqual(ctx.destroyed,3)
+        self.assertTrue(self.lua.globals().primary.visible)
+
+    def test_recoil_partial_anchor_creation_failure_removes_both_components(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.lua.execute('''local original=new_component
+          new_component=function(owner)
+            local c=original(owner)
+            if ctx.created==2 then c.SetStaticMesh=function() error('anchor mesh failure') end end
+            return c
+          end''')
+        self.tick()
+        ctx=self.lua.globals().ctx
+        self.assertEqual(ctx.destroyed,2)
+        self.assertTrue(self.lua.globals().primary.visible)
+        self.assertEqual(self.lua.globals().files['bolter3d.owned'],'')
+        self.assertFalse(any(e.data!='off' for e in ctx.events.values()))
+
+    def test_recoil_recreates_pair_when_anchor_expires(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.tick()
+        self.lua.globals().ctx.components[2].valid=False
+        self.tick(1.1)
+        ctx=self.lua.globals().ctx
+        self.assertEqual(ctx.destroyed,1)
+        self.assertEqual(ctx.created,4)
+        self.assertTrue(ctx.components[3].visible)
+        self.assertFalse(ctx.components[4].visible)
+
+    def test_packaged_defaults_enable_bolter_recoil(self):
+        self.lua.globals().files['bolter3d.settings']=(ROOT/'profile/defaults/bolter3d.default.settings').read_text()
+        self.tick()
+        self.assertEqual(self.lua.globals().ctx.created,2)
+
+    def test_foreign_anchor_is_retained_while_owned_visual_and_sprite_restore(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.tick()
+        self.lua.execute('''local foreign=object('Foreign pawn',9999,class('Pawn'))
+          ctx.components[2].get_outer=function() engine_only();return foreign end
+          ctx.components[2].SetHiddenInGame=function() error('foreign mutation') end
+          ctx.components[2].SetRelativeScale3D=function() error('foreign mutation') end''')
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1\nx=5'
+        self.tick(.3)
+        ctx=self.lua.globals().ctx
+        self.assertTrue(self.lua.globals().primary.visible)
+        self.assertFalse(ctx.components[1].valid)
+        self.assertTrue(ctx.components[2].valid)
+        self.assertNotEqual(self.lua.globals().files['bolter3d.owned'],'')
+        self.lua.globals().files['bolter3d.mode']='off'
+        self.reload()
+        self.tick()
+        self.assertTrue(self.lua.globals().primary.visible)
+
+    def test_partial_anchor_initialization_and_rollback_failure_recover_both(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.lua.execute('''local original=new_component
+          new_component=function(owner)
+            local c=original(owner)
+            if ctx.created==1 then
+              local destroy=c.K2_DestroyComponent
+              local failed=false
+              c.K2_DestroyComponent=function(self,requester)
+                if not failed then failed=true;error('transient rollback failure') end
+                return destroy(self,requester)
+              end
+            else c.SetStaticMesh=function() error('anchor initialization failed') end end
+            return c
+          end''')
+        self.tick()
+        self.lua.globals().files['bolter3d.mode']='off'
+        self.reload()
+        self.tick()
+        ctx=self.lua.globals().ctx
+        self.assertEqual(ctx.destroyed,2)
+        self.assertFalse(ctx.components[2].valid)
+        self.assertTrue(self.lua.globals().primary.visible)
+        self.assertEqual(self.lua.globals().files['bolter3d.owned'],'')
+
+    def test_foreign_anchor_journal_survives_expired_original_pawn(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.tick()
+        self.lua.execute('''local foreign=object('Foreign pawn',9999,class('Pawn'))
+          ctx.components[2].get_outer=function() engine_only();return foreign end
+          ctx.components[2].SetHiddenInGame=function() error('foreign mutation') end''')
+        self.lua.globals().files['bolter3d.mode']='off'
+        self.tick(.3)
+        journal=self.lua.globals().files['bolter3d.owned']
+        self.lua.globals().pawn.valid=False
+        self.lua.globals().files['bolter3d.mode']='preview'
+        self.reload()
+        self.tick()
+        self.assertEqual(self.lua.globals().files['bolter3d.owned'],journal)
+        self.assertTrue(self.lua.globals().ctx.components[2].valid)
+        self.assertEqual(self.lua.globals().ctx.created,2)
 
     def test_muzzle_heartbeat_publishes_only_the_owned_mesh_and_equipped_weapon(self):
         self.tick()

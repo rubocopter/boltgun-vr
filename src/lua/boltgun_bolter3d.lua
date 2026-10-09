@@ -67,11 +67,12 @@ local required = {'SetHiddenInGame','SetVisibility','SetCollisionEnabled','SetGe
     'SetMaterial','SetRelativeScale3D','K2_DestroyComponent'}
 local defaults = {scale=.5,x=0,y=0,z=0,yaw=0,pitch=0,roll=0,
     muzzle_enabled=1,muzzle_x=67.81414,muzzle_y=0,muzzle_z=53,
-    grip_x=-48,grip_y=0,grip_z=24}
+    grip_x=-48,grip_y=0,grip_z=24,recoil_enabled=0}
 local limits = {scale={.2,.85},x={-60,60},y={-60,60},z={-60,60},
     yaw={-180,180},pitch={-180,180},roll={-180,180},
     grip_x={-100,100},grip_y={-100,100},grip_z={-100,100},
-    muzzle_enabled={0,1},muzzle_x={-200,200},muzzle_y={-200,200},muzzle_z={-200,200}}
+    muzzle_enabled={0,1},muzzle_x={-200,200},muzzle_y={-200,200},muzzle_z={-200,200},
+    recoil_enabled={0,1}}
 for _, item in ipairs(arsenal) do
     if item.id ~= 'bolter' then
         local prefix = item.id .. '_muzzle_'
@@ -83,7 +84,8 @@ for _, item in ipairs(arsenal) do
 end
 local stopped, recovered, timer, retry_timer, mode, settings, settings_text = false, false, 1, 1, 'off', {}, ''
 local load_attempted, load_failed = {}, false
-local owned, owner, applied, last_status = nil, nil, nil, nil
+local owned, anchor, owner, applied, last_status = nil, nil, nil, nil, nil
+local base_location, base_rotation = nil, nil
 local current_weapon = nil
 local sprite_state = nil
 local muzzle_timer, muzzle_published, muzzle_failed = 1, false, false
@@ -114,8 +116,15 @@ local function publish_muzzle(weapon)
     if dispatch == nil or muzzle_timer < .1 then return end
     muzzle_timer = 0
     local text = string.format('%d|%d|%d|%.6f|%.6f|%.6f',
-        owner:get_address(),weapon:get_address(),owned:get_address(),
+        owner:get_address(),weapon:get_address(),(anchor or owned):get_address(),
         settings[prefix .. 'x'],settings[prefix .. 'y'],settings[prefix .. 'z'])
+    if anchor ~= nil then
+        -- The hidden tracked mesh is the immutable firing reference. Only the
+        -- separate visible mesh receives native visual recoil on actual shots.
+        text = text .. string.format('|%d|%.6f|%.6f|%.6f|%.6f|%.6f|%.6f|%.6f',
+            owned:get_address(),base_location.x,base_location.y,base_location.z,
+            base_rotation.x,base_rotation.y,base_rotation.z,base_rotation.w)
+    end
     local ok = pcall(dispatch, 'boltgun.muzzle.v1', text)
     muzzle_published = ok
     if not ok then
@@ -178,23 +187,34 @@ end
 
 local function cleanup()
     revoke_muzzle() -- Before destroying/detaching anything referenced by the plugin.
-    if valid(owned) then
-        local actual_owner = owned:get_outer()
-        assert(not valid(actual_owner) or actual_owner == owner, 'Preview owner changed; refusing mutation')
-        owned:SetHiddenInGame(true, false)
-        owned:SetVisibility(false, false)
-        hook.remove_motion_controller_state(owned)
-    end
-    restore_sprite()
-    if valid(owned) then
-        if valid(owner) and owned:get_outer() == owner then
-            owned:K2_DestroyComponent(owner)
-        else
-            -- Actor destruction owns its component teardown. Never call a stale owner.
-            report('Owner expired; detached visual awaits actor teardown')
+    local foreign_retained = false
+    for _, part in pairs({owned, anchor}) do
+        if valid(part) then
+            local actual_owner = part:get_outer()
+            if not valid(actual_owner) or actual_owner == owner then
+                part:SetHiddenInGame(true, false)
+                part:SetVisibility(false, false)
+                hook.remove_motion_controller_state(part)
+            else
+                foreign_retained = true
+                report('Preview owner changed; foreign component retained')
+            end
         end
     end
-    owned, owner, applied, current_weapon = nil, nil, nil, nil
+    restore_sprite()
+    for _, part in pairs({owned, anchor}) do
+        if valid(part) then
+            if valid(owner) and part:get_outer() == owner then
+                part:K2_DestroyComponent(owner)
+            else
+                -- Actor destruction owns its component teardown. Never call a stale owner.
+                report('Owner expired; detached visual awaits actor teardown')
+            end
+        end
+    end
+    assert(not foreign_retained, 'Foreign component retained; ownership journal preserved')
+    owned, anchor, owner, applied, current_weapon = nil, nil, nil, nil, nil
+    base_location, base_rotation = nil, nil
     sprite_state = nil
     clear_journal()
 end
@@ -206,8 +226,9 @@ local function recover()
     for value in text:gmatch('[^\r\n]+') do fields[#fields+1] = value end
     local v1 = #fields == 6 and fields[1] == 'v1'
     local v2 = #fields == 11 and fields[1] == 'v2'
-    assert(v1 or v2, 'Invalid ownership journal; refusing a duplicate visual')
-    if v2 then
+    local v3 = #fields == 13 and fields[1] == 'v3'
+    assert(v1 or v2 or v3, 'Invalid ownership journal; refusing a duplicate visual')
+    if v2 or v3 then
         assert((fields[10] == 'true' or fields[10] == 'false') and
             (fields[11] == 'true' or fields[11] == 'false'), 'Invalid sprite visibility journal')
     end
@@ -223,11 +244,17 @@ local function recover()
         candidate_owner = candidate:get_outer()
         local class = candidate:get_class()
         assert(valid(class) and class:get_full_name() == CLASS, 'Journal is not a preview mesh component')
-    elseif v2 then
+    elseif v2 or v3 then
         -- The preview may have been destroyed independently. Restore a hidden
         -- sprite only on the exact surviving pawn recorded in this session.
         candidate_owner = api:find_uobject(fields[5])
-        if not valid(candidate_owner) then clear_journal(); recovered = true; return end
+        if not valid(candidate_owner) then
+            -- The original actor may expire while a reference with changed
+            -- ownership survives. Keep its durable record and block allocation.
+            assert(not v3 or not valid(api:find_uobject(fields[13])),
+                'Previous pawn expired while recoil reference survives; ownership journal preserved')
+            clear_journal(); recovered = true; return
+        end
         candidate = nil
     else
         clear_journal(); recovered = true; return
@@ -235,13 +262,25 @@ local function recover()
     assert(valid(candidate_owner) and tostring(candidate_owner:get_address()) == fields[3]
         and candidate_owner:get_full_name() == fields[5], 'Component owner identity changed')
     local recovered_sprite
-    if v2 then
+    if v2 or v3 then
         recovered_sprite = snapshot_sprite(candidate_owner)
         assert(recovered_sprite.address == fields[7] and recovered_sprite.name == fields[8] and
             tostring(recovered_sprite.renderer:get_address()) == fields[9], 'Sprite recovery identity changed')
         recovered_sprite.hidden, recovered_sprite.visible = fields[10] == 'true', fields[11] == 'true'
     end
-    owned, owner = candidate, candidate_owner
+    local recovered_anchor = nil
+    if v3 then
+        recovered_anchor = api:find_uobject(fields[13])
+        if valid(recovered_anchor) then
+            assert(tostring(recovered_anchor:get_address()) == fields[12] and
+                recovered_anchor ~= candidate and
+                recovered_anchor:get_class():get_full_name() == CLASS,
+                'Recoil reference identity changed')
+        else
+            recovered_anchor = nil
+        end
+    end
+    owned, anchor, owner = candidate, recovered_anchor, candidate_owner
     sprite_state = recovered_sprite
     cleanup(); recovered = true
     report('Previous preview removed on engine tick')
@@ -268,11 +307,8 @@ local function apply_settings(profile)
     local scale = profile.id == 'bolter' and settings.scale or profile.scale
     local grip_x = profile.id == 'bolter' and settings.grip_x or profile.grip_x
     local grip_z = profile.id == 'bolter' and settings.grip_z or profile.grip_z
-    owned:SetRelativeScale3D({X=scale,Y=scale,Z=scale})
     -- UEVR explicitly warns that a MotionControllerState pointer can be invalidated.
     -- Resolve it when needed and never store it in the script state.
-    local state = hook.get_or_add_motion_controller_state(owned)
-    assert(state ~= nil, 'Controller attachment unavailable')
     local location = UEVR_Vector3f.new()
     -- Unreal mesh centimetres: grip (-48,0,24). UObjectHook uses GLM offsets
     -- and converts (x,y,z) -> UE (y,z,-x). Cancel the scaled grip coordinates
@@ -286,14 +322,20 @@ local function apply_settings(profile)
     local rotation = UEVR_Quaternionf.new()
     rotation.w,rotation.x = cy*cp*cr+sy*sp*sr, cy*sp*cr+sy*cp*sr
     rotation.y,rotation.z = sy*cp*cr-cy*sp*sr, cy*cp*sr-sy*sp*cr
-    state:set_hand(1)
     -- The optional native getter reads this owned collisionless component's
     -- latest world pose. UEVR must not restore it to the pawn origin after draw.
     local prefix = profile.id == 'bolter' and 'muzzle_' or profile.id .. '_muzzle_'
-    state:set_permanent(settings.muzzle_enabled == 1 and settings[prefix .. 'enabled'] == 1 and
-        not muzzle_failed and uevr.params.functions.dispatch_custom_event ~= nil)
-    state:set_location_offset(location)
-    state:set_rotation_offset(rotation)
+    for _, part in pairs({owned, anchor}) do
+        part:SetRelativeScale3D({X=scale,Y=scale,Z=scale})
+        local state = hook.get_or_add_motion_controller_state(part)
+        assert(state ~= nil, 'Controller attachment unavailable')
+        state:set_hand(1)
+        state:set_permanent(settings.muzzle_enabled == 1 and settings[prefix .. 'enabled'] == 1 and
+            not muzzle_failed and uevr.params.functions.dispatch_custom_event ~= nil)
+        state:set_location_offset(location)
+        state:set_rotation_offset(rotation)
+    end
+    base_location, base_rotation = location, rotation
     applied = settings_text
 end
 
@@ -449,6 +491,30 @@ local function create(pawn, mesh, material, weapon, profile)
     -- The static mesh already has its own authored material slots. An unloaded
     -- override must not prevent the geometry from appearing.
     if valid(material) then owned:SetMaterial(0, material) end
+    if profile.id == 'bolter' and settings.recoil_enabled == 1 and
+        settings.muzzle_enabled == 1 and uevr.params.functions.dispatch_custom_event ~= nil then
+        anchor = api:add_component_by_class(pawn, class, false)
+        assert(valid(anchor) and anchor ~= owned and anchor:get_outer() == pawn,
+            'Recoil reference creation/ownership failed')
+        -- Record both identities before initialization can fail. A later script
+        -- instance can finish teardown even if rollback also fails temporarily.
+        journal = table.concat({'v3',tostring(engine:get_address()),tostring(pawn:get_address()),
+            tostring(owned:get_address()),pawn:get_full_name(),owned:get_full_name(),
+            sprite_state.address,sprite_state.name,tostring(sprite_state.renderer:get_address()),
+            tostring(sprite_state.hidden),tostring(sprite_state.visible),
+            tostring(anchor:get_address()),anchor:get_full_name()}, '\n')
+        fs.write(JOURNAL, journal)
+        assert(fs.read(JOURNAL) == journal, 'Recoil reference journal could not be verified')
+        anchor:SetHiddenInGame(true, false)
+        anchor:SetVisibility(false, false)
+        anchor:SetCollisionEnabled(0)
+        anchor:SetGenerateOverlapEvents(false)
+        anchor:SetMobility(2)
+        anchor:SetCastShadow(false)
+        anchor:SetOwnerNoSee(false)
+        anchor:SetOnlyOwnerSee(false)
+        assert(anchor:SetStaticMesh(mesh) == true, 'Recoil reference mesh assignment failed')
+    end
     current_weapon = profile.id
     apply_settings(profile)
     owned:SetVisibility(true, false)
@@ -491,6 +557,15 @@ local function step(delta)
     end
     if owned ~= nil and current_weapon ~= profile.id then cleanup() end
     if owned ~= nil and (not valid(owned) or not valid(owner) or owner ~= pawn) then cleanup() end
+    if owned ~= nil and anchor ~= nil and not valid(anchor) then cleanup() end
+    if owned ~= nil and (owned:get_outer() ~= owner or
+        (anchor ~= nil and anchor:get_outer() ~= owner)) then
+        cleanup()
+        error('Preview owner changed; module disabled after restoring owned components')
+    end
+    if owned ~= nil and profile.id == 'bolter' and
+        (anchor ~= nil) ~= (settings.recoil_enabled == 1 and settings.muzzle_enabled == 1 and
+            uevr.params.functions.dispatch_custom_event ~= nil) then cleanup() end
     if owned ~= nil then
         if applied ~= settings_text then apply_settings(profile) end
         hide_sprite()
@@ -515,7 +590,7 @@ uevr.params.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
     if not ok then
         local clean, clean_error = true, nil
         -- If journal validation failed before adopting an object, do not erase it.
-        if owned ~= nil then clean, clean_error = pcall(cleanup) end
+        if owned ~= nil or anchor ~= nil then clean, clean_error = pcall(cleanup) end
         stopped = true
         report('Disabled after API error: ' .. tostring(error)
             .. (clean and '' or ' | Cleanup pending: ' .. tostring(clean_error)))

@@ -1,7 +1,57 @@
 > Maintained paths: see [repository layout](REPOSITORY.md) and [build guide](BUILD.md).
 > Historical commands/evidence below describe development snapshots; local research archives are not shipped.
 
-# Arsenal 3D: native muzzle bridge, revision 12
+# Arsenal 3D: native muzzle bridge, revision 13
+
+## Revision 13: isolated Bolter visual recoil
+
+`recoil_enabled=1` in `data/bolter3d.settings` creates two owned Bolter
+components with identical scale and grip calibration. The invisible reference
+remains stationary relative to the right controller and supplies the existing
+projectile/flash origin. Only the visible component receives procedural offsets.
+Packaged defaults enable the option; missing keys in custom settings default to
+zero. `recoil_enabled=0` restores a single static component. The muzzle bridge
+must also be enabled; there is no input-only recoil fallback.
+
+The existing `boltgun.muzzle.v1` event accepts either six fields or fourteen:
+
+```text
+pawn|weapon|anchor|muzzle_x|muzzle_y|muzzle_z|visual|base_x|base_y|base_z|quat_x|quat_y|quat_z|quat_w
+```
+
+The extension is accepted only for the Bolter and Machine Spirit Bolter, with
+distinct components belonging to the same local pawn and sharing the exact
+expected asset. Location values must be finite/bounded and the quaternion near
+unit length. Quaternion payload order is x/y/z/w; the UEVR ABI uses w/x/y/z.
+Base offsets use the same UEVR coordinates as Lua's grip calibration.
+
+Only a non-null return from the validated native projectile spawn queues an
+impulse. The original spawn is called exactly once, before animation; its native
+orientation, spread and payload remain intact. Each shot adds 1.1 offset units,
+limited to 5, with exponential decay at 12/s and a 0.003-unit settling threshold.
+Local X pitch is composed with the configured rotation, limited to about 7.2
+degrees. UEVR applies `hand * inverse(offset)`, so the pitch offset is
+pre-multiplied into the base quaternion to preserve the mesh-local frame with
+nonzero grip yaw/roll. Tick deltas are bounded to 0.1 s and invalid values are ignored.
+The reference, camera and controller poses are never animated.
+
+Offsets restore on off, lease expiry, weapon change, menu or tracking loss.
+Off events on UI threads only revoke permission and queue cancellation;
+restoration happens on the next engine tick/event. A fresh heartbeat cannot
+replay a pending shot from a revoked session. Motion-state handles are resolved
+for each write. Native API faults disable the bridge for the session; partial
+writes attempt restoration without allowing the fault to escape the callback.
+A failed restoration keeps its target/base for a later tick, while the bridge
+remains disabled. Heartbeat calibration updates also refresh that saved base.
+Lua's v3 journal recovers both owned components and supports prior v1/v2 journals.
+If a component changes owner, Lua retains that component untouched, restores
+the verified sprite and other owned components, and preserves the journal while
+blocking new allocation. The record also survives expiry of the original pawn.
+
+Offline tests cover successful/failed spawns, stable firing origins, capped
+bursts, settling, cancellation, invalid events, expired pawns and simulated API
+faults. See [revision 13](2026-10-09-revision13.md) for the required headset checks.
+The nine other firearms retain their revision 12 behaviour.
 
 ## Revision 12: all ten firearms
 

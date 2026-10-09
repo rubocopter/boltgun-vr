@@ -1,7 +1,23 @@
 > Maintained paths: see [repository layout](REPOSITORY.md) and [build guide](BUILD.md).
 > Historical commands/evidence below describe development snapshots; local research archives are not shipped.
 
-# Arsenal 3D del Boltgun original â€” revisiÃ³n 12
+# Arsenal 3D del Boltgun original — revisión 13
+
+## Retroceso visual del Bolter
+
+La revisión 13 añade un retroceso ligero de la malla al crear un proyectil real,
+con recuperación suave y acumulación limitada en ráfagas. Solo se aplica al
+Bolter y su variante Machine Spirit. Una malla invisible de referencia mantiene
+el origen del proyectil y los fogonazos compatibles; la cámara y los mandos no
+reciben animación. Las otras nueve armas conservan su comportamiento anterior.
+
+Los ajustes distribuidos incluyen `recoil_enabled=1`; `recoil_enabled=0` vuelve
+al modelo estático. La opción requiere `muzzle_enabled=1`. Si la configuración
+personalizada no tiene esta clave, sigue desactivada hasta añadirla. La revisión
+está preparada en el repositorio y pendiente de instalación/prueba en PS VR2.
+Consulta [los cambios y pruebas pendientes](2026-10-09-revision13.md).
+
+## Arsenal y puente de origen
 
 El perfil experimental utiliza las **mallas 3D de pickups del propio juego**:
 Bolter, escopeta, plasma, bolter pesado, lanzador Vengeance, rifle de fusiÃ³n,
