@@ -24,10 +24,11 @@ game and official injector together; injection still requires one manual click.
 
 ## Current status
 
-Development snapshot: **profile v7, arsenal revision 14, chainsword package 4**.
+Development snapshot: **profile v7, arsenal revision 15, chainsword package 4**.
 Earlier videos confirmed the Bolter replacement and chainsword appearance/tracking.
-The latest muzzle coordinates, arsenal recoil, firing haptics, chainsword texture recovery, teeth motion and Codex changes still need
-headset validation. See [validation and limitations](docs/STATUS.md).
+The maintainer reports that the current VR mechanics work except firearm effects.
+Revision 15 adds passive firearm-effect diagnostics; it still requires a new
+headset check. See [validation and limitations](docs/STATUS.md).
 
 Native firing direction and spread are preserved. Attached effects and beam/hitscan
 paths outside the intercepted helper retain native behaviour. There are no physical
@@ -55,7 +56,7 @@ or [advanced installation](docs/INSTALL.md) before using it.
 | [Sense controls](docs/CONTROLS.md) | [Source and notices](docs/SOURCE-AND-NOTICES.md) |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | [Repository layout](docs/REPOSITORY.md) |
 | [Status and known limits](docs/STATUS.md) | [Native muzzle implementation](docs/NATIVE-MUZZLE.md) |
-| [Arsenal details](docs/ARSENAL.md) | [Revision 14](docs/2026-10-09-revision14.md) |
+| [Arsenal details](docs/ARSENAL.md) | [Revision 15 diagnostic guide](docs/2026-10-09-revision15.md) |
 | [Chainsword details](docs/CHAINSAW.md) | [Release status](docs/STATUS.md) |
 
 Unofficial fan project. The game, injector and extracted game assets are not included.

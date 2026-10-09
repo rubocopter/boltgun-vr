@@ -1,7 +1,15 @@
 > Maintained paths: see [repository layout](REPOSITORY.md) and [build guide](BUILD.md).
 > Historical commands/evidence below describe development snapshots; local research archives are not shipped.
 
-# Arsenal 3D: native muzzle bridge, revision 13
+# Arsenal 3D: native muzzle bridge (revision 15)
+
+## Revision 15: passive effect diagnostics
+
+For the current bridge, see the [diagnostic guide](2026-10-09-revision15.md).
+Shot, recoil and haptic outcomes are logged for up to eight six-second
+windows after an owned firearm lease is acquired. No new firing hooks or
+effects are introduced. Reports from the previous headset run say gameplay
+works except firearm effects; the diagnostics still need a headset run.
 
 ## Revision 14: isolated firearm visual recoil
 
@@ -19,7 +27,7 @@ The existing `boltgun.muzzle.v1` event accepts either six fields or fourteen:
 pawn|weapon|anchor|muzzle_x|muzzle_y|muzzle_z|visual|base_x|base_y|base_z|quat_x|quat_y|quat_z|quat_w
 ```
 
-The extension is accepted only for the Bolter and Machine Spirit Bolter, with
+The extension is accepted for all ten firearm profiles and their Machine Spirit variants, with
 distinct components belonging to the same local pawn and sharing the exact
 expected asset. Location values must be finite/bounded and the quaternion near
 unit length. Quaternion payload order is x/y/z/w; the UEVR ABI uses w/x/y/z.
@@ -27,7 +35,7 @@ Base offsets use the same UEVR coordinates as Lua's grip calibration.
 
 Only a non-null return from the validated native projectile spawn queues an
 impulse. The original spawn is called exactly once, before animation; its native
-orientation, spread and payload remain intact. Each shot adds 1.1 offset units,
+orientation, spread and payload remain intact. Each shot adds 2.8 offset units,
 limited to 5, with exponential decay at 12/s and a 0.003-unit settling threshold.
 Local X pitch is composed with the configured rotation, limited to about 7.2
 degrees. UEVR applies `hand * inverse(offset)`, so the pitch offset is
@@ -51,7 +59,7 @@ blocking new allocation. The record also survives expiry of the original pawn.
 Offline tests cover successful/failed spawns, stable firing origins, capped
 bursts, settling, cancellation, invalid events, expired pawns and simulated API
 faults. See [revision 13](2026-10-09-revision13.md) for the required headset checks.
-The nine other firearms retain their revision 12 behaviour.
+All ten firearm profiles acquired this optional recoil path in revision 14.
 
 ## Revision 12: all ten firearms
 
