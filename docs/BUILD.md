@@ -21,3 +21,18 @@ Deployment tests use temporary repository copies/profiles, never the live instal
 The prepared, credited sword mesh/texture are supplied under `assets/chainsword`;
 original downloads are not required. Its converter lives in `src/native/chainsword`.
 Git preserves exact runtime bytes because manifests depend on SHA-256.
+
+## Automated checks
+
+`.github/workflows/validate.yml` runs the same unit tests, native harnesses,
+MSVC x64 builds, source/package hash checks and isolated deployment tests on
+Windows Server 2022 when pushed, opened as a pull request or started manually.
+It uses Python 3.14, installs only the declared developer dependencies and does
+not need a local game installation, UEVR injector or headset. The workflow has
+read-only repository permissions and does not publish build products.
+
+The native build updates DLL hashes in the checked-out manifests only when they
+differ from the CI compiler output. Exact DLL bytes can vary by toolchain version;
+compare the hashes produced by your release toolchain before distributing a
+package. A green workflow confirms offline contracts and installer isolation,
+but does not establish in-game behaviour or validate tracking and weapon effects.

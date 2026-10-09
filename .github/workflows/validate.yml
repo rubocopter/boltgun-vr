@@ -1,0 +1,46 @@
+name: Validate source and deployment
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Test Python and Lua runtime contracts
+        run: python -m unittest discover -s tests -p 'test_*.py' -q
+
+      - name: Test chainsword converter
+        run: python -m unittest discover -s src/native/chainsword -p 'test_*.py' -q
+
+      - name: Compile plugins and run native harnesses
+        run: .\tools\Build.ps1
+
+      - name: Check deployment and package SHA-256 hashes
+        run: .\tools\Check-Repository.ps1
+
+      - name: Test isolated install, upgrades, disable and restore
+        run: .\tests\Test-Deployment.ps1

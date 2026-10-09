@@ -18,8 +18,8 @@ $newHash = (Get-FileHash -LiteralPath (Join-Path $repo $bolter.pluginSource)).Ha
 if ($bolter.pluginSha256 -ne $newHash) {
     $bolter.pluginUpgradeFrom = @($bolter.pluginUpgradeFrom + $bolter.pluginSha256 | Select-Object -Unique)
     $bolter.pluginSha256 = $newHash
+    [IO.File]::WriteAllText($bolterPath, ($bolter | ConvertTo-Json -Depth 10)+"`n", [Text.UTF8Encoding]::new($false))
 }
-[IO.File]::WriteAllText($bolterPath, ($bolter | ConvertTo-Json -Depth 10)+"`n", [Text.UTF8Encoding]::new($false))
 $chainPath = Join-Path $repo 'manifests\chainsword3d.package.json'
 $chain = Get-Content -LiteralPath $chainPath -Raw | ConvertFrom-Json
 $plugin = $chain.files | Where-Object target -eq 'plugins\boltgun_chainsword.dll'
@@ -27,11 +27,18 @@ $newHash = (Get-FileHash -LiteralPath (Join-Path $repo $plugin.source)).Hash
 if ($plugin.sha256 -ne $newHash) {
     $plugin.upgradeFrom = @($plugin.upgradeFrom + $plugin.sha256 | Select-Object -Unique)
     $plugin.sha256 = $newHash
+    [IO.File]::WriteAllText($chainPath, ($chain | ConvertTo-Json -Depth 10)+"`n", [Text.UTF8Encoding]::new($false))
 }
-[IO.File]::WriteAllText($chainPath, ($chain | ConvertTo-Json -Depth 10)+"`n", [Text.UTF8Encoding]::new($false))
 $deploymentPath = Join-Path $repo 'deployment.json'
 $deployment = Get-Content -LiteralPath $deploymentPath -Raw | ConvertFrom-Json
+$deploymentChanged = $false
 foreach ($entry in $deployment | Where-Object source -like 'build\plugins\*') {
-    $entry.sha256 = (Get-FileHash -LiteralPath (Join-Path $repo $entry.source)).Hash
+    $newHash = (Get-FileHash -LiteralPath (Join-Path $repo $entry.source)).Hash
+    if ($entry.sha256 -ne $newHash) {
+        $entry.sha256 = $newHash
+        $deploymentChanged = $true
+    }
 }
-[IO.File]::WriteAllText($deploymentPath, ($deployment | ConvertTo-Json -Depth 10)+"`n", [Text.UTF8Encoding]::new($false))
+if ($deploymentChanged) {
+    [IO.File]::WriteAllText($deploymentPath, ($deployment | ConvertTo-Json -Depth 10)+"`n", [Text.UTF8Encoding]::new($false))
+}
