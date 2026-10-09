@@ -19,7 +19,8 @@ Windows Â· UEVR / OpenXR Â· Developed with PS VR2 Sense
 - **Comfort and controls.** Head-oriented movement, configurable snap or smooth turning, pause/recenter mappings and graphics adjustments.
 - **Smaller Codex.** The chainsword module scales the reading animation to 65%, then restores its scale.
 
-Start Boltgun normally and inject UEVR. Once installed, the mod needs no extra launcher.
+Start Boltgun normally and inject UEVR. An optional player shortcut opens the
+game and official injector together; injection still requires one manual click.
 
 ## Current status
 
@@ -38,20 +39,24 @@ Windows x64, an owned copy of the original Boltgun, UEVR with OpenXR, a PCVR hea
 and tracked controllers. Supplied mappings target PS VR2 Sense; other controllers
 have not been validated. The muzzle bridge accepts one exact executable hash.
 
-There is no public release or download yet. Native DLLs must be built locally.
-The base installer requires a recognised UEVR profile and game configuration.
-Read [installation](docs/INSTALL.md) before using it.
+There is no public release or download yet. Maintainers can build a local player
+ZIP with verified native DLLs via `tools/Package-Setup.ps1`. This package does
+not contain UEVR. The guided installer requires a recognised UEVR profile and
+game configuration, created by an initial manual UEVR injection.
+Read the [quick start](docs/EASY-SETUP.md) ([Español](docs/INSTALACION-FACIL.es.md))
+or [advanced installation](docs/INSTALL.md) before using it.
 
 ## Documentation
 
 | Playing and setup | Development |
 | --- | --- |
-| [Installation and recovery](docs/INSTALL.md) | [Architecture](docs/ARCHITECTURE.md) |
-| [Sense controls](docs/CONTROLS.md) | [Build and verification](docs/BUILD.md) |
-| [Troubleshooting](docs/TROUBLESHOOTING.md) | [Source and notices](docs/SOURCE-AND-NOTICES.md) |
-| [Status and known limits](docs/STATUS.md) | [Repository layout](docs/REPOSITORY.md) |
-| [Arsenal details](docs/ARSENAL.md) | [Native muzzle implementation](docs/NATIVE-MUZZLE.md) |
-| [Chainsword details](docs/CHAINSAW.md) | [Revision 12](docs/2026-10-09-revision12.md) |
+| [Guided setup](docs/EASY-SETUP.md) · [Español](docs/INSTALACION-FACIL.es.md) | [Architecture](docs/ARCHITECTURE.md) |
+| [Installation and recovery](docs/INSTALL.md) | [Build and verification](docs/BUILD.md) |
+| [Sense controls](docs/CONTROLS.md) | [Source and notices](docs/SOURCE-AND-NOTICES.md) |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | [Repository layout](docs/REPOSITORY.md) |
+| [Status and known limits](docs/STATUS.md) | [Native muzzle implementation](docs/NATIVE-MUZZLE.md) |
+| [Arsenal details](docs/ARSENAL.md) | [Revision 12](docs/2026-10-09-revision12.md) |
+| [Chainsword details](docs/CHAINSAW.md) | [Release status](docs/STATUS.md) |
 
 Unofficial fan project. The game, injector and extracted game assets are not included.
 The external chainsword is credited to Kaiser-E under CC BY 4.0.

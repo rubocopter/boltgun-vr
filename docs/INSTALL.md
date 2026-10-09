@@ -1,7 +1,9 @@
 # Installation and recovery
 
-This source snapshot has no published installer or release ZIP. Build the native plugins
-first using [BUILD.md](BUILD.md). Keep Boltgun closed during installation/restoration.
+For the player-facing double-click flow, start with the [guided setup](EASY-SETUP.md)
+or the [Spanish instructions](INSTALACION-FACIL.es.md). A local ZIP can be built
+using `tools/Package-Setup.ps1` after [compiling the plugins](BUILD.md); there is
+no published release. Keep Boltgun closed during installation/restoration.
 
 ## Base profile
 
@@ -26,7 +28,10 @@ under `backups/steamvr-runtime`. For custom locations:
 .\Install.ps1 -ProfileRoot 'D:\VR\Boltgun' -GameConfigRoot 'D:\Config\Boltgun' -SteamBindingRoot 'D:\Steam\config\openxr'
 ```
 
-The base installer does not activate optional 3D modules.
+The base installer does not activate optional 3D modules. `Instalar Boltgun VR.cmd`
+asks whether to enable them and calls `Setup-BoltgunVR.ps1`, which checks the
+user-provided official UEVR path and the current installation before saving
+launcher settings. The launcher opens Steam and UEVR; injection remains manual.
 
 ## Optional 3D modules
 

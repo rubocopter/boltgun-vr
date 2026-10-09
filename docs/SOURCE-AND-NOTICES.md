@@ -9,7 +9,8 @@ redistribution license. Resolve this before publication; third-party terms remai
 ## UEVR API
 
 `dependencies/uevr/API.h`: copyright 2023 praydog, MIT. The full permission/disclaimer
-remain embedded in the header. The injector is not distributed. Prior notes reference
+remain embedded in the header. The injector is not distributed or downloaded
+by this installer; users obtain the official release themselves. Prior notes reference
 UEVR commit `4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d`.
 The maintained plugins use UEVR's inline-hook API; MinHook is not a build input.
 
