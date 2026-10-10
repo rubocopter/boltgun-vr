@@ -3,13 +3,13 @@
 | Area | Evidence | Still needed |
 | --- | --- | --- |
 | Weapon wheel | Earlier headset feedback; Lua tests | Current appearance and bindings |
-| Bolter 3D | Earlier videos confirmed replacement; recoil tested offline | Revision 16 effect diagnostics and muzzle/flash alignment |
+| Bolter 3D | Earlier videos confirmed replacement; recoil and revision 17 lifecycle tested offline | Revision 17 weapon-switch recovery, revision 16 effect diagnostics and muzzle/flash alignment |
 | Ten-firearm arsenal | Offline lifecycle/identity/bridge tests | Nine estimated landmarks, DLC, level changes |
 | Chainsword | Earlier video confirmed appearance/tracking | Teeth motion, yaw 180, Codex scale, stability |
 | Two-hand aim | Proximity/recovery tests | Accuracy and ergonomics; shipped off |
 | FMalloc workaround | Configured | Clean exit on hardware |
 
-The maintained suite contains 142 Python/Lua cases, three converter cases and four
+The maintained suite contains 146 Python/Lua cases, three converter cases and four
 C++ harnesses. These validate simulated contracts and geometry, not headset correctness.
 
 The muzzle bridge accepts executable SHA-256
@@ -23,6 +23,10 @@ the prior projectile/flash origins. Packaged defaults enable it; custom settings
 without `recoil_enabled=1` retain the static model. Failed spawns,
 UEVR menus and inactive tracking do not trigger it. See the
 [revision 16 diagnostic guide](history/2026-10-10-revision16.md).
+The [revision 17 lifecycle notes](history/2026-10-10-revision17.md) describe
+per-weapon mesh failure latches, half-second identity probes and replacement
+of a weapon instance with another of the same class. These are offline-only
+changes and need headset verification.
 
 Meshes load from the owned game. No physical reloads or gesture-based damage are
 implemented. Codex scaling does not change physical distance to the headset.
@@ -35,4 +39,5 @@ Maintainer headset feedback for revision 14: core VR interaction works;
 firearm effects remain incorrect. Revision 16 extends the bounded passive
 counters with Niagara fallback reasons, hook registration and weapon identity,
 and clears accumulated Niagara counts on a new lease. Results from this new
-build have not been verified in VR.
+build have not been verified in VR. Revision 17 keeps those native effects
+unchanged while improving recovery when an optional 3D weapon cannot load.

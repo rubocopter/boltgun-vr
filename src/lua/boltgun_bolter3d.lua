@@ -49,6 +49,9 @@ local arsenal = {
         scale=.26,grip_x=-95,grip_z=45},
 }
 local class_map = {}
+-- Weapon classes are immutable, but Lua's UObject wrappers can be collected.
+-- Use weak keys so the cache cannot keep an Unreal wrapper alive across maps.
+local resolved_weapon_classes = setmetatable({}, {__mode='k'})
 -- Mesh-local UE centimetres, measured at the front barrel face in the
 -- exported pickup geometry. Multi-melta uses the midpoint of its two barrels.
 local muzzle_landmarks = {bolter={67.81414,0,53},shotgun={84.109,0,54.241},
@@ -83,10 +86,12 @@ for _, item in ipairs(arsenal) do
     end
 end
 local stopped, recovered, timer, retry_timer, mode, settings, settings_text = false, false, 1, 1, 'off', {}, ''
-local load_attempted, load_failed = {}, false
+local load_attempted, failed_meshes = {}, {}
+local failed_profile, failed_probe_timer = nil, 0
 local owned, anchor, owner, applied, last_status = nil, nil, nil, nil, nil
 local base_location, base_rotation = nil, nil
 local current_weapon = nil
+local current_weapon_address, current_weapon_name = nil, nil
 local sprite_state = nil
 local muzzle_timer, muzzle_published, muzzle_failed = 1, false, false
 
@@ -214,6 +219,7 @@ local function cleanup()
     end
     assert(not foreign_retained, 'Foreign component retained; ownership journal preserved')
     owned, anchor, owner, applied, current_weapon = nil, nil, nil, nil, nil
+    current_weapon_address, current_weapon_name = nil, nil
     base_location, base_rotation = nil, nil
     sprite_state = nil
     clear_journal()
@@ -291,7 +297,8 @@ local function refresh_settings()
     local previous_mode = mode
     mode = value == 'preview' and 'preview' or 'off'
     if mode == 'preview' and previous_mode ~= mode then
-        load_attempted, load_failed = {}, false
+        load_attempted, failed_meshes = {}, {}
+        failed_profile, failed_probe_timer = nil, 0
     end
     settings_text = fs.read(SETTINGS)
     for key, fallback in pairs(defaults) do
@@ -342,12 +349,20 @@ end
 local function find_weapon(weapon)
     if not valid(weapon) then return nil end
     local class = weapon:get_class()
+    if not valid(class) then return nil end
+    local original_class = class
+    local cached = resolved_weapon_classes[original_class]
+    if cached ~= nil then return cached or nil end
     for _=1,8 do
         if not valid(class) then return nil end
         local profile = class_map[class:get_full_name()]
-        if profile then return profile end
+        if profile then
+            resolved_weapon_classes[original_class] = profile
+            return profile
+        end
         class = class:get_super_struct()
     end
+    resolved_weapon_classes[original_class] = false
     return nil
 end
 
@@ -516,6 +531,8 @@ local function create(pawn, mesh, material, weapon, profile)
         assert(anchor:SetStaticMesh(mesh) == true, 'Recoil reference mesh assignment failed')
     end
     current_weapon = profile.id
+    current_weapon_address = tostring(weapon:get_address())
+    current_weapon_name = weapon:get_full_name()
     apply_settings(profile)
     owned:SetVisibility(true, false)
     owned:SetHiddenInGame(false, false)
@@ -536,9 +553,14 @@ local function step(delta)
         if owned ~= nil then cleanup() end
         report('Off'); return
     end
-    -- After a failed load, avoid all pawn/property and global object searches.
-    -- A mode off->preview transition or a new script instance explicitly retries.
-    if load_failed then return end
+    -- An unavailable pickup mesh is latched per weapon. Probe the equipped
+    -- identity at a bounded interval so another weapon can still be equipped,
+    -- without re-querying or repeatedly loading the failed asset.
+    if failed_profile ~= nil then
+        failed_probe_timer = math.min(.5, failed_probe_timer + math.max(0, delta or 0))
+        if failed_probe_timer < .5 then return end
+        failed_probe_timer = 0
+    end
     if not vr.is_hmd_active() or not vr.is_using_controllers() or uevr.params.functions.is_drawing_ui() then
         if owned ~= nil then cleanup() end
         report('Waiting for active headset/controllers outside UEVR menu'); return
@@ -555,7 +577,9 @@ local function step(delta)
         if owned ~= nil then cleanup() end
         report('Waiting for supported firearm'); return
     end
-    if owned ~= nil and current_weapon ~= profile.id then cleanup() end
+    if owned ~= nil and (current_weapon ~= profile.id or
+        current_weapon_address ~= tostring(weapon:get_address()) or
+        current_weapon_name ~= weapon:get_full_name()) then cleanup() end
     if owned ~= nil and (not valid(owned) or not valid(owner) or owner ~= pawn) then cleanup() end
     if owned ~= nil and anchor ~= nil and not valid(anchor) then cleanup() end
     if owned ~= nil and (owned:get_outer() ~= owner or
@@ -572,14 +596,21 @@ local function step(delta)
         publish_muzzle(weapon)
         return
     end
+    if failed_meshes[profile.id] then
+        failed_profile = profile.id
+        return
+    end
+    failed_profile = nil
     if retry_timer < 1 then return end
     retry_timer = 0
     local mesh = api:find_uobject(profile.mesh)
     if not valid(mesh) then mesh = load_mesh_once(profile) end
     local material = api:find_uobject(profile.material)
     if not valid(mesh) then
-        load_failed = true
-        report('Preview suspended after failed mesh load; no further Unreal queries until explicitly re-enabled'); return
+        failed_meshes[profile.id] = true
+        failed_profile = profile.id
+        report(profile.id .. ' mesh unavailable; this weapon is paused until preview is re-enabled')
+        return
     end
     create(pawn, mesh, material, weapon, profile)
 end

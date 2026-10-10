@@ -7,6 +7,11 @@ UEVR settings/recovery. The profile supplies controller mapping and UObject atta
 owns its component and restores the sprite when preconditions fail. `src/native/muzzle`
 guards executable identity, equipped class, mesh ownership and tracking before changing
 supported projectile/flash origins; direction and spread remain native.
+The Lua preview caches resolved Unreal weapon classes with weak keys and tracks
+the active weapon's UObject identity. A failed pickup load stays latched for
+that firearm; subsequent checks for a different equipped weapon run at most
+twice a second, without retrying the failed asset. Re-enabling preview resets
+these latches. See [revision 17](history/2026-10-10-revision17.md).
 With firearm recoil enabled, Lua owns a visible mesh and an invisible tracked
 reference with identical grip calibration. The bridge reads projectile/flash
 origins from the reference, queues recoil only after a successful native spawn,

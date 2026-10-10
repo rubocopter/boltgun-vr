@@ -48,6 +48,9 @@ foreach ($name in $guideFiles) { Add-PackageFile "docs\$name" }
 foreach ($revision in 12..15) {
     Add-PackageFile "docs\history\2026-10-09-revision$revision.md"
 }
+foreach ($revision in 16..17) {
+    Add-PackageFile "docs\history\2026-10-10-revision$revision.md"
+}
 foreach ($name in @('bolter3d.package.json','chainsword3d.package.json')) {
     Add-PackageFile "manifests\$name"
 }

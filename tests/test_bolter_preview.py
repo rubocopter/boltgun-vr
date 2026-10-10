@@ -16,7 +16,7 @@ class BolterPreviewTests(unittest.TestCase):
         ctx={queries=0,created=0,destroyed=0,attached=0,removed=0,logs={},
              components={},hmd=true,controllers=true,menu=false,engine_thread=false,
              mesh_loaded=true,material_loaded=true,weapon_name='Bolter',addresses=2000,
-             load_calls=0,mesh_load_allowed=true,library_available=true,soft_load_calls=0,
+             load_calls=0,asset_lookups=0,mesh_load_allowed=true,library_available=true,soft_load_calls=0,
              registry_available=true,struct_available=true,events={}}
         files={['bolter3d.mode']='preview'}
         function engine_only()
@@ -201,7 +201,10 @@ class BolterPreviewTests(unittest.TestCase):
             if name=='ScriptStruct /Script/CoreUObject.AssetData' then
               return ctx.struct_available and asset_descriptor or nil
             end
-            if name:find('StaticMesh /Game/',1,true) then return ctx.mesh_loaded and mesh or nil end
+             if name:find('StaticMesh /Game/',1,true) then
+               ctx.asset_lookups=ctx.asset_lookups+1
+               return ctx.mesh_loaded and mesh or nil
+             end
             if name:find('MaterialInstanceConstant /Game/',1,true) then return ctx.material_loaded and material or nil end
             return registry[name]
           end},
@@ -400,6 +403,38 @@ class BolterPreviewTests(unittest.TestCase):
         self.tick(1)
         self.assertEqual(ctx.destroyed,3)
         self.assertTrue(self.lua.globals().primary.visible)
+
+    def test_same_weapon_type_new_instance_replaces_visual_and_muzzle_lease(self):
+        self.tick()
+        self.lua.execute('''
+          replacement=object('Weapon replacement',1050,bolter_class,handler)
+          replacement.get_class=function() engine_only();return bolter_class end
+          handler.get_property=function(self,key)
+            engine_only();assert(key=='EquippedWeapon');return replacement
+          end
+        ''')
+        self.tick(1.1)
+        ctx=self.lua.globals().ctx
+        self.assertEqual(ctx.created,2)
+        self.assertEqual(ctx.destroyed,1)
+        self.assertTrue(self.lua.globals().primary.hidden)
+        self.assertTrue(ctx.components[2].visible)
+        leases=[e.data for e in ctx.events.values() if e.name=='boltgun.muzzle.v1' and e.data!='off']
+        self.assertEqual(leases[-1].split('|')[1],'1050')
+
+    def test_identical_weapon_class_resolves_profile_only_once_per_instance(self):
+        self.lua.execute('''
+          ctx.weapon_class_name_reads=0
+          bolter_class.get_full_name=function()
+            engine_only();ctx.weapon_class_name_reads=ctx.weapon_class_name_reads+1
+            return 'BlueprintGeneratedClass /Game/Blueprints/Weapons/Boltgun/BP_Boltgun.BP_Boltgun_C'
+          end
+        ''')
+        self.tick()
+        initial=self.lua.globals().ctx.weapon_class_name_reads
+        self.assertGreater(initial,0)
+        for _ in range(15): self.tick(.1)
+        self.assertEqual(self.lua.globals().ctx.weapon_class_name_reads,initial)
 
     def test_recoil_partial_anchor_creation_failure_removes_both_components(self):
         self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
@@ -661,7 +696,62 @@ class BolterPreviewTests(unittest.TestCase):
         ctx.mesh_loaded=True
         self.tick(1)
         self.assertEqual(ctx.created,0)
-        self.assertEqual(ctx.queries,before)
+        self.assertGreater(ctx.queries,before)
+        self.assertLessEqual(ctx.queries-before,35,'Failed mesh should only poll equipped weapon')
+        self.assertEqual(ctx.load_calls,1)
+        self.assertEqual(ctx.asset_lookups,1)
+
+    def test_failed_bolter_load_does_not_prevent_loading_shotgun(self):
+        ctx=self.lua.globals().ctx
+        ctx.mesh_loaded=False;ctx.mesh_load_allowed=False
+        self.tick()
+        self.assertEqual(ctx.load_calls,1)
+        self.assertEqual(ctx.created,0)
+        self.lua.execute('''
+          weapon.get_class=function() engine_only();return class(
+            'BlueprintGeneratedClass /Game/Blueprints/Weapons/Shotgun/BP_Shotgun.BP_Shotgun_C') end
+          mesh.get_full_name=function() engine_only();return
+            'StaticMesh /Game/Art/Pickups/Weapons/M_ShotgunPickup.M_ShotgunPickup' end
+          assets.GetAsset=function(self,data)
+            engine_only();ctx.load_calls=ctx.load_calls+1
+            assert(data.ObjectPath.name=='/Game/Art/Pickups/Weapons/M_ShotgunPickup.M_ShotgunPickup')
+            ctx.mesh_loaded=true;return mesh
+          end
+        ''')
+        ctx.mesh_load_allowed=True
+        self.tick(1.1)
+        self.assertEqual(ctx.created,1)
+        self.assertTrue(self.component().visible)
+        self.assertEqual(ctx.load_calls,2)
+        self.assertEqual(ctx.asset_lookups,2)
+
+    def test_failed_weapon_stays_latched_after_using_another_firearm(self):
+        ctx=self.lua.globals().ctx
+        ctx.mesh_loaded=False;ctx.mesh_load_allowed=False
+        self.tick()
+        self.assertEqual(ctx.load_calls,1)
+        self.assertEqual(ctx.asset_lookups,1)
+        self.lua.execute('''
+          weapon.get_class=function() engine_only();return class(
+            'BlueprintGeneratedClass /Game/Blueprints/Weapons/Shotgun/BP_Shotgun.BP_Shotgun_C') end
+          mesh.get_full_name=function() engine_only();return
+            'StaticMesh /Game/Art/Pickups/Weapons/M_ShotgunPickup.M_ShotgunPickup' end
+        ''')
+        ctx.mesh_loaded=True
+        self.tick(1.1)
+        self.assertEqual(ctx.created,1)
+        self.assertTrue(self.lua.globals().primary.hidden)
+        self.lua.execute('weapon.get_class=function() engine_only();return bolter_class end')
+        self.tick(1.1)
+        self.assertEqual(ctx.created,1)
+        self.assertEqual(ctx.destroyed,1)
+        self.assertFalse(self.lua.globals().primary.hidden)
+        self.assertTrue(self.lua.globals().primary.visible)
+        self.assertEqual(ctx.load_calls,1)
+        self.assertEqual(ctx.asset_lookups,2)
+        for _ in range(60): self.tick(.1)
+        self.assertEqual(ctx.load_calls,1)
+        self.assertEqual(ctx.asset_lookups,2)
 
     def test_missing_library_requires_explicit_reenable_before_recovery(self):
         ctx=self.lua.globals().ctx
@@ -691,7 +781,10 @@ class BolterPreviewTests(unittest.TestCase):
         before=ctx.queries
         ctx.mesh_loaded=True
         self.tick(1)
-        self.assertEqual(ctx.queries,before)
+        self.assertGreater(ctx.queries,before)
+        self.assertLessEqual(ctx.queries-before,35)
+        self.assertEqual(ctx.load_calls,1)
+        self.assertEqual(ctx.asset_lookups,1)
         self.assertEqual(ctx.created,0)
         self.lua.globals().files['bolter3d.mode']='off'
         self.tick(1)
@@ -699,23 +792,27 @@ class BolterPreviewTests(unittest.TestCase):
         self.tick(1)
         self.assertEqual(ctx.created,1)
 
-    def test_failed_struct_cast_never_loads_or_polls_again(self):
+    def test_failed_struct_cast_never_loads_again_and_probes_are_bounded(self):
         ctx=self.lua.globals().ctx
         ctx.mesh_loaded=False;ctx.cast_failed=True
         self.tick()
         before=ctx.queries
         for _ in range(60): self.tick(.1)
         self.assertEqual(ctx.load_calls,0)
-        self.assertEqual(ctx.queries,before)
+        self.assertEqual(ctx.asset_lookups,1)
+        self.assertGreater(ctx.queries,before)
+        self.assertLessEqual(ctx.queries-before,240,'Poll must be bounded after a failed cast')
 
-    def test_failed_load_has_no_native_queries_on_later_ticks(self):
+    def test_failed_load_only_probes_weapon_at_bounded_intervals(self):
         ctx=self.lua.globals().ctx
         ctx.mesh_loaded=False;ctx.mesh_load_allowed=False
         self.tick()
         before=ctx.queries
         for _ in range(600): self.tick(.01)
-        self.assertEqual(ctx.queries,before)
+        self.assertGreater(ctx.queries,before)
+        self.assertLessEqual(ctx.queries-before,240,'Poll must be bounded after a failed load')
         self.assertEqual(ctx.load_calls,1)
+        self.assertEqual(ctx.asset_lookups,1)
 
     def test_registry_load_bypasses_unsupported_soft_parameter(self):
         ctx=self.lua.globals().ctx
