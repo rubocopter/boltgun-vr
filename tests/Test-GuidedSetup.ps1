@@ -16,7 +16,24 @@ function Expect-Rejection([scriptblock]$Action,[string]$Message) {
     Assert $rejected $Message
 }
 New-Item -ItemType Directory -Path $sandbox,$player,$profile,$game,$steam -Force | Out-Null
-& (Join-Path $repo 'tools\Package-Setup.ps1') -OutputPath $zip | Out-Null
+$fixtureName='unshipped-fixture-'+[guid]::NewGuid().ToString('N')+'.txt'
+$guideFixtureName=[IO.Path]::ChangeExtension($fixtureName,'.md')
+$unexpectedFiles=@(
+    (Join-Path $repo "profile\scripts\$fixtureName"),
+    (Join-Path $repo "assets\chainsword\$fixtureName"),
+    (Join-Path $repo "docs\$guideFixtureName")
+)
+try {
+    foreach ($file in $unexpectedFiles) {
+        Assert (-not (Test-Path -LiteralPath $file)) 'Unexpected fixture collision.'
+        [IO.File]::WriteAllText($file,'Private fixture; must never be packaged.')
+    }
+    & (Join-Path $repo 'tools\Package-Setup.ps1') -OutputPath $zip | Out-Null
+} finally {
+    foreach ($file in $unexpectedFiles) {
+        if (Test-Path -LiteralPath $file -PathType Leaf) { Remove-Item -LiteralPath $file }
+    }
+}
 Expand-Archive -LiteralPath $zip -DestinationPath $player
 
 Add-Type -AssemblyName System.IO.Compression
@@ -32,6 +49,8 @@ try {
     Assert ($names -contains 'docs/INSTALACION-FACIL.es.md') 'Spanish player instructions missing.'
     Assert ($names -contains 'docs/history/2026-10-09-revision13.md') 'Linked arsenal guide missing.'
     Assert ($names -contains 'docs/history/2026-10-09-revision15.md') 'Linked muzzle diagnostic guide missing.'
+    Assert (@($names | Where-Object { $_ -like "*$fixtureName" }).Count -eq 0) 'Untracked private source file leaked into player ZIP.'
+    Assert (@($names | Where-Object { $_ -like "*$guideFixtureName" }).Count -eq 0) 'Unlisted local guide leaked into player ZIP.'
     Assert (@($names | Where-Object { $_ -match '(^|/)(superpowers|backups|research|diagnostics|\.git|UEVRInjector\.exe)(/|$)|\.(exe|pak|pdb|dmp)$' }).Count -eq 0) 'Forbidden/private content in player ZIP.'
 } finally { $archive.Dispose() }
 

@@ -27,6 +27,11 @@ The prepared, credited sword mesh/texture are supplied under `assets/chainsword`
 original downloads are not required. Its converter lives in `src/native/chainsword`.
 Git preserves exact runtime bytes because manifests depend on SHA-256.
 
+`tools/Package-Setup.ps1` assembles the player ZIP from deployment/package
+manifest sources and explicit lists of installer scripts, tools and published
+guides. When adding a player-facing guide or installer utility, update its list
+in that script. Files found alongside the listed inputs are deliberately excluded.
+
 ## Automated checks
 
 `.github/workflows/validate.yml` runs the same unit tests, native harnesses,

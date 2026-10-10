@@ -14,44 +14,61 @@ if ((Test-Path -LiteralPath $output) -and -not $Force) {
     throw "Existing ZIP preserved: $output. Choose -OutputPath or specify -Force."
 }
 $staging=Join-Path $repo ('build\player-package-'+[guid]::NewGuid().ToString('N'))
-$allowedDirs=@('profile','game-config','assets','manifests','src\lua')
 $rootFiles=@('README.md','deployment.json','Instalar Boltgun VR.cmd','Jugar Boltgun VR.cmd')
 $scriptFiles=@('Install.ps1','Restore.ps1','Setup-BoltgunVR.ps1',
     'Play-BoltgunVR.ps1','Bolter3D.ps1','Chainsword3D.ps1','Comprobar-perfil.ps1')
+$toolFiles=@('Paths.ps1','Check-Repository.ps1','Snapshots.ps1')
+$guideFiles=@('ARCHITECTURE.md','ARSENAL.md','BUILD.md','CHAINSAW.md',
+    'CONTROLS.md','EASY-SETUP.md','INSTALACION-FACIL.es.md','INSTALL.md',
+    'NATIVE-MUZZLE.md','README.es.md','REINSTALL.md','REPOSITORY.md',
+    'SOURCE-AND-NOTICES.md','STATUS.md','TROUBLESHOOTING.md')
+
+# Deployment manifests explicitly select runtime payloads. Everything else
+# in the ZIP is listed below, so stray local files are never copied.
+$packageFiles=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+function Add-PackageFile([string]$RelativePath) {
+    if ([string]::IsNullOrWhiteSpace($RelativePath) -or [IO.Path]::IsPathRooted($RelativePath)) {
+        throw "Invalid player package path: $RelativePath"
+    }
+    $relative=$RelativePath.Replace('/','\')
+    $source=[IO.Path]::GetFullPath((Join-Path $repo $relative))
+    $repoPrefix=[IO.Path]::GetFullPath($repo).TrimEnd('\')+'\'
+    if (-not $source.StartsWith($repoPrefix,[StringComparison]::OrdinalIgnoreCase)) {
+        throw "Player package path escapes repository: $RelativePath"
+    }
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+        throw "Missing player package source: $RelativePath"
+    }
+    [void]$packageFiles.Add($relative)
+}
+foreach ($name in $rootFiles) { Add-PackageFile $name }
+foreach ($name in $scriptFiles) { Add-PackageFile "scripts\$name" }
+foreach ($name in $toolFiles) { Add-PackageFile "tools\$name" }
+foreach ($name in $guideFiles) { Add-PackageFile "docs\$name" }
+foreach ($revision in 12..15) {
+    Add-PackageFile "docs\history\2026-10-09-revision$revision.md"
+}
+foreach ($name in @('bolter3d.package.json','chainsword3d.package.json')) {
+    Add-PackageFile "manifests\$name"
+}
+foreach ($entry in (Get-Content -LiteralPath (Join-Path $repo 'deployment.json') -Raw | ConvertFrom-Json)) {
+    Add-PackageFile $entry.source
+}
+$bolter=Get-Content -LiteralPath (Join-Path $repo 'manifests\bolter3d.package.json') -Raw | ConvertFrom-Json
+foreach ($path in @($bolter.source,$bolter.settingsSource,$bolter.pluginSource)) {
+    Add-PackageFile $path
+}
+$chainsword=Get-Content -LiteralPath (Join-Path $repo 'manifests\chainsword3d.package.json') -Raw | ConvertFrom-Json
+Add-PackageFile $chainsword.settingsSource
+foreach ($entry in $chainsword.files) { Add-PackageFile $entry.source }
 
 try {
     New-Item -ItemType Directory -Path $staging -Force | Out-Null
-    foreach ($directory in $allowedDirs) {
-        $from=Join-Path $repo $directory
-        $to=Join-Path $staging $directory
+    foreach ($file in $packageFiles) {
+        $to=Join-Path $staging $file
         New-Item -ItemType Directory -Path (Split-Path -Parent $to) -Force | Out-Null
-        Copy-Item -LiteralPath $from -Destination $to -Recurse
+        Copy-Item -LiteralPath (Join-Path $repo $file) -Destination $to
     }
-    # Include published guides and their linked revision history. Exclude
-    # private work notes and the internal repository-preparation archive.
-    New-Item -ItemType Directory -Path (Join-Path $staging 'docs') -Force | Out-Null
-    Get-ChildItem -LiteralPath (Join-Path $repo 'docs') -Filter '*.md' -File |
-        ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $staging 'docs') }
-    New-Item -ItemType Directory -Path (Join-Path $staging 'docs\history') -Force | Out-Null
-    foreach ($revision in 12..15) {
-        $name="2026-10-09-revision$revision.md"
-        Copy-Item -LiteralPath (Join-Path $repo "docs\history\$name") -Destination (Join-Path $staging 'docs\history')
-    }
-    New-Item -ItemType Directory -Path (Join-Path $staging 'build\plugins') -Force | Out-Null
-    foreach ($plugin in @('boltgun_muzzle.dll','boltgun_chainsword.dll')) {
-        Copy-Item -LiteralPath (Join-Path $repo "build\plugins\$plugin") -Destination (Join-Path $staging 'build\plugins')
-    }
-    foreach ($item in $rootFiles) {
-        Copy-Item -LiteralPath (Join-Path $repo $item) -Destination (Join-Path $staging $item)
-    }
-    New-Item -ItemType Directory -Path (Join-Path $staging 'scripts') -Force | Out-Null
-    foreach ($name in $scriptFiles) {
-        Copy-Item -LiteralPath (Join-Path $repo "scripts\$name") -Destination (Join-Path $staging 'scripts')
-    }
-    New-Item -ItemType Directory -Path (Join-Path $staging 'tools') -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $repo 'tools\Paths.ps1') -Destination (Join-Path $staging 'tools')
-    Copy-Item -LiteralPath (Join-Path $repo 'tools\Check-Repository.ps1') -Destination (Join-Path $staging 'tools')
-    Copy-Item -LiteralPath (Join-Path $repo 'tools\Snapshots.ps1') -Destination (Join-Path $staging 'tools')
 
     # All package inputs are verified once more from inside the staged tree.
     & (Join-Path $staging 'tools\Check-Repository.ps1') | Out-Host
