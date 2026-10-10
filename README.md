@@ -28,10 +28,10 @@ game and official injector together; injection still requires one manual click.
 
 ## Current status
 
-Development snapshot: **profile v7, arsenal revision 15, chainsword package 4**.
+Development snapshot: **profile v7, arsenal revision 16, chainsword package 4**.
 Earlier videos confirmed the Bolter replacement and chainsword appearance/tracking.
 The maintainer reports that the current VR mechanics work except firearm effects.
-Revision 15 adds passive firearm-effect diagnostics; it still requires a new
+Revision 16 adds detailed Niagara fallback diagnostics; it still requires a new
 headset check. See [validation and limitations](docs/STATUS.md).
 
 Native firing direction and spread are preserved. Attached effects and beam/hitscan
@@ -61,7 +61,7 @@ or [advanced installation](docs/INSTALL.md) before using it.
 | [Windows reinstall and profile backup](docs/REINSTALL.md) | [Source and notices](docs/SOURCE-AND-NOTICES.md) |
 | [Sense controls](docs/CONTROLS.md) | [Repository layout](docs/REPOSITORY.md) |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | [Native muzzle implementation](docs/NATIVE-MUZZLE.md) |
-| [Status and known limits](docs/STATUS.md) | [Revision 15 diagnostic guide](docs/history/2026-10-09-revision15.md) |
+| [Status and known limits](docs/STATUS.md) | [Revision 16 diagnostic guide](docs/history/2026-10-10-revision16.md) |
 | [Arsenal details](docs/ARSENAL.md) | [Release status](docs/STATUS.md) |
 | [Chainsword details](docs/CHAINSAW.md) | |
 

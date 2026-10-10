@@ -6,6 +6,7 @@ static int native_calls{},pose_calls{},logs{};
 static int spawn_calls{};
 static Transform spawned{};
 static int flash_moves{};
+static char flash_diagnostic[2048]{};
 static int recoil_writes{};
 static int haptic_pulses{};
 static bool source_available=true;
@@ -47,7 +48,14 @@ static void set_recoil_rotation(UEVR_UObjectHookMotionControllerStateHandle stat
 static UEVR_UObjectHandle outer(UEVR_UObjectHandle) { return id(1); }
 static bool active() { return vr_active; }
 static bool drawing() { return menu_open; }
-static void log_info(const char*,...) { ++logs; }
+static void log_info(const char* format,...) {
+    ++logs;
+    if(std::strstr(format,"Niagara flash:")) {
+        va_list args;va_start(args,format);
+        vsnprintf_s(flash_diagnostic,sizeof(flash_diagnostic),_TRUNCATE,format,args);
+        va_end(args);
+    }
+}
 static int reflected_size=48,rotation_offset=0;
 static int selected_type=0;
 static bool wrong_mesh_asset=false,unequipped=false;
@@ -212,6 +220,12 @@ int main() {
     flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
     assert(flash_moves==1&&std::fabs(moved_flash.translation.x-433.90707f)<.002f);
     assert(std::fabs(moved_flash.translation.z-626.5f)<.002f);
+    expired_object=id(6);
+    flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
+    expired_object=id(7);
+    flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
+    expired_object=nullptr;
+    assert(flash_moves==1);
     flash_name=L"NS_Boltgun_Impact";
     flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
     assert(flash_moves==1);
@@ -241,6 +255,13 @@ int main() {
     mesh_pose.translation={10000,500,600};
     flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
     assert(flash_moves==1);mesh_pose.translation={400,500,600};
+    // Distinguish a parented location effect from the attached spawn route.
+    flash_parent=id(40);
+    flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
+    flash_parent=nullptr;unequipped=true;
+    flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
+    unequipped=false;
+    assert(flash_moves==1);
     pose_calls=0;
     assert(detour(id(2),&out,0,0,nullptr,true)==&out);
     assert(std::fabs(out.translation.x-433.90707f)<.002f);
@@ -280,8 +301,20 @@ int main() {
     g_diagnostics_since=GetTickCount64()-7000;
     on_tick(nullptr,0);
     assert(logs==previous_logs+5&&g_gate[Called].load()==0);
+    assert(std::strstr(flash_diagnostic,"invalidComponent=1"));
+    assert(std::strstr(flash_diagnostic,"invalidAsset=1"));
+    assert(std::strstr(flash_diagnostic,"parentUnknown=1"));
+    assert(std::strstr(flash_diagnostic,"parentPresent=1"));
+    assert(std::strstr(flash_diagnostic,"poseUnavailable=1"));
+    assert(std::strstr(flash_diagnostic,"transformRejected=1"));
+    assert(std::strstr(flash_diagnostic,"notAllowed=1"));
     on_tick(nullptr,0);
     assert(logs==previous_logs+5); // No diagnostic flood on every tick.
+    g_diagnostics_since=GetTickCount64()-7000;
+    on_tick(nullptr,0);
+    assert(std::strstr(flash_diagnostic,"parentUnknown=0"));
+    assert(std::strstr(flash_diagnostic,"transformRejected=0"));
+    assert(std::strstr(flash_diagnostic,"notAllowed=0"));
     on_event("boltgun.muzzle.v1","off");
     detour(id(2),&out,0,0,nullptr,true);assert(out.translation.x==500);
     assert(g_gate[Disabled].load()==1);
@@ -294,9 +327,19 @@ int main() {
     reflected_size=32;assert(!transform_contract(reinterpret_cast<UEVR_UFunctionHandle>(4)));
     reflected_size=48;rotation_offset=8;assert(!transform_contract(reinterpret_cast<UEVR_UFunctionHandle>(4)));
     rotation_offset=0;input_parameter=true;assert(!transform_contract(reinterpret_cast<UEVR_UFunctionHandle>(4)));
-    input_parameter=false;g_lease={};
+    input_parameter=false;
+    g_enabled=true;g_lease.heartbeat=GetTickCount64();
+    flash_parent_property_available=false;
+    flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
+    flash_parent_property_available=true;
+    assert(g_flash_location_calls.load()==1&&g_flash_matched.load()==1);
+    g_lease={};
     on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53");
     assert(g_enabled&&g_lease.mesh==id(3)&&g_lease.weapon==id(2));
+    // A fresh lease must not inherit Niagara events collected before equip.
+    assert(g_flash_location_calls.load()==0&&g_flash_attached_calls.load()==0);
+    assert(g_flash_matched.load()==0&&g_flash_moved.load()==0);
+    assert(g_flash_attached_skipped.load()==0);
     on_event("boltgun.muzzle.v1","1|99|3|67.81414|0|53");assert(!g_enabled);
     // The real event boundary must accept every catalog weapon, reject mesh
     // mismatches and retain native firing when a once-valid lease is unequipped.

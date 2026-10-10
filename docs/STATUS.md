@@ -3,7 +3,7 @@
 | Area | Evidence | Still needed |
 | --- | --- | --- |
 | Weapon wheel | Earlier headset feedback; Lua tests | Current appearance and bindings |
-| Bolter 3D | Earlier videos confirmed replacement; recoil tested offline | Revision 15 effect diagnostics and muzzle/flash alignment |
+| Bolter 3D | Earlier videos confirmed replacement; recoil tested offline | Revision 16 effect diagnostics and muzzle/flash alignment |
 | Ten-firearm arsenal | Offline lifecycle/identity/bridge tests | Nine estimated landmarks, DLC, level changes |
 | Chainsword | Earlier video confirmed appearance/tracking | Teeth motion, yaw 180, Codex scale, stability |
 | Two-hand aim | Proximity/recovery tests | Accuracy and ergonomics; shipped off |
@@ -22,7 +22,7 @@ Firearm recoil uses a separate visual mesh; its stationary firing reference reta
 the prior projectile/flash origins. Packaged defaults enable it; custom settings
 without `recoil_enabled=1` retain the static model. Failed spawns,
 UEVR menus and inactive tracking do not trigger it. See the
-[revision 15 diagnostic guide](history/2026-10-09-revision15.md).
+[revision 16 diagnostic guide](history/2026-10-10-revision16.md).
 
 Meshes load from the owned game. No physical reloads or gesture-based damage are
 implemented. Codex scaling does not change physical distance to the headset.
@@ -32,6 +32,7 @@ and in-headset verification remain publication tasks.
 Revision 14 generalizes isolated recoil to all ten firearm profiles and adds confirmed-spawn haptics. Chainsword texture loading now uses a native profile path hint. All current changes require fresh headset verification; hitscan/beam paths outside the spawn helper may not produce feedback.
 
 Maintainer headset feedback for revision 14: core VR interaction works;
-firearm effects remain incorrect. Revision 15 adds bounded passive counters
-to distinguish projectile, visual mesh, haptic and Niagara pathways. Results
-from this new build have not been verified in VR.
+firearm effects remain incorrect. Revision 16 extends the bounded passive
+counters with Niagara fallback reasons, hook registration and weapon identity,
+and clears accumulated Niagara counts on a new lease. Results from this new
+build have not been verified in VR.

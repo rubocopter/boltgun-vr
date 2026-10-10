@@ -19,6 +19,14 @@ static SpawnFn g_spawn_original{};
 static std::atomic<unsigned long> g_spawn_calls{},g_spawn_redirected{};
 static std::atomic<unsigned long> g_flash_location_calls{},g_flash_attached_calls{},
     g_flash_matched{},g_flash_moved{},g_flash_attached_skipped{};
+enum FlashSkip : size_t {
+    InvalidComponent, InvalidAsset, NotAllowed, ParentUnknown, ParentPresent,
+    PoseUnavailable, TransformRejected, FlashSkipCount
+};
+static std::atomic<unsigned long> g_flash_skips[FlashSkipCount]{};
+static void skip_flash(FlashSkip reason) {
+    g_flash_skips[reason].fetch_add(1,std::memory_order_relaxed);
+}
 static std::atomic<bool> g_flash_faulted{};
 static bool g_flash_location_hooked{},g_flash_attached_hooked{};
 static ULONGLONG g_flash_retry_since{};
@@ -390,16 +398,20 @@ static bool flash_post(UEVR_UFunctionHandle fn,UEVR_UObjectHandle,void*,void* re
         UEVR_UObjectHandle component{};
         std::memcpy(&component,result,sizeof(component));
         if(!live(component)||!g_flash_component_class||
-           !g_api->sdk->uobject->is_a(component,g_flash_component_class)) return true;
+           !g_api->sdk->uobject->is_a(component,g_flash_component_class)) {
+            skip_flash(InvalidComponent);return true;
+        }
         const auto data=g_api->sdk->uobject->get_property_data(component,L"Asset");
         UEVR_UObjectHandle system{};
-        if(!data) return true;
+        if(!data) { skip_flash(InvalidAsset);return true; }
         std::memcpy(&system,data,sizeof(system));
         if(!live(system)||!g_flash_system_class||
-           !g_api->sdk->uobject->is_a(system,g_flash_system_class)) return true;
+           !g_api->sdk->uobject->is_a(system,g_flash_system_class)) {
+            skip_flash(InvalidAsset);return true;
+        }
         wchar_t name[96]{};
         g_api->sdk->fname->to_string(g_api->sdk->uobject->get_fname(system),name,96);
-        if(!is_weapon_flash(g_lease.profile,name)) return true;
+        if(!is_weapon_flash(g_lease.profile,name)) { skip_flash(NotAllowed);return true; }
         g_flash_matched.fetch_add(1,std::memory_order_relaxed);
         // A spawned attached system follows its parent on the next tick.
         // Reparenting it without proving that parent's lifetime is unsafe;
@@ -411,15 +423,19 @@ static bool flash_post(UEVR_UFunctionHandle fn,UEVR_UObjectHandle,void*,void* re
         UEVR_UObjectHandle parent{};
         const auto parent_data=g_api->sdk->uobject->get_property_data(component,L"AttachParent");
         // Fail closed if inheritance/reflection cannot resolve AttachParent.
-        if(!parent_data) return true;
+        if(!parent_data) { skip_flash(ParentUnknown);return true; }
         std::memcpy(&parent,parent_data,sizeof(parent));
         if(parent) {
+            skip_flash(ParentPresent);
             g_flash_attached_skipped.fetch_add(1,std::memory_order_relaxed);
             return true;
         }
         Transform original{},mesh{},updated{};
         g_api->sdk->uobject->process_event(component,g_flash_world_fn,&original);
-        if(!read_pose(mesh)||!flash_transform(mesh,g_lease.muzzle,original,updated)) return true;
+        if(!read_pose(mesh)) { skip_flash(PoseUnavailable);return true; }
+        if(!flash_transform(mesh,g_lease.muzzle,original,updated)) {
+            skip_flash(TransformRejected);return true;
+        }
         alignas(16) std::array<unsigned char,512> args{};
         std::memcpy(args.data()+g_flash_new_transform_offset,&updated,sizeof(updated));
         // bSweep=false and bTeleport=false, so no FHitResult is interpreted
@@ -474,7 +490,7 @@ static void prepare_flash_hooks(ULONGLONG now) {
         const auto fn=g_api->sdk->ustruct->find_function(struct_class,L"SpawnSystemAtLocation");
         if(fn&&g_api->sdk->ufunction->hook_ptr(fn,nullptr,flash_location_post)) {
             g_flash_location_hooked=true;
-            g_api->functions->log_info("[Boltgun muzzle 3D] Observing Niagara SpawnSystemAtLocation for owned bolter flash");
+            g_api->functions->log_info("[Boltgun muzzle 3D] Observing Niagara SpawnSystemAtLocation for owned firearm flashes");
         }
     }
     if(!g_flash_attached_hooked) {
@@ -516,12 +532,20 @@ static void on_tick(UEVR_UGameEngineHandle,float delta) {
         g_feedback[HapticSent].exchange(0),g_feedback[HapticNoAPI].exchange(0),
         g_feedback[HapticNoSource].exchange(0),g_feedback[HapticThrottled].exchange(0),
         g_feedback[HapticFault].exchange(0),g_feedback[HapticDisabled].exchange(0));
-    g_api->functions->log_info("[Boltgun muzzle 3D] Niagara flash: atLocation=%lu attached=%lu exact=%lu moved=%lu attachedHeld=%lu fault=%d",
+    g_api->functions->log_info("[Boltgun muzzle 3D] Niagara flash: atLocation=%lu attached=%lu exact=%lu moved=%lu attachedHeld=%lu fault=%d profile=%d locationHook=%d attachedHook=%d invalidComponent=%lu invalidAsset=%lu notAllowed=%lu parentUnknown=%lu parentPresent=%lu poseUnavailable=%lu transformRejected=%lu",
         g_flash_location_calls.exchange(0,std::memory_order_relaxed),
         g_flash_attached_calls.exchange(0,std::memory_order_relaxed),
         g_flash_matched.exchange(0,std::memory_order_relaxed),
         g_flash_moved.exchange(0,std::memory_order_relaxed),
-        g_flash_attached_skipped.exchange(0,std::memory_order_relaxed),int(g_flash_faulted.load()));
+        g_flash_attached_skipped.exchange(0,std::memory_order_relaxed),int(g_flash_faulted.load()),
+        g_lease.profile,int(g_flash_location_hooked),int(g_flash_attached_hooked),
+        g_flash_skips[InvalidComponent].exchange(0,std::memory_order_relaxed),
+        g_flash_skips[InvalidAsset].exchange(0,std::memory_order_relaxed),
+        g_flash_skips[NotAllowed].exchange(0,std::memory_order_relaxed),
+        g_flash_skips[ParentUnknown].exchange(0,std::memory_order_relaxed),
+        g_flash_skips[ParentPresent].exchange(0,std::memory_order_relaxed),
+        g_flash_skips[PoseUnavailable].exchange(0,std::memory_order_relaxed),
+        g_flash_skips[TransformRejected].exchange(0,std::memory_order_relaxed));
 }
 static void event_inner(const char* text) {
     unsigned long long p{},w{},m{},v{};
@@ -592,6 +616,12 @@ static void event_inner(const char* text) {
         g_spawn_calls.exchange(0,std::memory_order_relaxed);
         g_spawn_redirected.exchange(0,std::memory_order_relaxed);
         for(auto& counter : g_feedback) counter.exchange(0,std::memory_order_relaxed);
+        g_flash_location_calls.exchange(0,std::memory_order_relaxed);
+        g_flash_attached_calls.exchange(0,std::memory_order_relaxed);
+        g_flash_matched.exchange(0,std::memory_order_relaxed);
+        g_flash_moved.exchange(0,std::memory_order_relaxed);
+        g_flash_attached_skipped.exchange(0,std::memory_order_relaxed);
+        for(auto& counter : g_flash_skips) counter.exchange(0,std::memory_order_relaxed);
         g_api->functions->log_info("[Boltgun muzzle 3D] Owned firearm %d and Transform contract verified",profile);
     } else {
         g_lease.heartbeat=now;g_lease.muzzle={x,y,z};g_lease.ready=true;g_lease.profile=profile;

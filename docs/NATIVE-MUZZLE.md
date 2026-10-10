@@ -1,15 +1,17 @@
 > Maintained paths: see [repository layout](REPOSITORY.md) and [build guide](BUILD.md).
 > Historical commands/evidence below describe development snapshots; local research archives are not shipped.
 
-# Arsenal 3D: native muzzle bridge (revision 15)
+# Arsenal 3D: native muzzle bridge (revision 16)
 
-## Revision 15: passive effect diagnostics
+## Revision 16: Niagara fallback diagnostics
 
-For the current bridge, see the [diagnostic guide](history/2026-10-09-revision15.md).
-Shot, recoil and haptic outcomes are logged for up to eight six-second
-windows after an owned firearm lease is acquired. No new firing hooks or
-effects are introduced. Reports from the previous headset run say gameplay
-works except firearm effects; the diagnostics still need a headset run.
+For the current bridge, see the [diagnostic guide](history/2026-10-10-revision16.md).
+Shot, recoil, haptic and Niagara outcomes are logged for up to eight six-second
+windows after an owned firearm lease is acquired. Niagara reports hook state,
+weapon identity and reasons an effect remains untouched. All Niagara counts
+reset on a new lease. Firing transforms and feedback intensity are unchanged.
+Reports from the previous headset run say gameplay works except firearm
+effects; this revision still needs a headset run.
 
 ## Revision 14: isolated firearm visual recoil
 
