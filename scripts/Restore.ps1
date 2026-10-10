@@ -17,9 +17,15 @@ $manifest=Assert-BoltgunSnapshot -SnapshotPath $snapshot -ProfileRoot $ProfileRo
 $active=@($entries | Where-Object { -not $_.disabled })
 $snapshotEntries=if ($manifest.version -eq 2) { @($entries) } elseif ($manifest.version -eq 1) { $active } else { throw 'Unknown snapshot version.' }
 if (@($manifest.entries).Count -ne $snapshotEntries.Count) { throw 'Snapshot inventory differs from this package.' }
-for ($i=0; $i -lt $snapshotEntries.Count; $i++) {
-    $record=$manifest.entries[$i]
-    $entry=$snapshotEntries[$i]
+$recordsByTarget=@{}
+foreach ($record in $manifest.entries) {
+    if (-not $record.target -or $recordsByTarget.ContainsKey($record.target)) {
+        throw 'Duplicate or missing snapshot destination.'
+    }
+    $recordsByTarget[$record.target]=$record
+}
+foreach ($entry in $snapshotEntries) {
+    $record=$recordsByTarget[$entry.target]
     if ($record.target -ne $entry.target -or $record.source -ne $entry.source) {
         throw 'Snapshot entry does not match the destination manifest.'
     }
@@ -27,9 +33,8 @@ for ($i=0; $i -lt $snapshotEntries.Count; $i++) {
 
 # Validate the full restoration before changing any destination. Only files
 # with recognised bytes can be replaced or removed.
-for ($i=0; $i -lt $active.Count; $i++) {
-    $entry=$active[$i]
-    $record=$manifest.entries[$i]
+foreach ($entry in $active) {
+    $record=$recordsByTarget[$entry.target]
     if (Test-Path -LiteralPath $entry.target -PathType Leaf) {
         $hash=(Get-FileHash -LiteralPath $entry.target -Algorithm SHA256).Hash
         if ($hash -notin @($entry.sha256,$entry.originalSha256,$entry.acceptedBaseSha256,$record.sha256)) {
@@ -37,9 +42,8 @@ for ($i=0; $i -lt $active.Count; $i++) {
         }
     }
 }
-for ($i=0; $i -lt $active.Count; $i++) {
-    $entry=$active[$i]
-    $record=$manifest.entries[$i]
+foreach ($entry in $active) {
+    $record=$recordsByTarget[$entry.target]
     if ($record.existed) {
         New-Item -ItemType Directory -Path (Split-Path -Parent $entry.target) -Force | Out-Null
         Copy-Item -LiteralPath (Join-Path $snapshot $record.file) -Destination $entry.target -Force
@@ -51,9 +55,8 @@ for ($i=0; $i -lt $active.Count; $i++) {
     }
 }
 if ($manifest.version -eq 2) {
-    for ($i=$active.Count; $i -lt $snapshotEntries.Count; $i++) {
-        $entry=$snapshotEntries[$i]
-        $record=$manifest.entries[$i]
+    foreach ($entry in @($entries | Where-Object { $_.disabled })) {
+        $record=$recordsByTarget[$entry.target]
         $present=Test-Path -LiteralPath $entry.target -PathType Leaf
         $hash=if ($present) { (Get-FileHash -LiteralPath $entry.target -Algorithm SHA256).Hash } else { $null }
         if ($present -and $hash -notin @($entry.sha256,$record.sha256)) {

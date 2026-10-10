@@ -69,6 +69,23 @@ Reject { & (Join-Path $repo 'scripts\Restore.ps1') @params } 'Missing snapshot m
 Assert (Test-Path -LiteralPath $config) 'Missing snapshot modified installed files.'
 Move-Item -LiteralPath ($manifestPath+'.missing') -Destination $manifestPath
 
+# Future package revisions may reorder enabled and optional sources. Restoring
+# an existing snapshot must still match each destination to its own record.
+$reorderedRoot=Join-Path $sandbox 'reordered-package'
+New-Item -ItemType Directory -Path (Join-Path $reorderedRoot 'scripts'),(Join-Path $reorderedRoot 'tools') -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $repo 'scripts\Restore.ps1') -Destination (Join-Path $reorderedRoot 'scripts')
+Copy-Item -LiteralPath (Join-Path $repo 'tools\Paths.ps1') -Destination (Join-Path $reorderedRoot 'tools')
+Copy-Item -LiteralPath (Join-Path $repo 'tools\Snapshots.ps1') -Destination (Join-Path $reorderedRoot 'tools')
+$originalEntries=@(Get-Content -LiteralPath (Join-Path $repo 'deployment.json') -Raw | ConvertFrom-Json)
+$reorderedEntries=@($originalEntries | Where-Object { $_.disabled }) + @($originalEntries | Where-Object { -not $_.disabled })
+[IO.File]::WriteAllText((Join-Path $reorderedRoot 'deployment.json'),
+    (($reorderedEntries | ConvertTo-Json -Depth 8)+"`n"),[Text.UTF8Encoding]::new($false))
+& (Join-Path $reorderedRoot 'scripts\Restore.ps1') @params | Out-Null
+Assert (-not (Test-Path -LiteralPath $config)) 'Reordered restore kept an initially absent active file.'
+Assert ((Hash $ini) -eq $originalIni) 'Reordered restore did not recover existing INI.'
+Assert ((Hash $optionalScript) -eq $originalOptionalHash) 'Reordered restore changed existing optional script.'
+Assert ([IO.File]::ReadAllText($optionalMode) -eq 'custom-original-mode') 'Reordered restore changed existing optional setting.'
+
 & (Join-Path $repo 'scripts\Restore.ps1') @params | Out-Null
 Assert (-not (Test-Path -LiteralPath $config)) 'Initially absent file was not removed.'
 Assert ((Hash $ini) -eq $originalIni) 'Existing INI was not restored exactly.'
