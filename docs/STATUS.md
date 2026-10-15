@@ -13,6 +13,13 @@ previous-pawn references and rebuilds visuals when the primary renderer changes.
 Installed locally with a backup; regression tests pass. Headset verification of
 loading another save remains pending (`verifiedInGame: false`).
 
+**16 October 2026 - firearm revision 19.** Headset feedback and the UEVR log
+confirmed revision 18 still stopped after a foreign-component cleanup error.
+Revision 19 validates component identities, retires previous-pawn ownership, and
+waits for the new pawn/renderer to initialize. Repeated save-load regressions
+pass offline. Revision 19 is installed locally with a verified backup; in-headset
+verification remains pending (`verifiedInGame: false`).
+
 | Component | Evidence | Next VR check |
 | --- | --- | --- |
 | PS VR2 Sense controls and weapon wheel | Earlier headset feedback and offline input tests | Current bindings, menu and wheel ergonomics |

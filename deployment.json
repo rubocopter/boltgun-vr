@@ -42,7 +42,7 @@
   {
     "source": "src\\lua\\boltgun_bolter3d.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_bolter3d.lua",
-    "sha256": "C10DD9BBA9C33F603348E3373F381AA4769533319F4B3D953E715F7D942AFAEB",
+    "sha256": "471B1F71B60B50DD085B4B199A8D4BD72C4FE68A05CD326A3209559913F83192",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional 10-firearm 3D replacement; installed/selected only by Bolter3D.ps1"

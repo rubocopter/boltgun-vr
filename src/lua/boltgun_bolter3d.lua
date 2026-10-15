@@ -94,6 +94,8 @@ local current_weapon = nil
 local current_weapon_address, current_weapon_name = nil, nil
 local sprite_state = nil
 local owner_name, owner_address = nil, nil
+local component_identities = {}
+local waiting_for_pawn = {} -- Private sentinel for a recoverable travel interval.
 local muzzle_timer, muzzle_published, muzzle_failed = 1, false, false
 
 local function report(message)
@@ -194,6 +196,21 @@ local function restore_sprite()
     end
 end
 
+local function remember_component(part)
+    if valid(part) then
+        component_identities[part] = {name=part:get_full_name(),address=tostring(part:get_address())}
+    end
+end
+
+local function current_component(part)
+    if not valid(part) then return false end
+    local identity = component_identities[part]
+    if identity == nil then return true end -- Partial allocation; ownership still checked by cleanup.
+    local class = part:get_class()
+    return valid(class) and class:get_full_name() == CLASS and
+        part:get_full_name() == identity.name and tostring(part:get_address()) == identity.address
+end
+
 local function cleanup()
     revoke_muzzle() -- Before destroying/detaching anything referenced by the plugin.
     -- A live wrapper can now refer to a renamed/reused actor after travel.
@@ -202,7 +219,7 @@ local function cleanup()
         (owner:get_full_name() ~= owner_name or tostring(owner:get_address()) ~= owner_address)
     local foreign_retained = false
     for _, part in pairs({owned, anchor}) do
-        if not owner_replaced and valid(part) then
+        if not owner_replaced and current_component(part) then
             local actual_owner = part:get_outer()
             if not valid(actual_owner) or actual_owner == owner then
                 part:SetHiddenInGame(true, false)
@@ -216,7 +233,7 @@ local function cleanup()
     end
     if not owner_replaced then restore_sprite() end
     for _, part in pairs({owned, anchor}) do
-        if not owner_replaced and valid(part) then
+        if not owner_replaced and current_component(part) then
             if valid(owner) and part:get_outer() == owner then
                 part:K2_DestroyComponent(owner)
             else
@@ -225,12 +242,29 @@ local function cleanup()
             end
         end
     end
-    assert(not foreign_retained, 'Foreign component retained; ownership journal preserved')
+    if foreign_retained then
+        local next_pawn = api:get_local_pawn(0)
+        if valid(next_pawn) and next_pawn ~= owner then
+            -- A different live pawn is a new ownership scope. Keep the previous
+            -- record for diagnostics, leave foreign objects untouched, and let
+            -- the new pawn receive its own visual and active journal.
+            local previous = fs.read(JOURNAL)
+            fs.write('bolter3d.retired', previous)
+            assert(fs.read('bolter3d.retired') == previous, 'Previous ownership record could not be retained')
+            report('Previous pawn replaced; stale ownership retired, rebuilding firearms')
+        elseif not valid(owner) then
+            report('Waiting for new pawn before retiring previous firearm ownership')
+            error(waiting_for_pawn)
+        else
+            error('Foreign component retained; ownership journal preserved')
+        end
+    end
     owned, anchor, owner, applied, current_weapon = nil, nil, nil, nil, nil
     current_weapon_address, current_weapon_name = nil, nil
     base_location, base_rotation = nil, nil
     sprite_state = nil
     owner_name, owner_address = nil, nil
+    component_identities = {}
     clear_journal()
 end
 
@@ -297,6 +331,8 @@ local function recover()
     end
     owned, anchor, owner = candidate, recovered_anchor, candidate_owner
     owner_name, owner_address = fields[5], fields[3]
+    remember_component(owned)
+    remember_component(anchor)
     sprite_state = recovered_sprite
     cleanup(); recovered = true
     report('Previous preview removed on engine tick')
@@ -498,6 +534,7 @@ local function create(pawn, mesh, material, weapon, profile)
     owner_name, owner_address = pawn:get_full_name(), tostring(pawn:get_address())
     sprite_state = snapshot_sprite(pawn)
     owned = api:add_component_by_class(pawn, class, false)
+    remember_component(owned)
     assert(valid(owned) and owned:get_outer() == pawn, 'Preview creation/ownership failed')
     owned:SetHiddenInGame(true, false)
     owned:SetVisibility(false, false)
@@ -520,6 +557,7 @@ local function create(pawn, mesh, material, weapon, profile)
     if settings.recoil_enabled == 1 and
         settings.muzzle_enabled == 1 and uevr.params.functions.dispatch_custom_event ~= nil then
         anchor = api:add_component_by_class(pawn, class, false)
+        remember_component(anchor)
         assert(valid(anchor) and anchor ~= owned and anchor:get_outer() == pawn,
             'Recoil reference creation/ownership failed')
         -- Record both identities before initialization can fail. A later script
@@ -591,11 +629,11 @@ local function step(delta)
     if owned ~= nil and (current_weapon ~= profile.id or
         current_weapon_address ~= tostring(weapon:get_address()) or
         current_weapon_name ~= weapon:get_full_name()) then cleanup() end
-    if owned ~= nil and (not valid(owned) or not valid(owner) or owner ~= pawn) then cleanup() end
+    if owned ~= nil and (not current_component(owned) or not valid(owner) or owner ~= pawn) then cleanup() end
     if owned ~= nil and valid(owner) and
         (owner:get_full_name() ~= owner_name or tostring(owner:get_address()) ~= owner_address) then cleanup() end
     if owned ~= nil and not check_sprite() then cleanup() end
-    if owned ~= nil and anchor ~= nil and not valid(anchor) then cleanup() end
+    if owned ~= nil and anchor ~= nil and not current_component(anchor) then cleanup() end
     if owned ~= nil and (owned:get_outer() ~= owner or
         (anchor ~= nil and anchor:get_outer() ~= owner)) then
         cleanup()
@@ -617,6 +655,12 @@ local function step(delta)
     failed_profile = nil
     if retry_timer < 1 then return end
     retry_timer = 0
+    -- EquippedWeapon can become available before the new pawn's renderer.
+    -- Wait for a complete sprite ownership snapshot before allocating anything.
+    local sprite_ready = pcall(snapshot_sprite, pawn)
+    if not sprite_ready then
+        report('Waiting for new pawn weapon renderer'); return
+    end
     local mesh = api:find_uobject(profile.mesh)
     if not valid(mesh) then mesh = load_mesh_once(profile) end
     local material = api:find_uobject(profile.material)
@@ -633,6 +677,7 @@ uevr.params.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
     if stopped then return end
     local ok, error = pcall(step, delta)
     if not ok then
+        if error == waiting_for_pawn then return end
         local clean, clean_error = true, nil
         -- If journal validation failed before adopting an object, do not erase it.
         if owned ~= nil or anchor ~= nil then clean, clean_error = pcall(cleanup) end

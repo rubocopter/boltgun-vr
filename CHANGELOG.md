@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Handle recycled firearm components and delayed pawn/renderer initialization
+  across save loads. Retain previous-pawn ownership diagnostics without disabling
+  the new pawn's 3D visuals. Revision 18 did not cover this observed failure.
+
 - Rebuild firearm visuals after save/map loads rename the previous pawn or replace
   its primary sprite, instead of permanently disabling 3D. VR verification pending.
 

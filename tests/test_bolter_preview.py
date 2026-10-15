@@ -1160,6 +1160,116 @@ class BolterPreviewTests(unittest.TestCase):
         self.assertTrue(self.component().visible)
         self.assertNotEqual(self.lua.globals().files['bolter3d.owned'],'')
 
+    def test_save_load_reused_component_wrappers_do_not_disable_firearms(self):
+        for recoil in (0, 1):
+            with self.subTest(recoil=recoil):
+                self.setUp()
+                self.lua.globals().files['bolter3d.settings']=f'recoil_enabled={recoil}'
+                self.tick()
+                for generation in range(1, 4):
+                    before=self.lua.globals().ctx.created
+                    self.lua.execute("""
+                      old_pawn=pawn
+                      old_pawn.valid=false
+                      for _, c in pairs(ctx.components) do
+                        if c.valid then
+                          c.get_full_name=function() engine_only();return 'Recycled unrelated component' end
+                          c.get_outer=function() engine_only();return object('Unrelated actor',9000,class('Actor')) end
+                          c.SetHiddenInGame=function() error('recycled component mutation') end
+                          c.SetVisibility=function() error('recycled component mutation') end
+                          c.K2_DestroyComponent=function() error('recycled component destruction') end
+                        end
+                      end
+                      pawn=object('Pawn loaded_save',ctx.created+3000,class('Pawn'))
+                      pawn.get_property=old_pawn.get_property
+                      renderer.get_outer=function() engine_only();return pawn end
+                      primary.hidden=false;primary.visible=true
+                    """)
+                    self.tick(1.1)
+                    ctx=self.lua.globals().ctx
+                    self.assertEqual(ctx.created,before+1+recoil)
+                    self.assertFalse(self.lua.globals().primary.visible)
+                    self.assertTrue(ctx.components[before+1].visible)
+                    self.tick(1.1)
+                    self.assertEqual(ctx.created,before+1+recoil)
+                    self.assertFalse(any('Disabled after API error' in v for v in ctx.logs.values()))
+
+    def test_save_load_retires_old_ownership_even_if_component_identity_is_unchanged(self):
+        self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
+        self.tick()
+        journal=self.lua.globals().files['bolter3d.owned']
+        self.lua.execute("""
+          old_pawn=pawn;old_pawn.valid=false
+          local foreign=object('Foreign after travel',9000,class('Actor'))
+          for _,c in pairs(ctx.components) do
+            c.get_outer=function() engine_only();return foreign end
+            c.SetHiddenInGame=function() error('foreign mutation') end
+            c.K2_DestroyComponent=function() error('foreign destruction') end
+          end
+          pawn=object('Pawn new_save',3000,class('Pawn'))
+          pawn.get_property=old_pawn.get_property
+          renderer.get_outer=function() engine_only();return pawn end
+          primary.visible=true;primary.hidden=false
+        """)
+        self.tick(1.1)
+        self.assertEqual(self.lua.globals().ctx.created,4)
+        self.assertFalse(self.lua.globals().primary.visible)
+        self.assertEqual(self.lua.globals().files['bolter3d.retired'],journal)
+        self.assertNotEqual(self.lua.globals().files['bolter3d.owned'],journal)
+
+    def test_teardown_before_new_pawn_is_ready_does_not_permanently_stop_3d(self):
+        self.tick()
+        self.lua.execute("""
+          old_pawn=pawn;old_pawn.valid=false
+          local foreign=object('Foreign after travel',9000,class('Actor'))
+          ctx.components[1].get_outer=function() engine_only();return foreign end
+          ctx.components[1].SetHiddenInGame=function() error('foreign mutation') end
+          ctx.components[1].K2_DestroyComponent=function() error('foreign destruction') end
+          ctx.menu=true
+        """)
+        for _ in range(3):
+            self.tick(1.1)
+        self.assertEqual(self.lua.globals().ctx.created,1)
+        self.lua.execute("""
+          pawn=object('Pawn new_save',3000,class('Pawn'))
+          pawn.get_property=old_pawn.get_property
+          renderer.get_outer=function() engine_only();return pawn end
+          primary.visible=true;primary.hidden=false
+          ctx.menu=false
+        """)
+        self.tick(1.1)
+        self.assertEqual(self.lua.globals().ctx.created,2)
+        self.assertFalse(self.lua.globals().primary.visible)
+
+    def test_save_load_waits_for_new_pawn_sprite_initialization(self):
+        self.tick()
+        self.lua.execute("""
+          old_pawn=pawn;old_pawn.valid=false
+          ctx.components[1].valid=false
+          pawn=object('Pawn initializing_save',3000,class('Pawn'))
+          pawn.get_property=old_pawn.get_property
+          renderer.get_outer=function() engine_only();return pawn end
+          ctx.sprite_missing=true
+          primary.visible=true;primary.hidden=false
+        """)
+        self.tick(1.1)
+        self.assertEqual(self.lua.globals().ctx.created,1)
+        self.lua.globals().ctx.sprite_missing=False
+        self.tick(1.1)
+        self.assertEqual(self.lua.globals().ctx.created,2)
+        self.assertFalse(self.lua.globals().primary.visible)
+
+    def test_reused_component_with_different_class_is_never_mutated(self):
+        self.tick()
+        self.lua.execute("""
+          ctx.components[1].get_class=function() engine_only();return class('OtherComponent') end
+          ctx.components[1].SetHiddenInGame=function() error('unrelated class mutation') end
+          ctx.components[1].K2_DestroyComponent=function() error('unrelated class destruction') end
+        """)
+        self.tick(1.1)
+        self.assertEqual(self.lua.globals().ctx.created,2)
+        self.assertFalse(self.lua.globals().primary.visible)
+
     def test_map_travel_renames_old_pawn_and_sprite_without_disabling_3d(self):
         self.tick()
         self.lua.execute("""

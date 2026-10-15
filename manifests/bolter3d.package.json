@@ -1,8 +1,9 @@
 {
-  "version": 18,
+  "version": 19,
   "source": "src\\lua\\boltgun_bolter3d.lua",
-  "sha256": "C10DD9BBA9C33F603348E3373F381AA4769533319F4B3D953E715F7D942AFAEB",
+  "sha256": "471B1F71B60B50DD085B4B199A8D4BD72C4FE68A05CD326A3209559913F83192",
   "upgradeFrom": [
+    "C10DD9BBA9C33F603348E3373F381AA4769533319F4B3D953E715F7D942AFAEB",
     "78D771D22F137136AD7C5C13912C8CB15192E82DD380135B5AB062EF99DD065A",
     "107A3F35DE979A7ADC853E76162AD98D45B25B01545E33325076BB1391DF770B",
     "EB6A9AE857AAD48027ADAC3EE67C39063228B04CA60711FCBA0C1A73764D6159",
@@ -27,7 +28,7 @@
   "model": "10 original Boltgun firearm pickups (8 base game + 2 DLC)",
   "verifiedInGame": false,
   "previousVerifiedRevision": "E8FCCF017E79295FDE5D543AB1F3519DF1DCF4C8069FC44D23EE486561356D66",
-  "verificationScope": "Revision 18: recover firearm visuals across pawn renames and renderer replacement on save/map loads; preserve ownership checks; offline validation only, headset verification required.",
+  "verificationScope": "Revision 19: validate component identity, retire previous-pawn ownership without mutating foreign objects, and wait for pawn/renderer readiness across save loads; offline validation only, headset verification required.",
   "pluginSource": "build\\plugins\\boltgun_muzzle.dll",
   "pluginSha256": "352DA85346A09ABEA432FBEC9D5459F1231BEB37DCE5FA90E963422AC9D79847",
   "pluginUpgradeFrom": [
