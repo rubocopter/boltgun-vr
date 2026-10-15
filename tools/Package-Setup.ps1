@@ -14,7 +14,8 @@ if ((Test-Path -LiteralPath $output) -and -not $Force) {
     throw "Existing ZIP preserved: $output. Choose -OutputPath or specify -Force."
 }
 $staging=Join-Path $repo ('build\player-package-'+[guid]::NewGuid().ToString('N'))
-$rootFiles=@('README.md','deployment.json','Instalar Boltgun VR.cmd','Jugar Boltgun VR.cmd')
+$rootFiles=@('README.md','AGENTS.md','deployment.json','Instalar Boltgun VR.cmd','Jugar Boltgun VR.cmd',
+    'assets/banner/boltgun-vr.png')
 $scriptFiles=@('Install.ps1','Restore.ps1','Setup-BoltgunVR.ps1',
     'Play-BoltgunVR.ps1','Bolter3D.ps1','Chainsword3D.ps1','Comprobar-perfil.ps1')
 $toolFiles=@('Paths.ps1','Check-Repository.ps1','Snapshots.ps1')
@@ -45,9 +46,6 @@ foreach ($name in $rootFiles) { Add-PackageFile $name }
 foreach ($name in $scriptFiles) { Add-PackageFile "scripts\$name" }
 foreach ($name in $toolFiles) { Add-PackageFile "tools\$name" }
 foreach ($name in $guideFiles) { Add-PackageFile "docs\$name" }
-foreach ($revision in 12..15) {
-    Add-PackageFile "docs\history\2026-10-09-revision$revision.md"
-}
 foreach ($revision in 16..17) {
     Add-PackageFile "docs\history\2026-10-10-revision$revision.md"
 }
