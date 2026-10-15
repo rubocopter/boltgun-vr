@@ -93,6 +93,7 @@ local base_location, base_rotation = nil, nil
 local current_weapon = nil
 local current_weapon_address, current_weapon_name = nil, nil
 local sprite_state = nil
+local owner_name, owner_address = nil, nil
 local muzzle_timer, muzzle_published, muzzle_failed = 1, false, false
 
 local function report(message)
@@ -169,8 +170,11 @@ end
 local function check_sprite()
     local s = sprite_state
     if not s or not valid(s.plane) then return false end
-    assert(s.plane:get_full_name() == s.name and tostring(s.plane:get_address()) == s.address,
-        'Primary sprite identity changed')
+    if s.plane:get_full_name() ~= s.name or tostring(s.plane:get_address()) ~= s.address then
+        return false -- Map travel can rename still-valid objects awaiting teardown.
+    end
+    if reference(owner, 'WeaponRenderer') ~= s.renderer or
+        reference(s.renderer, 'PrimaryRenderPlane') ~= s.plane then return false end
     assert(valid(s.renderer) and s.plane:get_outer() == s.renderer and
         s.renderer:get_outer() == owner, 'Primary sprite owner changed')
     return true
@@ -184,7 +188,7 @@ local function hide_sprite()
 end
 
 local function restore_sprite()
-    if check_sprite() and valid(owner) then
+    if valid(owner) and check_sprite() then
         sprite_state.plane:SetHiddenInGame(sprite_state.hidden, false)
         sprite_state.plane:SetVisibility(sprite_state.visible, false)
     end
@@ -192,9 +196,13 @@ end
 
 local function cleanup()
     revoke_muzzle() -- Before destroying/detaching anything referenced by the plugin.
+    -- A live wrapper can now refer to a renamed/reused actor after travel.
+    -- Never mutate objects through that previous-world ownership record.
+    local owner_replaced = valid(owner) and owner_name ~= nil and
+        (owner:get_full_name() ~= owner_name or tostring(owner:get_address()) ~= owner_address)
     local foreign_retained = false
     for _, part in pairs({owned, anchor}) do
-        if valid(part) then
+        if not owner_replaced and valid(part) then
             local actual_owner = part:get_outer()
             if not valid(actual_owner) or actual_owner == owner then
                 part:SetHiddenInGame(true, false)
@@ -206,9 +214,9 @@ local function cleanup()
             end
         end
     end
-    restore_sprite()
+    if not owner_replaced then restore_sprite() end
     for _, part in pairs({owned, anchor}) do
-        if valid(part) then
+        if not owner_replaced and valid(part) then
             if valid(owner) and part:get_outer() == owner then
                 part:K2_DestroyComponent(owner)
             else
@@ -222,6 +230,7 @@ local function cleanup()
     current_weapon_address, current_weapon_name = nil, nil
     base_location, base_rotation = nil, nil
     sprite_state = nil
+    owner_name, owner_address = nil, nil
     clear_journal()
 end
 
@@ -287,6 +296,7 @@ local function recover()
         end
     end
     owned, anchor, owner = candidate, recovered_anchor, candidate_owner
+    owner_name, owner_address = fields[5], fields[3]
     sprite_state = recovered_sprite
     cleanup(); recovered = true
     report('Previous preview removed on engine tick')
@@ -485,6 +495,7 @@ local function create(pawn, mesh, material, weapon, profile)
     local engine = api:get_engine()
     assert(valid(engine), 'Engine unavailable')
     owner = pawn
+    owner_name, owner_address = pawn:get_full_name(), tostring(pawn:get_address())
     sprite_state = snapshot_sprite(pawn)
     owned = api:add_component_by_class(pawn, class, false)
     assert(valid(owned) and owned:get_outer() == pawn, 'Preview creation/ownership failed')
@@ -581,6 +592,9 @@ local function step(delta)
         current_weapon_address ~= tostring(weapon:get_address()) or
         current_weapon_name ~= weapon:get_full_name()) then cleanup() end
     if owned ~= nil and (not valid(owned) or not valid(owner) or owner ~= pawn) then cleanup() end
+    if owned ~= nil and valid(owner) and
+        (owner:get_full_name() ~= owner_name or tostring(owner:get_address()) ~= owner_address) then cleanup() end
+    if owned ~= nil and not check_sprite() then cleanup() end
     if owned ~= nil and anchor ~= nil and not valid(anchor) then cleanup() end
     if owned ~= nil and (owned:get_outer() ~= owner or
         (anchor ~= nil and anchor:get_outer() ~= owner)) then

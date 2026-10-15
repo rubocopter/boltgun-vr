@@ -8,6 +8,11 @@ two-hand `get_transform` query. Repository source now requires explicit `on` in
 `two_hand.mode` and guards reentrant callbacks. Offline tests cover this path;
 the correction has not been deployed to the live profile or verified in VR.
 
+**16 October 2026 - firearm revision 18.** Save/map travel now discards renamed
+previous-pawn references and rebuilds visuals when the primary renderer changes.
+Installed locally with a backup; regression tests pass. Headset verification of
+loading another save remains pending (`verifiedInGame: false`).
+
 | Component | Evidence | Next VR check |
 | --- | --- | --- |
 | PS VR2 Sense controls and weapon wheel | Earlier headset feedback and offline input tests | Current bindings, menu and wheel ergonomics |

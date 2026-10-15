@@ -1160,6 +1160,54 @@ class BolterPreviewTests(unittest.TestCase):
         self.assertTrue(self.component().visible)
         self.assertNotEqual(self.lua.globals().files['bolter3d.owned'],'')
 
+    def test_map_travel_renames_old_pawn_and_sprite_without_disabling_3d(self):
+        self.tick()
+        self.lua.execute("""
+          old_pawn=pawn
+          old_pawn.get_full_name=function() engine_only();return 'Pawn TRASH_previous_map' end
+          primary.get_full_name=function() engine_only();return 'StaticMeshComponent TRASH_previous_map' end
+          pawn=object('Pawn new_map',3001,class('Pawn'))
+          pawn.get_property=old_pawn.get_property
+          renderer.get_outer=function() engine_only();return pawn end
+          primary.get_full_name=function() engine_only();return 'StaticMeshComponent new_map.Primary Render Plane' end
+          primary.hidden=false;primary.visible=true
+          local foreign=object('Expired world component owner',3002,class('Pawn'))
+          ctx.components[1].get_outer=function() engine_only();return foreign end
+          ctx.components[1].SetHiddenInGame=function() error('old world mutation') end
+        """)
+        self.tick(1)
+        self.assertEqual(self.lua.globals().ctx.created,2)
+        self.assertFalse(self.lua.globals().primary.visible)
+        self.tick(1)
+        self.assertEqual(self.lua.globals().ctx.created,2)
+        self.assertTrue(self.component().visible)
+
+    def test_replaced_sprite_is_detected_even_when_old_sprite_is_still_valid(self):
+        self.tick()
+        self.lua.execute("""
+          old_primary=primary
+          primary={}
+          for k,v in pairs(old_primary) do primary[k]=v end
+          primary.get_address=function() engine_only();return 4001 end
+          primary.get_full_name=function() engine_only();return 'StaticMeshComponent new_sprite' end
+          primary.hidden=false;primary.visible=true
+        """)
+        self.tick(1)
+        self.assertEqual(self.lua.globals().ctx.created,2)
+        self.assertFalse(self.lua.globals().primary.visible)
+        self.assertTrue(self.lua.globals().primary.valid)
+
+    def test_renderer_replacement_on_same_pawn_recovers_3d(self):
+        self.tick()
+        self.lua.execute("""
+          primary.get_full_name=function() engine_only();return 'StaticMeshComponent replaced.Primary Render Plane' end
+          primary.hidden=false;primary.visible=true
+        """)
+        self.tick(1)
+        self.tick(1)
+        self.assertEqual(self.lua.globals().ctx.created,2)
+        self.assertFalse(self.lua.globals().primary.visible)
+
     def test_default_rotation_is_a_unit_identity_quaternion(self):
         self.tick()
         q=self.component().rotation

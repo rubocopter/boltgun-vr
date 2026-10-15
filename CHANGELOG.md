@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Rebuild firearm visuals after save/map loads rename the previous pawn or replace
+  its primary sprite, instead of permanently disabling 3D. VR verification pending.
+
 - Fix repeated UEVR engine-tick callback reentry during two-hand controller pose
   queries, observed in the crash log after moving the weapon.
 - Keep experimental proximity two-hand aiming disabled unless
