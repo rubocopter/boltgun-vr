@@ -58,7 +58,7 @@ foreach ($entry in $entries) {
         continue
     }
     $hash=(Get-FileHash -LiteralPath $entry.target -Algorithm SHA256).Hash
-    if ($hash -notin @($entry.sha256,$entry.originalSha256,$entry.acceptedBaseSha256)) {
+    if ($hash -notin (@($entry.sha256,$entry.originalSha256,$entry.acceptedBaseSha256) + @($entry.upgradeFrom))) {
         throw "An existing file contains unknown changes and will be preserved: $($entry.target)"
     }
 }

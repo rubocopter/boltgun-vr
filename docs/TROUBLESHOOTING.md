@@ -11,6 +11,12 @@
 - Chainsword/Codex alignment: calibrate `chainsword3d.settings`, or disable with
   `scripts/Chainsword3D.ps1 -Mode off`. Preserve settings before snapshot restoration.
 - Unknown executable: expect native bridge fallback. Never bypass the identity check.
+- Crash after moving a controller: check the UEVR log for repeated
+  `boltgun_sense.lua` / `get_transform` / `update_two_hand` frames. The original
+  v1.0.0 script unintentionally enabled proximity two-hand aiming by default and
+  could recursively enter the engine-tick callback. The unreleased source fix
+  makes this mode opt-in and guards nested ticks. Do not enable the mode while
+  testing the original v1.0.0 script.
 
 Log: `%APPDATA%\UnrealVRMod\Boltgun-Win64-Shipping\log.txt`. Record module version,
 headset/controllers, game hash, reproduction steps and short relevant log excerpts.

@@ -12,7 +12,8 @@ class WheelTests(unittest.TestCase):
              action_calls_during_load=0,create_pressed=false,aim=2,aim_writes=0,
              left_pos={x=-0.45,y=1.2,z=-0.35},right_pos={x=0.45,y=1.2,z=-0.35}}
         mods={FrameworkConfig_AlwaysShowCursor='false',UI_Framework_MouseEmulation='true',UI_Framework_FollowView='false'}
-        files={}
+        -- Opt in for the two-hand behavior tests; a missing mode should be safe.
+        files={['two_hand.mode']='on'}
         fs={write=function(path,data) files[path]=data end,
             read=function(path) return files[path] or '' end}
         uevr={params={vr={
@@ -39,6 +40,12 @@ class WheelTests(unittest.TestCase):
           get_right_controller_index=function() return 2 end,
           get_transform=function(self,index)
             if self~=uevr.params.vr then error('missing VR instance') end
+            ctx.pose_reads=(ctx.pose_reads or 0)+1
+            if ctx.reenter_tick and index==1 then
+              ctx.reenter_count=(ctx.reenter_count or 0)+1
+              if ctx.reenter_count>8 then error('recursive engine tick') end
+              tick(nil,.01)
+            end
             if ctx.fail_pose then error('tracking unavailable') end
             if index==1 then return {[3]=ctx.left_pos} end
             if index==2 then return {[3]=ctx.right_pos} end
@@ -181,6 +188,21 @@ class WheelTests(unittest.TestCase):
         self.lua.execute((ROOT/'profile/scripts/boltgun_sense.lua').read_text())
         self.close_hands();self.settle_hands()
         self.assertEqual(ctx.aim,2)
+    def test_two_handed_defaults_to_disabled_when_mode_is_missing(self):
+        ctx=self.lua.globals().ctx
+        self.lua.globals().files['two_hand.mode']=None
+        self.lua.execute((ROOT/'profile/scripts/boltgun_sense.lua').read_text())
+        ctx.pose_reads=0
+        self.close_hands();self.settle_hands()
+        self.assertEqual(ctx.aim,2)
+        self.assertEqual(ctx.pose_reads,0)
+    def test_reentrant_tracking_query_does_not_recurse_engine_tick(self):
+        ctx=self.lua.globals().ctx
+        ctx.pose_reads=0
+        ctx.reenter_tick=True
+        self.lua.globals().tick(None,.05)
+        self.assertEqual(ctx.reenter_count,1)
+        self.assertEqual(ctx.pose_reads,2)
     def test_two_handed_restores_when_controllers_disconnect(self):
         ctx=self.lua.globals().ctx
         self.close_hands();self.settle_hands()

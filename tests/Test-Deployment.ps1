@@ -70,8 +70,20 @@ Assert (-not (Test-Path -LiteralPath (Join-Path $profile 'config.txt'))) 'Previo
 Assert ((Hash (Join-Path $game 'Engine.ini')) -eq (Hash (Join-Path $copy 'game-config\Engine.ini'))) 'Pre-existing INI not preserved.'
 Assert (-not (Test-Path -LiteralPath (Join-Path $game 'Input.ini'))) 'Previously absent INI not removed.'
 Assert (-not (Test-Path -LiteralPath $scriptPath)) 'Optional module survived baseline restoration.'
-# Reject traversal before any installation writes.
+# A patch installer must recognize an existing v1.0.0 Sense script. Exercise the
+# upgrade allowlist with temporary legacy bytes, without touching a live profile.
 $manifestPath = Join-Path $copy 'deployment.json'
+$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$senseEntry = $manifest | Where-Object source -eq 'profile\scripts\boltgun_sense.lua'
+Assert (@($senseEntry.upgradeFrom) -contains '0BA255C6662661D84503637F19511C9407BEDE4EF0960672D52F485DBFC24A4C') 'v1.0.0 Sense script is not recognized for upgrade.'
+$baseScriptPath = Join-Path $profile 'scripts\boltgun_sense.lua'
+New-Item -ItemType Directory -Path (Split-Path -Parent $baseScriptPath) -Force | Out-Null
+[IO.File]::WriteAllText($baseScriptPath, 'previous-version-fixture')
+$senseEntry.upgradeFrom = @($senseEntry.upgradeFrom) + (Hash $baseScriptPath)
+$manifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath
+& (Join-Path $copy 'scripts\Install.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam | Out-Null
+Assert ((Hash $baseScriptPath) -eq (Hash (Join-Path $copy 'profile\scripts\boltgun_sense.lua'))) 'Recognized Sense upgrade was not installed.'
+# Reject traversal before any installation writes.
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $manifest[0].target = '${ProfileRoot}\..\outside.txt'
 $manifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath

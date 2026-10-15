@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Fix repeated UEVR engine-tick callback reentry during two-hand controller pose
+  queries, observed in the crash log after moving the weapon.
+- Keep experimental proximity two-hand aiming disabled unless
+  `data/two_hand.mode` explicitly contains `on`. Add regression coverage for
+  both reentry and the default setting. VR verification is still pending.
+- Recognize the original v1.0.0 Sense script hash during subsequent installs
+  while continuing to reject user-modified or unknown scripts.
+
 ## v1.0.0 — 15 October 2026
 
 Initial 1.0 release. Future fixes can ship as patch releases.

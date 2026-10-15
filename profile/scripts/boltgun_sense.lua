@@ -15,7 +15,8 @@ local start_held, menu_chord_held = false, false
 local visual_time, reveal = 0, 0
 
 -- UEVR AimMethod: RIGHT_CONTROLLER=2, TWO_HANDED_RIGHT=4.
--- Optional override: set profile/data/two_hand.mode to "off" and reload scripts.
+-- Optional feature: set profile/data/two_hand.mode to "on" and reload scripts.
+-- A missing, unreadable, or unrecognized setting leaves it disabled.
 local two_hand_enabled = nil
 local two_hand_owned, two_hand_close_time, two_hand_blocked = false, 0, false
 local TWO_HAND_ENTER_SQ, TWO_HAND_EXIT_SQ = 0.22 * 0.22, 0.32 * 0.32
@@ -28,7 +29,7 @@ end
 local function read_two_hand_setting()
     if two_hand_enabled ~= nil then return end
     local ok, value = pcall(function() return fs.read('two_hand.mode') end)
-    two_hand_enabled = not (ok and type(value) == 'string' and value:match('^%s*off%s*$'))
+    two_hand_enabled = ok and type(value) == 'string' and value:match('^%s*on%s*$') ~= nil
     log_event(two_hand_enabled and 'Proximity two-hand aiming enabled' or 'Proximity two-hand aiming disabled')
 end
 
@@ -264,7 +265,7 @@ local function poll_create_recenter()
     end
     create_held = pressed and true or false
 end
-uevr.params.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
+local function sense_engine_tick(engine, delta)
     local dt = math.min(0.05, math.max(0, delta or 0))
     visual_time = visual_time + dt
     reveal = opened and math.min(1, reveal + dt * 7) or 0
@@ -301,6 +302,19 @@ uevr.params.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
     if not opened then persist_restoration() end
     remaining = math.max(0, remaining - math.max(0, delta or 0))
     if remaining == 0 then pulse = 0 end
+end
+-- A synchronous VR pose query may invoke the Lua engine-tick callback again.
+-- Reject nested ticks before they can re-enter the same tracking query.
+local engine_tick_busy, engine_tick_error_logged = false, false
+uevr.params.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
+    if engine_tick_busy then return end
+    engine_tick_busy = true
+    local ok, err = pcall(sense_engine_tick, engine, delta)
+    engine_tick_busy = false
+    if not ok and not engine_tick_error_logged then
+        engine_tick_error_logged = true
+        log_event('Engine tick failed: ' .. tostring(err))
+    end
 end)
 uevr.params.sdk.callbacks.on_script_reset(function()
     restore_two_hand()

@@ -37,7 +37,7 @@ foreach ($entry in $active) {
     $record=$recordsByTarget[$entry.target]
     if (Test-Path -LiteralPath $entry.target -PathType Leaf) {
         $hash=(Get-FileHash -LiteralPath $entry.target -Algorithm SHA256).Hash
-        if ($hash -notin @($entry.sha256,$entry.originalSha256,$entry.acceptedBaseSha256,$record.sha256)) {
+        if ($hash -notin (@($entry.sha256,$entry.originalSha256,$entry.acceptedBaseSha256,$record.sha256) + @($entry.upgradeFrom))) {
             throw "Unknown changes preserved; cannot restore: $($entry.target)"
         }
     }

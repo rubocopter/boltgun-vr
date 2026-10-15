@@ -102,7 +102,8 @@ foreach ($taskEntry in $taskEntries) {
     }
     if (Test-Path -LiteralPath $taskEntry.target) {
         $taskCurrent = (Get-FileHash -LiteralPath $taskEntry.target -Algorithm SHA256).Hash
-        if ($taskCurrent -ne $taskEntry.sha256 -and $taskCurrent -ne $taskEntry.originalSha256 -and $taskCurrent -ne $taskEntry.acceptedBaseSha256) {
+        $knownHashes = @($taskEntry.sha256,$taskEntry.originalSha256,$taskEntry.acceptedBaseSha256) + @($taskEntry.upgradeFrom)
+        if ($taskCurrent -notin $knownHashes) {
             throw "Hay cambios posteriores en $($taskEntry.target). Conservados; revisalos antes de reinstalar."
         }
     }

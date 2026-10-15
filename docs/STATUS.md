@@ -2,6 +2,12 @@
 
 **15 October 2026 — v1.0.0 release snapshot.** Sense profile **v7**, 3D firearm arsenal **revision 17**, chainsword **package 4**. Current runtime behavior requires new headset verification.
 
+**16 October 2026 — local, unreleased correction.** The UEVR log from a crash
+after moving the weapon shows repeated engine-tick reentry through the optional
+two-hand `get_transform` query. Repository source now requires explicit `on` in
+`two_hand.mode` and guards reentrant callbacks. Offline tests cover this path;
+the correction has not been deployed to the live profile or verified in VR.
+
 | Component | Evidence | Next VR check |
 | --- | --- | --- |
 | PS VR2 Sense controls and weapon wheel | Earlier headset feedback and offline input tests | Current bindings, menu and wheel ergonomics |
