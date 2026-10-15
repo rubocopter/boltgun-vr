@@ -93,5 +93,5 @@ $config=[ordered]@{
 $settingsPath=Join-Path $SettingsRoot 'launcher.json'
 [IO.File]::WriteAllText($settingsPath, ($config | ConvertTo-Json)+"`n", [Text.UTF8Encoding]::new($false))
 Write-Output "Ready: launcher settings stored at $settingsPath"
-Write-Output 'Use Jugar Boltgun VR.cmd to open the game and official UEVR frontend.'
+Write-Output 'Use Boltgun VR.cmd to open the game and official UEVR frontend.'
 Write-Output 'Injection still requires pressing Inject in the official UEVR window.'

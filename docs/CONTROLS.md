@@ -21,4 +21,4 @@ Wheel groups: up = Bolter/Vengeance; right = Shotgun/Melta/Multi-Melta;
 down = Plasma/Volkite; left = Heavy Bolter/Graviton/Missile Launcher.
 Labels describe groups, not acquired inventory. Vibration confirms selection input,
 not ownership or successful equip. Two-hand aiming is shipped off.
-Options/Create rely on SteamVR's generated application binding, which can be regenerated.
+Options/Create rely on SteamVR's generated Oculus Touch application binding, which can be regenerated. The supplied PS VR2 Sense configuration uses that binding. No separate Index, Vive or other controller-profile mappings are included or validated.

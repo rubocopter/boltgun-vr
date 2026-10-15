@@ -14,9 +14,9 @@ if ((Test-Path -LiteralPath $output) -and -not $Force) {
     throw "Existing ZIP preserved: $output. Choose -OutputPath or specify -Force."
 }
 $staging=Join-Path $repo ('build\player-package-'+[guid]::NewGuid().ToString('N'))
-$rootFiles=@('README.md','AGENTS.md','deployment.json','Instalar Boltgun VR.cmd','Jugar Boltgun VR.cmd',
+$rootFiles=@('README.md','CHANGELOG.md','deployment.json','Boltgun VR.cmd',
     'assets/banner/boltgun-vr.png')
-$scriptFiles=@('Install.ps1','Restore.ps1','Setup-BoltgunVR.ps1',
+$scriptFiles=@('Install.ps1','Restore.ps1','Setup-BoltgunVR.ps1','Menu.ps1',
     'Play-BoltgunVR.ps1','Bolter3D.ps1','Chainsword3D.ps1','Comprobar-perfil.ps1')
 $toolFiles=@('Paths.ps1','Check-Repository.ps1','Snapshots.ps1')
 $guideFiles=@('ARCHITECTURE.md','ARSENAL.md','BUILD.md','CHAINSAW.md',

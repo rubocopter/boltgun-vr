@@ -19,6 +19,8 @@
   optional tracked 3D firearms and a tracked chainsword.
 </p>
 
+Latest pre-alpha package: **v0.1.0-prealpha** · [Changelog](CHANGELOG.md)
+
 <p align="center">
   <a href="docs/EASY-SETUP.md"><b>Get started →</b></a>
   &nbsp;·&nbsp; <a href="docs/CONTROLS.md">Controls</a>
@@ -27,7 +29,7 @@
 </p>
 
 > [!IMPORTANT]
-> **Pre-alpha source snapshot; no public installer release yet.** The latest source is **Sense profile v7 / 3D arsenal revision 17 / chainsword package 4**. Earlier headset checks confirmed core controls, the Bolter model and chainsword tracking, but the current firearm effects and revision 17 recovery changes still need in-headset verification. A green automated test is not a VR playtest.
+> **Pre-alpha release.** The current build is **Sense profile v7 / 3D arsenal revision 17 / chainsword package 4**. Earlier headset checks confirmed core controls, the Bolter model and chainsword tracking, but the current firearm effects and revision 17 recovery changes still need in-headset verification. A green automated check is not a VR playtest. [Get the current release](https://github.com/rubocopter/boltgun-vr/releases/latest).
 
 ## What changes in VR
 
@@ -41,14 +43,14 @@ Firearms have experimental visual recoil and firing haptics on intercepted proje
 
 ## Install
 
-The repository contains **source and build tooling**, including a guided installer. It does **not** include compiled native plugins, UEVR or game files; there is no downloadable release ZIP at present.
+The [pre-alpha release](https://github.com/rubocopter/boltgun-vr/releases/latest) includes a player ZIP with the compiled native plugins and the English menu launcher. UEVR and game files are not included. Source and build instructions remain available in this repository.
 
 1. Install your own copy of **Warhammer 40,000: Boltgun** on Windows and set up SteamVR/OpenXR with your PCVR headset and motion controllers.
 2. Get [UEVR from praydog's official releases](https://github.com/praydog/UEVR/releases). Maintainers can compile the two native plugins using [build instructions](docs/BUILD.md), verify their hashes and create a local player ZIP.
-3. From a complete local build/package, run **`Instalar Boltgun VR.cmd`**. Select your `UEVRInjector.exe` and opt into the experimental 3D components if you want to test them.
-4. Run **`Jugar Boltgun VR.cmd`** or start Boltgun normally, select **OpenXR** in UEVR and press **Inject** manually. After the first injection, reinstall the profile once if SteamVR still needs to create the game's Options/Create binding.
+3. Extract the downloaded player ZIP, run **`Boltgun VR.cmd`**, and choose **Install or update the VR profile**. Select your `UEVRInjector.exe` and choose whether to include the experimental 3D components.
+4. Choose **Start Boltgun and open the UEVR frontend**, select **OpenXR**, then press **Inject** manually. If SteamVR has not generated the Boltgun Oculus Touch binding yet, inject once, close the game, and run the install option again to patch Options/Create.
 
-For prerequisites, exact file locations, backups and restoring your previous profile, use the [guided setup](docs/EASY-SETUP.md) or [advanced install/recovery](docs/INSTALL.md). The launcher never injects automatically.
+For prerequisites, exact file locations, backups and restoring your previous profile, use the [guided setup](docs/EASY-SETUP.md) or [advanced install/recovery](docs/INSTALL.md). The menu never injects automatically. The only SteamVR binding patched by the installer is the generated Oculus Touch profile used by the supplied PS VR2 Sense setup. Other controller profiles have no separate mappings in this package and are not validated.
 
 ## Current development status
 
@@ -86,7 +88,7 @@ python -m unittest discover -s src/native/chainsword -p 'test_*.py' -q
 .\tools\Package-Setup.ps1
 ```
 
-See [build requirements](docs/BUILD.md), [repository layout](docs/REPOSITORY.md) and [AGENTS.md](AGENTS.md) before modifying or distributing a build.
+See [build requirements](docs/BUILD.md) and [repository layout](docs/REPOSITORY.md) before modifying or distributing a build.
 
 </details>
 

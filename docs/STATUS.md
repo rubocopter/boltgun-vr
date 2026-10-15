@@ -1,6 +1,6 @@
 # Current status and validation
 
-**15 October 2026 — pre-alpha source snapshot.** Sense profile **v7**, 3D firearm arsenal **revision 17**, chainsword **package 4**. There is no public player ZIP release. Automated checks cover source and isolated simulated deployment; current runtime behavior requires new headset verification.
+**15 October 2026 — pre-alpha snapshot.** Sense profile **v7**, 3D firearm arsenal **revision 17**, chainsword **package 4**. The release is experimental; current runtime behavior requires new headset verification.
 
 | Component | Evidence | Next VR check |
 | --- | --- | --- |
@@ -28,4 +28,4 @@ Meshes are loaded from the user's own game installation. There are no physical r
 
 ## Release boundary
 
-The manifests retain **`verifiedInGame=false`** and **`runtimeVerified=false`** pending maintainer confirmation of this revision on a headset. Fresh-profile install and rollback have isolated tests. A project-wide code-license decision and current VR verification remain before a redistributable player release. Refer to [build checks](BUILD.md), [repository layout](REPOSITORY.md) and [third-party notices](SOURCE-AND-NOTICES.md).
+The manifests retain **`verifiedInGame=false`** and **`runtimeVerified=false`** pending maintainer confirmation of this revision on a headset. The included controller mappings target the PS VR2 Sense setup through SteamVR's Oculus Touch binding; other controller profiles are not included or validated. Fresh-profile install and rollback have isolated checks. Refer to [build instructions](BUILD.md), [repository layout](REPOSITORY.md) and [third-party notices](SOURCE-AND-NOTICES.md).

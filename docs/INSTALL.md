@@ -23,15 +23,17 @@ Defaults follow the current Windows user:
 
 Steam's binding directory is resolved from the current user's Steam registry entry,
 with the standard Steam directory as fallback. UEVR must have generated Boltgun's
-Oculus Touch binding once for the Sense Options/Create patch. Binding backups are kept
+Oculus Touch binding once for the supplied Sense Options/Create patch. No other
+controller profile mappings are included. Binding backups are kept
 under `backups/steamvr-runtime`. For custom locations:
 
 ```powershell
 .\scripts\Install.ps1 -ProfileRoot 'D:\VR\Boltgun' -GameConfigRoot 'D:\Config\Boltgun' -SteamBindingRoot 'D:\Steam\config\openxr'
 ```
 
-The base installer does not activate optional 3D modules. `Instalar Boltgun VR.cmd`
-asks whether to enable them and calls `scripts/Setup-BoltgunVR.ps1`, which checks the
+The base installer does not activate optional 3D modules. `Boltgun VR.cmd` provides
+an English menu to install/update the base profile or include the experimental modules.
+It calls `scripts/Setup-BoltgunVR.ps1`, which checks the
 user-provided official UEVR path and the current installation before saving
 launcher settings. The launcher opens Steam and UEVR; injection remains manual.
 

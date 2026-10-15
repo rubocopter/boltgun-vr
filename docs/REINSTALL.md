@@ -45,8 +45,8 @@ check that the snapshot folder and its manifest exist on the retained drive.
    If you already changed a newly generated file, save it separately first.
    Restore only **Boltgun-specific** Steam binding files into the current
    Steam `config\openxr` folder.
-4. If launcher settings were restored, update the injector path with the guided
-   `Instalar Boltgun VR.cmd` if the preflight accepts your installed files.
+4. If launcher settings were restored, update the injector path from
+   **Install or update the VR profile** in `Boltgun VR.cmd` if the preflight accepts your installed files.
    Otherwise preserve your customization separately, then select your official
    `UEVRInjector.exe` on a new guided setup.
 5. Run `scripts/Bolter3D.ps1 -Mode status`, `scripts/Chainsword3D.ps1 -Mode status`

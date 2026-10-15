@@ -42,7 +42,9 @@ try {
     $names=@($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
     Assert ($names -contains 'build/plugins/boltgun_chainsword.dll') 'Chainsword plugin missing from ZIP.'
     Assert ($names -contains 'build/plugins/boltgun_muzzle.dll') 'Muzzle plugin missing from ZIP.'
-    Assert ($names -contains 'Instalar Boltgun VR.cmd') 'Installer shortcut missing.'
+    Assert ($names -contains 'Boltgun VR.cmd') 'Main menu shortcut missing.'
+    Assert (@($names | Where-Object { $_ -like '*.cmd' }).Count -eq 1) 'Player package must have exactly one command launcher.'
+    Assert ($names -contains 'scripts/Menu.ps1') 'English launcher menu missing.'
     Assert ($names -contains 'scripts/Install.ps1') 'Deployment script missing.'
     Assert ($names -contains 'tools/Snapshots.ps1') 'Restore snapshot tool missing.'
     Assert (@($names | Where-Object { $_ -like '*baseline*' }).Count -eq 0) 'Legacy baseline leaked into package.'

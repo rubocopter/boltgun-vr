@@ -21,9 +21,11 @@ superseded preparation notes are retained in Git history, not in the player pack
 No extracted game meshes, executable, PAK, dump or compiler products belong in Git.
 GitHub and Git track source only; they do not contain user calibrations or Windows
 runtime settings. See [Windows reinstall and local snapshots](REINSTALL.md).
-The player archive contains a curated subset of these directories, two root
-shortcuts and the compiled native plugins. The old starter profile and obsolete
+The player archive contains a curated subset of these directories, one English
+root menu launcher and the compiled native plugins. The old starter profile and obsolete
 experimental probes were retired. Installation snapshots live in ignored
 `backups/install/`; the separate reinstall snapshot tool covers user calibration.
-Before a downloadable public player release, decide the code license and record
-headset validation of the current build. The repository already has a public remote.
+The public pre-alpha release is an experimental build and does not mark the current
+revision as verified in VR. The project has no blanket source-code reuse license;
+see [source and third-party notices](SOURCE-AND-NOTICES.md) before reusing code.
+The repository already has a public remote.

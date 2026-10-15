@@ -4,7 +4,7 @@ Mod de **Warhammer 40,000: Boltgun** para PCVR basado en UEVR/OpenXR, desarrolla
 
 **Estado: pre-alfa.** El código actual corresponde al **perfil Sense v7, arsenal 3D revisión 17 y chainsword paquete 4**. Se han probado en visor las mecánicas básicas, el Bolter y el seguimiento de la espada en revisiones anteriores. La revisión 17 y los efectos de disparo actuales todavía necesitan una nueva prueba real.
 
-No existe aún un **instalador público descargable**. Este repositorio contiene el código fuente y las herramientas para compilar las DLL y generar un ZIP local. No incluye el juego, UEVR ni modelos extraídos del juego.
+Hay una **release prealfa descargable** en [GitHub Releases](https://github.com/rubocopter/boltgun-vr/releases/latest), con un ZIP de jugador que incluye el menú en inglés y los plugins nativos compilados. No incluye el juego ni UEVR. El código fuente y las herramientas de compilación están en este repositorio.
 
 ## Qué puedes probar
 
@@ -18,7 +18,7 @@ No hay recargas físicas ni daño causado por gestos con la espada. El modo de a
 
 ## Instalación y documentación
 
-Consulta la [instalación guiada](INSTALACION-FACIL.es.md) o la [guía avanzada y restauración](INSTALL.md) (en inglés). El instalador hace copias de seguridad, comprueba hashes y no realiza la inyección automáticamente. Necesitas el juego original, un visor PCVR, SteamVR/OpenXR y UEVR obtenido por separado.
+Consulta la [instalación guiada](INSTALACION-FACIL.es.md) o la [guía avanzada y restauración](INSTALL.md) (en inglés). El menú permite instalar, iniciar, activar módulos, revisar el perfil y restaurar copias. El instalador comprueba hashes y no inyecta automáticamente. Necesitas el juego original, un visor PCVR, SteamVR/OpenXR y UEVR por separado.
 
 | Jugadores | Desarrollo |
 | --- | --- |
