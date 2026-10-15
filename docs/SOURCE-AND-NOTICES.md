@@ -3,8 +3,10 @@
 ## Project license
 
 The maintainer has not chosen a project-wide code license. Penumbra's GPL license
-does not carry over through documentation style. Source availability grants no blanket
-redistribution license. Resolve this before publication; third-party terms remain separate.
+does not carry over through documentation style. The repository may be read publicly,
+but source availability does not grant a blanket license to reuse or redistribute
+the original project code. Choose and document licensing terms before offering a
+redistributable player release. Third-party terms remain separate.
 
 ## UEVR API
 

@@ -1,71 +1,95 @@
-<h1 align="center">Boltgun VR</h1>
-
 <p align="center">
-<b>Warhammer 40,000: Boltgun with tracked weapons and motion-controller controls.</b><br>
-A UEVR mod with a weapon-group wheel, ten optional 3D firearms and a tracked chainsword.<br>
-Windows Â· UEVR / OpenXR Â· Developed with PS VR2 Sense
+  <img src="assets/banner/boltgun-vr.png" alt="Boltgun VR — UEVR mod for Warhammer 40,000: Boltgun" width="100%">
 </p>
 
 <p align="center">
-<a href="docs/INSTALL.md">Installation</a> Â· <a href="docs/CONTROLS.md">Controls</a> Â·
-<a href="docs/TROUBLESHOOTING.md">Troubleshooting</a> Â· <a href="docs/README.es.md">EspaÃ±ol</a>
+  <img alt="Status: pre-alpha" src="https://img.shields.io/badge/status-pre--alpha-D97736?style=flat-square">
+  <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square">
+  <img alt="VR: UEVR and OpenXR" src="https://img.shields.io/badge/VR-UEVR%20%2F%20OpenXR-456779?style=flat-square">
+  <img alt="Controllers: PS VR2 Sense" src="https://img.shields.io/badge/controllers-PS%20VR2%20Sense-555555?style=flat-square">
 </p>
 
 <p align="center">
   <a href="https://ko-fi.com/onitaku"><img alt="Support development on Ko-fi" src="https://ko-fi.com/img/githubbutton_sm.svg"></a>
 </p>
 
+<p align="center">
+  <b>Bring the original Warhammer 40,000: Boltgun into PC VR.</b><br>
+  A UEVR profile with motion-controller input, an in-game weapon wheel,<br>
+  optional tracked 3D firearms and a tracked chainsword.
+</p>
+
+<p align="center">
+  <a href="docs/EASY-SETUP.md"><b>Get started →</b></a>
+  &nbsp;·&nbsp; <a href="docs/CONTROLS.md">Controls</a>
+  &nbsp;·&nbsp; <a href="docs/STATUS.md">Validation &amp; limits</a>
+  &nbsp;·&nbsp; <a href="docs/README.es.md">Español</a>
+</p>
+
+> [!IMPORTANT]
+> **Pre-alpha source snapshot; no public installer release yet.** The latest source is **Sense profile v7 / 3D arsenal revision 17 / chainsword package 4**. Earlier headset checks confirmed core controls, the Bolter model and chainsword tracking, but the current firearm effects and revision 17 recovery changes still need in-headset verification. A green automated test is not a VR playtest.
+
 ## What changes in VR
 
-- **Tracked firearms.** Optional replacements load the original game's ten pickup meshes, with per-weapon muzzle origins for supported projectile and flash paths. All ten firearm profiles support stronger visual recoil and firing haptics on confirmed projectile spawns. Multi-Melta and Missile Launcher require the DLC.
-- **Tracked chainsword.** A separate procedural mesh follows the left controller. Original attack controls, sound and damage remain in use.
-- **Weapon selection.** Hold R3, tilt the stick and release to select a native weapon group. Return to the centre to cancel.
-- **Comfort and controls.** Head-oriented movement, configurable snap or smooth turning, pause/recenter mappings and graphics adjustments.
-- **Smaller Codex.** The chainsword module scales the reading animation to 65%, then restores its scale.
+- **Motion controls.** Head-oriented movement, turning, pause/recenter mappings and PS VR2 Sense button assignments.
+- **Weapon wheel.** Hold R3, tilt the right stick towards a weapon group and release. Return to the centre to cancel.
+- **Optional tracked firearms.** Up to ten weapon-specific 3D replacements assembled from meshes already in the installed game; the Multi-Melta and Missile Launcher require the DLC. The mod can fall back to the original sprite when a mesh fails to load.
+- **Optional chainsword.** A separate tracked model on the left controller. Attacks, damage and sounds still use the original game's mechanics.
+- **Presentation tweaks.** Reduced Codex reading scale, comfort options and a normally hidden UEVR menu.
 
-Start Boltgun normally and inject UEVR. An optional player shortcut opens the
-game and official injector together; injection still requires one manual click.
+Firearms have experimental visual recoil and firing haptics on intercepted projectile spawns. Native aim and spread are preserved. Some muzzle flashes, attached Niagara effects, beams and hitscan paths still behave as in the original game. Physical reloads and gesture-based sword damage are not implemented.
 
-## Current status
+## Install
 
-Development snapshot: **profile v7, arsenal revision 17, chainsword package 4**.
-Earlier videos confirmed the Bolter replacement and chainsword appearance/tracking.
-The maintainer reports that the current VR mechanics work except firearm effects.
-Revision 17 improves 3D firearm switching after failed mesh loads and when a
-weapon instance is replaced. Revision 16's Niagara fallback diagnostics still
-require a headset check. See [validation and limitations](docs/STATUS.md).
+The repository contains **source and build tooling**, including a guided installer. It does **not** include compiled native plugins, UEVR or game files; there is no downloadable release ZIP at present.
 
-Native firing direction and spread are preserved. Attached effects and beam/hitscan
-paths outside the intercepted helper retain native behaviour. There are no physical
-reloads or gesture-based sword damage. Two-hand aiming is shipped off.
+1. Install your own copy of **Warhammer 40,000: Boltgun** on Windows and set up SteamVR/OpenXR with your PCVR headset and motion controllers.
+2. Get [UEVR from praydog's official releases](https://github.com/praydog/UEVR/releases). Maintainers can compile the two native plugins using [build instructions](docs/BUILD.md), verify their hashes and create a local player ZIP.
+3. From a complete local build/package, run **`Instalar Boltgun VR.cmd`**. Select your `UEVRInjector.exe` and opt into the experimental 3D components if you want to test them.
+4. Run **`Jugar Boltgun VR.cmd`** or start Boltgun normally, select **OpenXR** in UEVR and press **Inject** manually. After the first injection, reinstall the profile once if SteamVR still needs to create the game's Options/Create binding.
 
-## Requirements and installation
+For prerequisites, exact file locations, backups and restoring your previous profile, use the [guided setup](docs/EASY-SETUP.md) or [advanced install/recovery](docs/INSTALL.md). The launcher never injects automatically.
 
-Windows x64, an owned copy of the original Boltgun, UEVR with OpenXR, a PCVR headset
-and tracked controllers. Supplied mappings target PS VR2 Sense; other controllers
-have not been validated. The muzzle bridge accepts one exact executable hash.
+## Current development status
 
-There is no public release or download yet. Maintainers can build a local player
-ZIP with verified native DLLs via `tools/Package-Setup.ps1`. This package does
-not contain UEVR. The guided installer can create files in an empty profile.
-The first injection is only needed to generate a real SteamVR controller
-binding; run the installer again afterwards for the Options/Create mapping.
-Read the [quick start](docs/EASY-SETUP.md) ([Español](docs/INSTALACION-FACIL.es.md))
-or [advanced installation](docs/INSTALL.md) before using it.
+| Component | Evidence | What remains |
+| --- | --- | --- |
+| Sense controls and weapon wheel | Earlier in-headset feedback; offline Lua tests | Retest the current bindings |
+| 3D firearms (revision 17) | Earlier Bolter replacement in-headset; offline tests for all ten | Weapon switching, DLC, positioning and effects in the visor |
+| Native muzzle bridge | Exact-game-build guard and native harness tests | Flash origins and unsupported effect paths |
+| Tracked chainsword (package 4) | Earlier appearance/tracking in-headset; offline tests | Alignment, animation and stability |
+
+Revision 17 isolates failed mesh loads and detects newly spawned weapon objects of the same class. Revision 16 added diagnostics for Niagara/effect fallbacks. Neither revision has been confirmed in VR yet. Read [validation details](docs/STATUS.md) before treating the experimental modules as ready for regular play.
 
 ## Documentation
 
-| Playing and setup | Development |
+| Playing & setup | Development & maintenance |
 | --- | --- |
-| [Guided setup](docs/EASY-SETUP.md) · [Español](docs/INSTALACION-FACIL.es.md) | [Architecture](docs/ARCHITECTURE.md) |
-| [Installation and recovery](docs/INSTALL.md) | [Build and verification](docs/BUILD.md) |
-| [Windows reinstall and profile backup](docs/REINSTALL.md) | [Source and notices](docs/SOURCE-AND-NOTICES.md) |
-| [Sense controls](docs/CONTROLS.md) | [Repository layout](docs/REPOSITORY.md) |
-| [Troubleshooting](docs/TROUBLESHOOTING.md) | [Native muzzle implementation](docs/NATIVE-MUZZLE.md) |
-| [Status and known limits](docs/STATUS.md) | [Revision 17 lifecycle notes](docs/history/2026-10-10-revision17.md) · [Revision 16 diagnostics](docs/history/2026-10-10-revision16.md) |
-| [Arsenal details](docs/ARSENAL.md) | [Release status](docs/STATUS.md) |
-| [Chainsword details](docs/CHAINSAW.md) | |
+| [Quick start](docs/EASY-SETUP.md) · [Español](docs/INSTALACION-FACIL.es.md) | [Architecture](docs/ARCHITECTURE.md) |
+| [Sense controls](docs/CONTROLS.md) | [Build & tests](docs/BUILD.md) |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | [Arsenal implementation](docs/ARSENAL.md) |
+| [Installation & restore](docs/INSTALL.md) | [Native muzzle bridge](docs/NATIVE-MUZZLE.md) |
+| [Headset validation & limitations](docs/STATUS.md) | [Chainsword implementation](docs/CHAINSAW.md) |
+| [Windows reinstall & backup](docs/REINSTALL.md) | [Source, licensing & credits](docs/SOURCE-AND-NOTICES.md) |
 
-Unofficial fan project. The game, injector and extracted game assets are not included.
-The external chainsword is credited to Kaiser-E under CC BY 4.0.
-See [source and licensing scope](docs/SOURCE-AND-NOTICES.md).
+<details>
+<summary><b>For developers</b></summary>
+
+The active Lua modules live in `profile/scripts` and `src/lua`; the native x64 sources are in `src/native`. The repository has offline Lua/Python tests, native harnesses, isolated installer tests and a GitHub Actions validation workflow. Native build outputs remain local and are included only when deliberately assembling a player package.
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m unittest discover -s tests -p 'test_*.py' -q
+python -m unittest discover -s src/native/chainsword -p 'test_*.py' -q
+.\tools\Build.ps1
+.\tools\Check-Repository.ps1
+.\tools\Package-Setup.ps1
+```
+
+See [build requirements](docs/BUILD.md), [repository layout](docs/REPOSITORY.md) and [AGENTS.md](AGENTS.md) before modifying or distributing a build.
+
+</details>
+
+---
+
+**Unofficial fan project.** Not affiliated with or endorsed by Auroch Digital, Games Workshop, Focus Entertainment, praydog, Valve or Sony Interactive Entertainment. Warhammer 40,000: Boltgun and UEVR are required separately. Original game assets are not redistributed. The credited chainsword model is by Kaiser-E (CC BY 4.0). There is currently **no project-wide source-code license**; see [source and third-party notices](docs/SOURCE-AND-NOTICES.md) before reuse or redistribution.

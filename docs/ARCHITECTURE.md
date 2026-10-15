@@ -11,7 +11,8 @@ The Lua preview caches resolved Unreal weapon classes with weak keys and tracks
 the active weapon's UObject identity. A failed pickup load stays latched for
 that firearm; subsequent checks for a different equipped weapon run at most
 twice a second, without retrying the failed asset. Re-enabling preview resets
-these latches. See [revision 17](history/2026-10-10-revision17.md).
+these latches. See [revision 17](history/2026-10-10-revision17.md) and
+[current validation](STATUS.md) for what has and has not been tested in VR.
 With firearm recoil enabled, Lua owns a visible mesh and an invisible tracked
 reference with identical grip calibration. The bridge reads projectile/flash
 origins from the reference, queues recoil only after a successful native spawn,

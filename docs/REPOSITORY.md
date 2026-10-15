@@ -14,8 +14,9 @@
 
 `research`, `backups`, `diagnostics`, `previews` and `tools/python` remain ignored local
 archives: previous iterations, extracts, recordings, downloaded runtimes and diagnostics.
-Active files were copied out, preserving original research snapshots. The former README
-and maintenance scripts are saved under `backups/repository-preparation`.
+Local research and previous prototypes remain outside Git. The public documentation
+contains the current implementation and the two most recent technical notes;
+superseded preparation notes are retained in Git history, not in the player package.
 
 No extracted game meshes, executable, PAK, dump or compiler products belong in Git.
 GitHub and Git track source only; they do not contain user calibrations or Windows
@@ -24,5 +25,5 @@ The player archive contains a curated subset of these directories, two root
 shortcuts and the compiled native plugins. The old starter profile and obsolete
 experimental probes were retired. Installation snapshots live in ignored
 `backups/install/`; the separate reinstall snapshot tool covers user calibration.
-Before a public release, decide the code license and record headset validation
-of the current build.
+Before a downloadable public player release, decide the code license and record
+headset validation of the current build. The repository already has a public remote.

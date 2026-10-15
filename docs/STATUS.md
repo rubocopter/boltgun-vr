@@ -1,43 +1,31 @@
-# Validation and known limitations
+# Current status and validation
 
-| Area | Evidence | Still needed |
+**15 October 2026 — pre-alpha source snapshot.** Sense profile **v7**, 3D firearm arsenal **revision 17**, chainsword **package 4**. There is no public player ZIP release. Automated checks cover source and isolated simulated deployment; current runtime behavior requires new headset verification.
+
+| Component | Evidence | Next VR check |
 | --- | --- | --- |
-| Weapon wheel | Earlier headset feedback; Lua tests | Current appearance and bindings |
-| Bolter 3D | Earlier videos confirmed replacement; recoil and revision 17 lifecycle tested offline | Revision 17 weapon-switch recovery, revision 16 effect diagnostics and muzzle/flash alignment |
-| Ten-firearm arsenal | Offline lifecycle/identity/bridge tests | Nine estimated landmarks, DLC, level changes |
-| Chainsword | Earlier video confirmed appearance/tracking | Teeth motion, yaw 180, Codex scale, stability |
-| Two-hand aim | Proximity/recovery tests | Accuracy and ergonomics; shipped off |
-| FMalloc workaround | Configured | Clean exit on hardware |
+| PS VR2 Sense controls and weapon wheel | Earlier headset feedback and offline input tests | Current bindings, menu and wheel ergonomics |
+| Original-game 3D Bolter | Earlier headset footage confirms the model and tracking | Recoil, switching and muzzle/flash placement |
+| Ten-firearm arsenal (revision 17) | Offline weapon/class, ownership, same-class UObject replacement and failure-recovery tests | Full switching matrix, failed mesh recovery, nine estimated grips/landmarks and DLC |
+| Native muzzle bridge (revision 16) | Exact-game hash and native harness coverage | Correct position of effects, diagnostics, beams/hitscan bypass paths |
+| Tracked chainsword (package 4) | Earlier headset footage confirms appearance/tracking | Yaw/scale, teeth motion, stable ownership and gameplay feel |
+| Two-hand aim | Offline proximity/exit cases; disabled by default | Comfort and correct hand offsets if enabled |
+| FMalloc workaround | Configured | Exit and cleanup on real hardware |
 
-The maintained suite contains 146 Python/Lua cases, three converter cases and four
-C++ harnesses. These validate simulated contracts and geometry, not headset correctness.
+The maintained suite contains **146 Python/Lua cases**, **three chainsword converter cases**, **four native C++ harnesses**, and isolated PowerShell setup/restore checks. These establish local program contracts only.
 
-The muzzle bridge accepts executable SHA-256
-`BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A`.
-Unknown builds retain native firing. Direction/spread remain native. Attached Niagara
-effects and beam/hitscan paths bypassing the helper are not corrected.
-The Bolter landmark remains `(67.81414, 0, 53)`; other landmarks are estimates.
+## Firearm behavior and known limitations
 
-Firearm recoil uses a separate visual mesh; its stationary firing reference retains
-the prior projectile/flash origins. Packaged defaults enable it; custom settings
-without `recoil_enabled=1` retain the static model. Failed spawns,
-UEVR menus and inactive tracking do not trigger it. See the
-[revision 16 diagnostic guide](history/2026-10-10-revision16.md).
-The [revision 17 lifecycle notes](history/2026-10-10-revision17.md) describe
-per-weapon mesh failure latches, half-second identity probes and replacement
-of a weapon instance with another of the same class. These are offline-only
-changes and need headset verification.
+The native bridge is restricted to executable SHA-256 `BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A`. Unknown game builds retain native firing. Projectile direction/spread are preserved. Attached Niagara effects, unhooked hitscan/beam paths, and effects not on the exact allowlist are not relocated; **the maintainer's last headset report found firearm effects visibly incorrect**.
 
-Meshes load from the owned game. No physical reloads or gesture-based damage are
-implemented. Codex scaling does not change physical distance to the headset.
-Fresh-profile installation is tested offline; a project-wide licensing decision
-and in-headset verification remain publication tasks.
+The Bolter muzzle landmark remains `(67.81414, 0, 53)` in mesh-local Unreal centimetres; other weapon landmarks are estimates pending calibration. Optional visual recoil moves a visible mesh while its firing reference stays stationary. Packaged defaults enable `recoil_enabled=1`, but customized settings without that key keep the model static. Haptics depend on successfully intercepted projectile spawns.
 
-Revision 14 generalizes isolated recoil to all ten firearm profiles and adds confirmed-spawn haptics. Chainsword texture loading now uses a native profile path hint. All current changes require fresh headset verification; hitscan/beam paths outside the spawn helper may not produce feedback.
+Revision 16 adds passive Niagara fallback diagnostics with new-lease counter resets and hook/weapon identity fields. They help interpret effect paths but do not repair unsupported effects. See the [diagnostic reference](history/2026-10-10-revision16.md) and the [native muzzle guide](NATIVE-MUZZLE.md).
 
-Maintainer headset feedback for revision 14: core VR interaction works;
-firearm effects remain incorrect. Revision 16 extends the bounded passive
-counters with Niagara fallback reasons, hook registration and weapon identity,
-and clears accumulated Niagara counts on a new lease. Results from this new
-build have not been verified in VR. Revision 17 keeps those native effects
-unchanged while improving recovery when an optional 3D weapon cannot load.
+Revision 17 caches weapon-class resolutions, isolates mesh failure latches per firearm and notices same-class weapon UObject replacement while limiting failure-state probes to twice per second. Preview off/on clears failure latches. This revision was tested offline only and needs headset switching and recovery checks. See the [revision 17 notes](history/2026-10-10-revision17.md) and [arsenal guide](ARSENAL.md).
+
+Meshes are loaded from the user's own game installation. There are no physical reloads or gesture-based damage. Codex scale alters presentation, not physical distance. Game-level changes, corrupted/missing optional meshes, DLC and exit cleanup still require live validation.
+
+## Release boundary
+
+The manifests retain **`verifiedInGame=false`** and **`runtimeVerified=false`** pending maintainer confirmation of this revision on a headset. Fresh-profile install and rollback have isolated tests. A project-wide code-license decision and current VR verification remain before a redistributable player release. Refer to [build checks](BUILD.md), [repository layout](REPOSITORY.md) and [third-party notices](SOURCE-AND-NOTICES.md).
