@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Status: pre-alpha" src="https://img.shields.io/badge/status-pre--alpha-D97736?style=flat-square">
+  <img alt="Version: 1.0.0" src="https://img.shields.io/badge/version-1.0.0-58744e?style=flat-square">
   <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square">
   <img alt="VR: UEVR and OpenXR" src="https://img.shields.io/badge/VR-UEVR%20%2F%20OpenXR-456779?style=flat-square">
   <img alt="Controllers: PS VR2 Sense" src="https://img.shields.io/badge/controllers-PS%20VR2%20Sense-555555?style=flat-square">
@@ -19,7 +19,7 @@
   optional tracked 3D firearms and a tracked chainsword.
 </p>
 
-Latest pre-alpha package: **v0.1.0-prealpha** · [Changelog](CHANGELOG.md)
+Latest release: **v1.0.0** · [Changelog](CHANGELOG.md)
 
 <p align="center">
   <a href="docs/EASY-SETUP.md"><b>Get started →</b></a>
@@ -29,7 +29,7 @@ Latest pre-alpha package: **v0.1.0-prealpha** · [Changelog](CHANGELOG.md)
 </p>
 
 > [!IMPORTANT]
-> **Pre-alpha release.** The current build is **Sense profile v7 / 3D arsenal revision 17 / chainsword package 4**. Earlier headset checks confirmed core controls, the Bolter model and chainsword tracking, but the current firearm effects and revision 17 recovery changes still need in-headset verification. A green automated check is not a VR playtest. [Get the current release](https://github.com/rubocopter/boltgun-vr/releases/latest).
+> **Version 1.0.0.** The build is **Sense profile v7 / 3D arsenal revision 17 / chainsword package 4**. Earlier headset checks confirmed core controls, the Bolter model and chainsword tracking, but the current firearm effects and revision 17 recovery changes still need in-headset verification. A green automated check is not a VR playtest. [Get the current release](https://github.com/rubocopter/boltgun-vr/releases/latest).
 
 ## What changes in VR
 
@@ -43,7 +43,7 @@ Firearms have experimental visual recoil and firing haptics on intercepted proje
 
 ## Install
 
-The [pre-alpha release](https://github.com/rubocopter/boltgun-vr/releases/latest) includes a player ZIP with the compiled native plugins and the English menu launcher. UEVR and game files are not included. Source and build instructions remain available in this repository.
+The [v1.0.0 release](https://github.com/rubocopter/boltgun-vr/releases/latest) includes a player ZIP with the compiled native plugins and the English menu launcher. UEVR and game files are not included. Source and build instructions remain available in this repository.
 
 1. Install your own copy of **Warhammer 40,000: Boltgun** on Windows and set up SteamVR/OpenXR with your PCVR headset and motion controllers.
 2. Get [UEVR from praydog's official releases](https://github.com/praydog/UEVR/releases). Maintainers can compile the two native plugins using [build instructions](docs/BUILD.md), verify their hashes and create a local player ZIP.

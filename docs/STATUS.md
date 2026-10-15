@@ -1,6 +1,6 @@
 # Current status and validation
 
-**15 October 2026 — pre-alpha snapshot.** Sense profile **v7**, 3D firearm arsenal **revision 17**, chainsword **package 4**. The release is experimental; current runtime behavior requires new headset verification.
+**15 October 2026 — v1.0.0 release snapshot.** Sense profile **v7**, 3D firearm arsenal **revision 17**, chainsword **package 4**. Current runtime behavior requires new headset verification.
 
 | Component | Evidence | Next VR check |
 | --- | --- | --- |

@@ -1,6 +1,6 @@
 # Experimental 3D firearm arsenal (revision 17)
 
-The preview replaces the first-person sprite with a tracked original-game pickup mesh for the **currently equipped firearm**. The repository distributes only identifiers and loader code: meshes and materials are resolved from the player's own installed game. The feature is **pre-alpha**, and the current revision has not been confirmed in VR.
+The preview replaces the first-person sprite with a tracked original-game pickup mesh for the **currently equipped firearm**. The repository distributes only identifiers and loader code: meshes and materials are resolved from the player's own installed game. The feature remains **experimental**, and the current revision has not been confirmed in VR.
 
 ## Supported firearms
 
