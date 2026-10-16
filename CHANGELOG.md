@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Recover the 3D chainsword after component reuse, pawn replacement and delayed
+  renderer initialization. Preserve Codex calibration and foreign-object guards.
+- Align exact local firearm effects on verified renderer attachments with the
+  mesh muzzle, including reused Niagara systems after the renderer tick.
+  Headset verification of both corrections remains pending.
+
 - Handle recycled firearm components and delayed pawn/renderer initialization
   across save loads. Retain previous-pawn ownership diagnostics without disabling
   the new pawn's 3D visuals. Revision 18 did not cover this observed failure.

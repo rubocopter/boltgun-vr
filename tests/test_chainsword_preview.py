@@ -262,4 +262,195 @@ class ChainswordTests(unittest.TestCase):
         self.lua.globals().files['chainsword3d.mode']='off';self.tick(.3)
         self.assertEqual(self.eval('secondary.sprite_scale.x'),4)
 
+    def protect_mutations(self, expression):
+        self.lua.execute("""
+          local target=""" + expression + """
+          local function refuse()
+            ctx.foreign_mutations=(ctx.foreign_mutations or 0)+1
+            error('foreign mutation')
+          end
+          for _,key in ipairs({'SetHiddenInGame','SetVisibility','SetRelativeScale3D','K2_DestroyComponent'}) do
+            target[key]=refuse
+          end
+          local hook=uevr.types.UObjectHook
+          for _,key in ipairs({'get_or_add_motion_controller_state','remove_motion_controller_state'}) do
+            local original=hook[key]
+            hook[key]=function(c)
+              if c==target then return refuse() end
+              return original(c)
+            end
+          end
+        """)
+
+    def assert_recovered(self, created):
+        self.assertEqual(self.eval('ctx.created'),created)
+        self.assertTrue(self.component().visible)
+        self.assertTrue(self.eval('secondary.hidden'))
+        self.assertEqual(self.eval('ctx.foreign_mutations or 0'),0)
+        self.assertFalse(any('Disabled after API error' in message
+                             for message in self.lua.globals().ctx.logs.values()))
+
+    def replace_pawn(self):
+        self.lua.execute("""
+          pawn=object('Pawn loaded_map',3000+ctx.created,class('Pawn'))
+          pawn.get_property=old_pawn.get_property
+          renderer.get_outer=function() engine_only();return pawn end
+          secondary.hidden=false;secondary.visible=true
+        """)
+
+    def test_reused_component_on_same_pawn_recovers_without_foreign_mutation(self):
+        changes=(
+            "c.get_full_name=function() engine_only();return 'Recycled component' end",
+            "c.get_address=function() engine_only();return 9001 end",
+            "c.get_class=function() engine_only();return class('OtherComponent') end",
+        )
+        for change in changes:
+            with self.subTest(change=change):
+                self.setUp();self.start()
+                self.lua.execute("local c=ctx.components[1];"+change+"""
+                  c.get_outer=function() engine_only();return object('Foreign actor',9000,class('Actor')) end
+                """)
+                self.protect_mutations('ctx.components[1]')
+                self.tick(1.1);self.tick(1.1)
+                self.assert_recovered(2)
+                self.assertEqual(self.eval('ctx.destroyed'),0)
+                self.assertEqual(self.eval('ctx.removed'),0)
+
+    def test_distinct_pawn_retires_foreign_preview_and_preserves_its_record(self):
+        self.start()
+        journal=self.lua.globals().files['chainsword3d.owned']
+        self.lua.execute("""
+          old_pawn=pawn;old_pawn.valid=false
+          ctx.components[1].get_outer=function() engine_only();return object('Foreign actor',9000,class('Actor')) end
+        """)
+        self.protect_mutations('ctx.components[1]')
+        self.replace_pawn();self.tick(1.1)
+        self.assert_recovered(2)
+        self.assertEqual(self.lua.globals().files['chainsword3d.retired'],journal)
+        self.assertNotEqual(self.lua.globals().files['chainsword3d.owned'],journal)
+
+    def test_teardown_waits_without_stopping_or_erasing_ownership_until_new_pawn(self):
+        for menu in (False,True):
+            with self.subTest(menu=menu):
+                self.setUp();self.start()
+                journal=self.lua.globals().files['chainsword3d.owned']
+                self.lua.execute("""
+                  old_pawn=pawn;old_pawn.valid=false
+                  ctx.components[1].get_outer=function() engine_only();return object('Foreign actor',9000,class('Actor')) end
+                """)
+                self.protect_mutations('ctx.components[1]')
+                self.lua.globals().ctx.menu=menu
+                for _ in range(3):self.tick(1.1)
+                self.assertEqual(self.eval('ctx.created'),1)
+                self.assertEqual(self.eval('ctx.foreign_mutations or 0'),0)
+                self.assertEqual(self.lua.globals().files['chainsword3d.owned'],journal)
+                self.assertFalse(any('Disabled after API error' in message
+                                     for message in self.lua.globals().ctx.logs.values()))
+                self.replace_pawn();self.lua.globals().ctx.menu=False
+                self.tick(1.1)
+                self.assert_recovered(2)
+
+    def test_map_travel_renamed_live_owner_does_not_mutate_previous_world(self):
+        self.start();self.book();self.tick(.1)
+        self.lua.execute("""
+          old_pawn=pawn
+          old_pawn.get_full_name=function() engine_only();return 'Pawn TRASH_previous_map' end
+          old_secondary=secondary
+          secondary={};for k,v in pairs(old_secondary) do secondary[k]=v end
+          secondary.get_address=function() engine_only();return 4001 end
+          secondary.get_full_name=function() engine_only();return 'StaticMeshComponent new_map.Secondary Render Plane' end
+          secondary.sprite_scale={x=4,y=5,z=6}
+          ctx.components[1].get_outer=function() engine_only();return object('Previous world actor',9000,class('Actor')) end
+        """)
+        self.protect_mutations('ctx.components[1]');self.protect_mutations('old_secondary')
+        self.replace_pawn();self.tick(1.1)
+        self.assertEqual(self.eval('ctx.created'),2)
+        self.assertEqual(self.eval('ctx.foreign_mutations or 0'),0)
+        self.assertAlmostEqual(self.eval('secondary.sprite_scale.x'),2.6)
+        self.lua.globals().files['chainsword3d.mode']='off';self.tick(1.1)
+        self.assertEqual(self.eval('secondary.sprite_scale.x'),4)
+        self.assertEqual(self.lua.globals().files['chainsword3d.book'],'')
+
+    def test_same_pawn_wrapper_with_changed_identity_is_not_used_for_cleanup(self):
+        for change in ("pawn.get_full_name=function() engine_only();return 'Pawn renamed' end",
+                       "pawn.get_address=function() engine_only();return 4000 end"):
+            with self.subTest(change=change):
+                self.setUp();self.start();self.lua.execute(change)
+                self.protect_mutations('ctx.components[1]')
+                self.tick(1.1)
+                self.assert_recovered(2)
+
+    def test_renderer_initialization_waits_before_allocating_or_importing(self):
+        for transition in (False,True):
+            for missing in ('WeaponRenderer','SecondaryRenderPlane'):
+                with self.subTest(transition=transition,missing=missing):
+                    self.setUp()
+                    if transition:
+                        self.start()
+                        self.lua.execute('old_pawn=pawn;old_pawn.valid=false;ctx.components[1].valid=false')
+                        self.replace_pawn()
+                    self.lua.globals().ctx.missing_property=missing
+                    self.start()
+                    self.assertEqual(self.eval('ctx.created'),int(transition))
+                    self.assertEqual(self.eval('ctx.imports or 0'),int(transition))
+                    self.lua.globals().ctx.missing_property=None
+                    self.tick(1.1)
+                    self.assert_recovered(1+int(transition))
+
+    def test_renderer_and_secondary_replacement_on_same_pawn_recovers(self):
+        for replacement in ('renamed','address','plane','renderer'):
+            with self.subTest(replacement=replacement):
+                self.setUp();self.start();self.book();self.tick(.1)
+                if replacement=='renderer':
+                    self.lua.execute("""
+                      old_renderer=renderer
+                      renderer=object('Renderer replacement',4010,renderer_class,pawn)
+                      renderer.get_property=old_renderer.get_property
+                    """)
+                if replacement in ('plane','renderer'):
+                    self.lua.execute('old_secondary=secondary;secondary={};for k,v in pairs(old_secondary) do secondary[k]=v end')
+                    self.protect_mutations('old_secondary')
+                if replacement!='address':
+                    self.lua.execute("secondary.get_full_name=function() engine_only();return 'StaticMeshComponent replacement' end")
+                self.lua.execute("""
+                  secondary.get_address=function() engine_only();return 4011 end
+                  secondary.get_outer=function() engine_only();return renderer end
+                  secondary.hidden=false;secondary.visible=true
+                  secondary.sprite_scale={x=4,y=5,z=6}
+                """)
+                self.tick(1.1);self.tick(1.1)
+                self.assertEqual(self.eval('ctx.created'),2)
+                self.assertEqual(self.eval('ctx.foreign_mutations or 0'),0)
+                self.assertAlmostEqual(self.eval('secondary.sprite_scale.x'),2.6)
+                self.lua.globals().files['chainsword3d.mode']='off';self.tick(1.1)
+                self.assertEqual(self.eval('secondary.sprite_scale.x'),4)
+                self.assertEqual(self.lua.globals().files['chainsword3d.book'],'')
+
+    def test_same_identity_foreign_preview_on_same_pawn_is_never_mutated(self):
+        for mode in ('preview','off'):
+            with self.subTest(mode=mode):
+                self.setUp();self.start()
+                journal=self.lua.globals().files['chainsword3d.owned']
+                self.lua.execute("""
+                  ctx.components[1].get_outer=function() engine_only();return object('Foreign actor',9000,class('Actor')) end
+                """)
+                self.protect_mutations('ctx.components[1]')
+                self.lua.globals().files['chainsword3d.mode']=mode
+                self.tick(1.1);self.tick(1.1)
+                self.assertEqual(self.eval('ctx.created'),1)
+                self.assertEqual(self.eval('ctx.foreign_mutations or 0'),0)
+                self.assertEqual(self.lua.globals().files['chainsword3d.owned'],journal)
+                self.assertFalse(self.lua.globals().files['chainsword3d.retired'])
+
+    def test_same_identity_foreign_secondary_preserves_book_journal_and_scale(self):
+        self.start();self.book();self.tick(.1)
+        journal=self.lua.globals().files['chainsword3d.book']
+        self.lua.execute("secondary.get_outer=function() engine_only();return object('Foreign renderer',9010,renderer_class,pawn) end")
+        self.protect_mutations('secondary')
+        self.tick(1.1)
+        self.assertEqual(self.eval('ctx.created'),1)
+        self.assertEqual(self.eval('ctx.foreign_mutations or 0'),0)
+        self.assertAlmostEqual(self.eval('secondary.sprite_scale.x'),.65)
+        self.assertEqual(self.lua.globals().files['chainsword3d.book'],journal)
+
 if __name__=='__main__':unittest.main()

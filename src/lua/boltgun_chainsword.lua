@@ -25,6 +25,8 @@ local defaults = {scale=1,x=0,y=0,z=0,pitch=0,yaw=0,roll=0,book_scale=.65,book_e
 local limits = {scale={.3,1.5},x={-30,30},y={-30,30},z={-30,30},
     pitch={-180,180},yaw={-180,180},roll={-180,180},book_scale={.35,1},book_enabled={0,1}}
 local owned, owner, applied, sprite_state
+local owner_name, owner_address, component_identity
+local waiting_for_pawn = {} -- Private sentinel for a recoverable travel interval.
 local suppressed, stopped, recovered = false, false, false
 local mode, settings_text, settings, timer, retry_timer = 'off','',{},0,1
 local last_report
@@ -67,8 +69,11 @@ end
 local function check_sprite()
     local s = sprite_state
     if not s or not valid(s.plane) then return false end
-    assert(s.plane:get_full_name() == s.name and tostring(s.plane:get_address()) == s.address,
-        'Secondary sprite identity changed')
+    if s.plane:get_full_name() ~= s.name or tostring(s.plane:get_address()) ~= s.address then
+        return false -- Map travel can rename still-valid objects awaiting teardown.
+    end
+    if reference(owner, 'WeaponRenderer') ~= s.renderer or
+        reference(s.renderer, 'SecondaryRenderPlane') ~= s.plane then return false end
     assert(valid(s.renderer) and s.plane:get_outer() == s.renderer and
         s.renderer:get_outer() == owner, 'Secondary sprite owner changed')
     return true
@@ -173,17 +178,45 @@ local function update_book(is_book)
     set_plane_scale(sprite_state.plane,applied)
 end
 
-local function cleanup()
-    restore_book()
+local function remember_component()
     if valid(owned) then
-        local actual_owner = owned:get_outer()
-        assert(not valid(actual_owner) or actual_owner == owner, 'Preview owner changed; refusing mutation')
-        owned:SetHiddenInGame(true, false)
-        owned:SetVisibility(false, false)
-        hook.remove_motion_controller_state(owned)
+        component_identity = {name=owned:get_full_name(),address=tostring(owned:get_address())}
     end
-    if suppressed then restore_sprite(); suppressed = false end
-    if valid(owned) then
+end
+
+local function current_component()
+    if not valid(owned) then return false end
+    if component_identity == nil then return true end -- Partial allocation; cleanup checks ownership.
+    local class = owned:get_class()
+    return valid(class) and class:get_full_name() == CLASS and
+        owned:get_full_name() == component_identity.name and
+        tostring(owned:get_address()) == component_identity.address
+end
+
+local function cleanup()
+    -- Live wrappers can now refer to renamed/reused objects after travel.
+    -- Never mutate them through the previous ownership snapshot.
+    local owner_replaced = valid(owner) and owner_name ~= nil and
+        (owner:get_full_name() ~= owner_name or tostring(owner:get_address()) ~= owner_address)
+    if not owner_replaced then restore_book()
+    elseif book_state then clear_book() end
+    local foreign_retained = false
+    if not owner_replaced and current_component() then
+        local actual_owner = owned:get_outer()
+        if not valid(actual_owner) or actual_owner == owner then
+            owned:SetHiddenInGame(true, false)
+            owned:SetVisibility(false, false)
+            hook.remove_motion_controller_state(owned)
+        else
+            foreign_retained = true
+            report('Preview owner changed; foreign component retained')
+        end
+    end
+    if suppressed then
+        if not owner_replaced then restore_sprite() end
+        suppressed = false
+    end
+    if not owner_replaced and current_component() then
         if valid(owner) and owned:get_outer() == owner then
             owned:K2_DestroyComponent(owner)
         else
@@ -191,8 +224,25 @@ local function cleanup()
             report('Owner expired; detached visual awaits actor teardown')
         end
     end
+    if foreign_retained then
+        local next_pawn = api:get_local_pawn(0)
+        if valid(next_pawn) and next_pawn ~= owner then
+            -- A distinct live pawn starts a new ownership scope. Retain the old
+            -- record for diagnostics without touching the foreign component.
+            local previous = fs.read(JOURNAL)
+            fs.write('chainsword3d.retired', previous)
+            assert(fs.read('chainsword3d.retired') == previous, 'Previous ownership record could not be retained')
+            report('Previous pawn replaced; stale ownership retired, rebuilding chainsword')
+        elseif not valid(owner) then
+            report('Waiting for new pawn before retiring previous chainsword ownership')
+            error(waiting_for_pawn)
+        else
+            error('Foreign component retained; ownership journal preserved')
+        end
+    end
     owned, owner, applied = nil, nil, nil
     sprite_state = nil
+    owner_name, owner_address, component_identity = nil, nil, nil
     clear_journal()
 end
 
@@ -239,6 +289,8 @@ local function recover()
         recovered_sprite.hidden, recovered_sprite.visible = fields[10] == 'true', fields[11] == 'true'
     end
     owned, owner = candidate, candidate_owner
+    owner_name, owner_address = fields[5], fields[3]
+    remember_component()
     sprite_state = recovered_sprite
     suppressed = recovered_sprite ~= nil
     cleanup(); recovered = true
@@ -401,8 +453,10 @@ local function create(pawn)
     for _, name in ipairs(required) do assert(class:find_function(name), 'Required function missing: '..name) end
     local engine = api:get_engine(); assert(valid(engine),'Engine unavailable')
     owner = pawn
+    owner_name, owner_address = pawn:get_full_name(), tostring(pawn:get_address())
     sprite_state = snapshot_sprite(pawn)
     owned = api:add_component_by_class(pawn,class,false)
+    remember_component()
     assert(valid(owned) and owned:get_outer()==pawn, 'Chainsword ownership failed')
     owned:SetHiddenInGame(true,false); owned:SetVisibility(false,false)
     owned:SetCollisionEnabled(0); owned:SetGenerateOverlapEvents(false)
@@ -448,18 +502,31 @@ local function step(delta)
     end
     local pawn=api:get_local_pawn(0)
     if not valid(pawn) then if owned~=nil then cleanup() end;return end
-    if owned~=nil and (not valid(owned) or not valid(owner) or owner~=pawn) then cleanup() end
+    if owned~=nil and (not current_component() or not valid(owner) or owner~=pawn) then cleanup() end
+    if owned~=nil and valid(owner) and
+        (owner:get_full_name()~=owner_name or tostring(owner:get_address())~=owner_address) then cleanup() end
+    if owned~=nil and not check_sprite() then cleanup() end
+    if owned~=nil and owned:get_outer()~=owner then
+        cleanup()
+        error('Preview owner changed; module disabled after restoring owned components')
+    end
     if owned~=nil then
         if applied~=settings_text then apply_settings() end
         update_visual();return
     end
     if retry_timer<1 then return end
-    retry_timer=0;create(pawn)
+    retry_timer=0
+    -- A live pawn can precede its renderer/secondary plane during loading.
+    -- Wait for a complete ownership snapshot before allocating or importing.
+    local sprite_ready = pcall(snapshot_sprite, pawn)
+    if not sprite_ready then report('Waiting for new pawn weapon renderer');return end
+    create(pawn)
 end
 uevr.params.sdk.callbacks.on_pre_engine_tick(function(engine,delta)
     if stopped then return end
     local ok,error=pcall(step,delta)
     if not ok then
+        if error==waiting_for_pawn then return end
         local clean,detail=true,nil
         if owned~=nil then clean,detail=pcall(cleanup) end
         stopped=true

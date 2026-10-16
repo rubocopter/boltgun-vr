@@ -381,6 +381,29 @@ static bool flash_set_contract(UEVR_UFunctionHandle fn,int& transform_offset) {
     return true;
 }
 
+static bool local_flash_parent(UEVR_UObjectHandle parent) {
+    if(!live(g_lease.pawn)||g_api->sdk->functions->get_local_pawn(0)!=g_lease.pawn) return false;
+    auto property=[&](UEVR_UObjectHandle object,const wchar_t* name) {
+        UEVR_UObjectHandle value{};
+        if(!live(object)) return value;
+        const auto data=g_api->sdk->uobject->get_property_data(object,name);
+        if(data) std::memcpy(&value,data,sizeof(value));
+        return value;
+    };
+    const auto renderer=property(g_lease.pawn,L"WeaponRenderer");
+    if(!live(renderer)||g_api->sdk->uobject->get_outer(renderer)!=g_lease.pawn) return false;
+    const auto plane=property(renderer,L"PrimaryRenderPlane");
+    const auto camera=property(renderer,L"Camera");
+    for(int depth=0;live(parent)&&depth<8;++depth) {
+        if(parent==renderer) return true;
+        if(parent==plane&&g_api->sdk->uobject->get_outer(plane)==renderer) return true;
+        if((parent==camera||parent==g_lease.mesh)&&
+           g_api->sdk->uobject->get_outer(parent)==g_lease.pawn) return true;
+        parent=property(parent,L"AttachParent");
+    }
+    return false;
+}
+
 // Native UFunction post hooks receive (UObject, FFrame, RESULT_DECL). The
 // *third* parameter is FFrame, not a reflected parameter array. Only read the
 // returned NiagaraComponent pointer and use independently reflected methods.
@@ -413,20 +436,15 @@ static bool flash_post(UEVR_UFunctionHandle fn,UEVR_UObjectHandle,void*,void* re
         g_api->sdk->fname->to_string(g_api->sdk->uobject->get_fname(system),name,96);
         if(!is_weapon_flash(g_lease.profile,name)) { skip_flash(NotAllowed);return true; }
         g_flash_matched.fetch_add(1,std::memory_order_relaxed);
-        // A spawned attached system follows its parent on the next tick.
-        // Reparenting it without proving that parent's lifetime is unsafe;
-        // count and retain such systems for a subsequent, targeted fix.
-        if(attached_call) {
-            g_flash_attached_skipped.fetch_add(1,std::memory_order_relaxed);
-            return true;
-        }
         UEVR_UObjectHandle parent{};
         const auto parent_data=g_api->sdk->uobject->get_property_data(component,L"AttachParent");
         // Fail closed if inheritance/reflection cannot resolve AttachParent.
         if(!parent_data) { skip_flash(ParentUnknown);return true; }
         std::memcpy(&parent,parent_data,sizeof(parent));
-        if(parent) {
-            skip_flash(ParentPresent);
+        // Follow only an exact local-renderer ancestry, retaining the native
+        // attachment and lifetime. Enemy/world effects remain untouched.
+        if((attached_call&&!parent)||(parent&&!local_flash_parent(parent))) {
+            if(!attached_call) skip_flash(ParentPresent);
             g_flash_attached_skipped.fetch_add(1,std::memory_order_relaxed);
             return true;
         }
@@ -497,8 +515,39 @@ static void prepare_flash_hooks(ULONGLONG now) {
         const auto fn=g_api->sdk->ustruct->find_function(struct_class,L"SpawnSystemAttached");
         if(fn&&g_api->sdk->ufunction->hook_ptr(fn,nullptr,flash_attached_post)) {
             g_flash_attached_hooked=true;
-            g_api->functions->log_info("[Boltgun muzzle 3D] Observing Niagara SpawnSystemAttached (attached results retained)");
+            g_api->functions->log_info("[Boltgun muzzle 3D] Aligning verified local Niagara attachments to each firearm muzzle");
         }
+    }
+}
+
+// Animation effects may already exist or use native spawning that bypasses
+// NiagaraFunctionLibrary. Correct only exact weapon effects whose attachment
+// ancestry proves they belong to the current local renderer, after its tick.
+static void on_post_tick(UEVR_UGameEngineHandle,float delta) {
+    static float elapsed=0;
+    if(GetCurrentThreadId()!=g_engine_thread.load()||!g_enabled.load()||!g_lease.ready||
+       g_flash_faulted.load()||!g_flash_world_fn||!g_flash_set_fn||
+       !g_api->sdk->uobject_hook->get_objects_by_class||
+       !live(reinterpret_cast<UEVR_UObjectHandle>(g_flash_component_class))) return;
+    elapsed+=std::isfinite(delta)&&delta>0?delta:0;
+    if(elapsed<.033f) return;
+    elapsed=0;
+    __try {
+        std::array<UEVR_UObjectHandle,128> effects{};
+        const int count=g_api->sdk->uobject_hook->get_objects_by_class(
+            g_flash_component_class,effects.data(),static_cast<unsigned>(effects.size()),false);
+        for(int i=0;i<count&&i<static_cast<int>(effects.size());++i) {
+            const auto component=effects[i];
+            if(!live(component)) continue;
+            const auto data=g_api->sdk->uobject->get_property_data(component,L"AttachParent");
+            UEVR_UObjectHandle parent{};
+            if(data) std::memcpy(&parent,data,sizeof(parent));
+            if(!parent||!local_flash_parent(parent)) continue;
+            auto result=component;
+            flash_post(g_flash_set_fn,nullptr,nullptr,&result,true);
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        g_flash_faulted.store(true);
     }
 }
 
@@ -697,6 +746,8 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
     }
     if(!api->functions->register_inline_hook||!api->callbacks->on_custom_event||
        !api->sdk->callbacks->on_pre_engine_tick||!api->sdk->fstructproperty||!api->sdk->uscriptstruct) return false;
+    if(api->sdk->callbacks->on_post_engine_tick)
+        api->sdk->callbacks->on_post_engine_tick(on_post_tick);
     // Callback registration precedes the hook. Once hooked, initialization
     // must succeed so UEVR retains this DLL and its managed trampoline together.
     if(!api->sdk->callbacks->on_pre_engine_tick(on_tick)||!api->callbacks->on_custom_event(on_event))
@@ -705,6 +756,6 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
         reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))+0x10616a0,
         reinterpret_cast<void*>(spawn_detour),reinterpret_cast<void**>(&g_spawn_original));
     if(id<0) api->functions->log_warn("[Boltgun muzzle 3D] Hook unavailable; retaining native firing");
-    else api->functions->log_info("[Boltgun muzzle 3D] Revision 14: ten-firearm isolated visual recoil; successful-spawn feedback");
+    else api->functions->log_info("[Boltgun muzzle 3D] Revision 20: local attached effects follow firearm muzzles after renderer ticks");
     return true;
 }

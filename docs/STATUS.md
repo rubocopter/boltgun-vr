@@ -20,6 +20,14 @@ waits for the new pawn/renderer to initialize. Repeated save-load regressions
 pass offline. Revision 19 is installed locally with a verified backup; in-headset
 verification remains pending (`verifiedInGame: false`).
 
+**16 October 2026 - firearm revision 20 / chainsword package 5.** The supplied
+video confirms firearm visuals while the log shows the chainsword stopped on a
+component ownership change. Chainsword recovery now covers reused components
+and delayed renderers. Exact local attached firearm effects are positioned at
+the weapon barrel after renderer updates, including reused Niagara systems.
+Offline tests pass. Both corrections are installed locally with verified hashes
+and a backup; headset verification remains pending.
+
 | Component | Evidence | Next VR check |
 | --- | --- | --- |
 | PS VR2 Sense controls and weapon wheel | Earlier headset feedback and offline input tests | Current bindings, menu and wheel ergonomics |
@@ -30,11 +38,11 @@ verification remains pending (`verifiedInGame: false`).
 | Two-hand aim | Offline proximity/exit cases; disabled by default | Comfort and correct hand offsets if enabled |
 | FMalloc workaround | Configured | Exit and cleanup on real hardware |
 
-The maintained suite contains **146 Python/Lua cases**, **three chainsword converter cases**, **four native C++ harnesses**, and isolated PowerShell setup/restore checks. These establish local program contracts only.
+The maintained suite contains **165 Python/Lua cases**, **three chainsword converter cases**, **four native C++ harnesses**, and isolated PowerShell setup/restore checks. These establish local program contracts only.
 
 ## Firearm behavior and known limitations
 
-The native bridge is restricted to executable SHA-256 `BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A`. Unknown game builds retain native firing. Projectile direction/spread are preserved. Attached Niagara effects, unhooked hitscan/beam paths, and effects not on the exact allowlist are not relocated; **the maintainer's last headset report found firearm effects visibly incorrect**.
+The native bridge is restricted to executable SHA-256 `BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A`. Unknown game builds retain native firing. Projectile direction/spread are preserved. Attached effects outside verified local renderer ancestry, unhooked hitscan/beam paths, and effects not on the exact allowlist are not relocated; **the maintainer's last headset report found firearm effects visibly incorrect**.
 
 The Bolter muzzle landmark remains `(67.81414, 0, 53)` in mesh-local Unreal centimetres; other weapon landmarks are estimates pending calibration. Optional visual recoil moves a visible mesh while its firing reference stays stationary. Packaged defaults enable `recoil_enabled=1`, but customized settings without that key keep the model static. Haptics depend on successfully intercepted projectile spawns.
 

@@ -18,7 +18,9 @@
     "sha256": "A789C1052BF298E6F6D4B78A79EB2D8212E127E56DCF14E7D740BC2566ED4599",
     "originalSha256": null,
     "acceptedBaseSha256": "3F21EC5667CDB53AC0F75EF60C6AAC946B0B0C70C735A6C4AB42CFDACC7C2720",
-    "upgradeFrom": ["0BA255C6662661D84503637F19511C9407BEDE4EF0960672D52F485DBFC24A4C"]
+    "upgradeFrom": [
+      "0BA255C6662661D84503637F19511C9407BEDE4EF0960672D52F485DBFC24A4C"
+    ]
   },
   {
     "source": "game-config\\Input.ini",
@@ -66,7 +68,7 @@
   {
     "source": "build\\plugins\\boltgun_muzzle.dll",
     "target": "${ProfileRoot}\\plugins\\boltgun_muzzle.dll",
-    "sha256": "352DA85346A09ABEA432FBEC9D5459F1231BEB37DCE5FA90E963422AC9D79847",
+    "sha256": "EF71110F10354A0DD9E0949D8C0460666D7CA00A724E99E3CB5F2E27630F9B99",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional exact-build ten-firearm muzzle bridge; installed only by Bolter3D.ps1; included for original-profile restoration"
@@ -74,7 +76,7 @@
   {
     "source": "src\\lua\\boltgun_chainsword.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_chainsword.lua",
-    "sha256": "787BAD078A784AA7198E6F3128D3C17491751BF0B36029A2D6E420B2C1919125",
+    "sha256": "234C6FE2FF100A4869D3B1ED58223FC365C79CB1495E0D2B7479A5813669C7E2",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional external Chainsword; installed by Chainsword3D.ps1"

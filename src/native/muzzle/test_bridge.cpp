@@ -25,6 +25,7 @@ static bool fail_property_query=false;
 static Transform moved_flash{};
 static UEVR_UObjectHandle flash_parent{};
 static bool flash_parent_property_available=true;
+static bool local_renderer_ready=false;
 static const wchar_t* flash_name=L"NS_Boltgun_Muzzleflash_Standard";
 static UEVR_UObjectHandle spawn_native(UEVR_UObjectHandle,UEVR_UClassHandle,void*,const Transform* transform,UEVR_UObjectHandle) {
     ++spawn_calls;spawned=*transform;return fail_spawn?nullptr:reinterpret_cast<UEVR_UObjectHandle>(99);
@@ -45,7 +46,9 @@ static void set_recoil_rotation(UEVR_UObjectHookMotionControllerStateHandle stat
     if(fail_recoil_rotation) { fail_recoil_rotation=false;RaiseException(0xE0000001,0,0,nullptr); }
     recoil_rotation=*value;
 }
-static UEVR_UObjectHandle outer(UEVR_UObjectHandle) { return id(1); }
+static UEVR_UObjectHandle outer(UEVR_UObjectHandle object) {
+    return object==id(51)?id(50):id(1);
+}
 static bool active() { return vr_active; }
 static bool drawing() { return menu_open; }
 static void log_info(const char* format,...) {
@@ -82,6 +85,9 @@ static void* property_data(UEVR_UObjectHandle obj,const wchar_t* name) {
     if(fail_property_query) { fail_property_query=false;RaiseException(0xE0000002,0,0,nullptr); }
     static auto handler=id(5);static auto equipped=id(2);static auto flash_system=id(7);
     static auto mesh_asset=id(100);
+    static auto renderer=id(50),primary=id(51);
+    if(local_renderer_ready&&obj==id(1)&&std::wcscmp(name,L"WeaponRenderer")==0) return &renderer;
+    if(local_renderer_ready&&obj==id(50)&&std::wcscmp(name,L"PrimaryRenderPlane")==0) return &primary;
     equipped=unequipped?id(9):id(2);
     mesh_asset=id(wrong_mesh_asset?999:100+selected_type);
     if((obj==id(3)||obj==id(4))&&std::wcscmp(name,L"StaticMesh")==0) return &mesh_asset;
@@ -545,6 +551,49 @@ int main() {
     g_lease.created=GetTickCount64()-200;
     spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
     assert(g_feedback[ShotNoVisual]==1&&g_feedback[ShotQueued]==0);
+    // Real local renderer attachments must align on every firearm; a foreign
+    // attachment with the same effect asset must never be moved.
+    g_flash_faulted=false;local_renderer_ready=true;flash_parent=id(51);
+    for(int type=0;type<10;++type) {
+        selected_type=type;g_lease={};
+        on_event("boltgun.muzzle.v1","1|2|3|80|0|55");
+        g_lease.created=GetTickCount64()-200;
+        flash_name=weapon_profiles[type].flashes[0];
+        const int before=flash_moves;
+        flash_attached_post(reinterpret_cast<UEVR_UFunctionHandle>(13),nullptr,nullptr,&flash_result);
+        assert(flash_moves==before+1);
+        assert(std::fabs(moved_flash.translation.x-440)<.002f);
+        assert(std::fabs(moved_flash.translation.z-627.5f)<.002f);
+        assert(flash_parent==id(51)); // Native attachment/lifetime are preserved.
+        flash_parent=id(40);
+        flash_attached_post(reinterpret_cast<UEVR_UFunctionHandle>(13),nullptr,nullptr,&flash_result);
+        assert(flash_moves==before+1);
+        flash_parent=id(51);
+    }
+    // Existing/reused attached systems can bypass both spawn hooks. A post-tick
+    // scan must correct them again after the native renderer moves its parent.
+    hook.get_objects_by_class=[](UEVR_UClassHandle cls,UEVR_UObjectHandle* out,unsigned int capacity,bool defaults) {
+        assert(cls==g_flash_component_class&&!defaults&&capacity==128);
+        out[0]=id(6);return 1;
+    };
+    const int before_poll=flash_moves;
+    // Temporarily simulate a live system attached to the verified local plane.
+    flash_parent=id(51);
+    on_post_tick(nullptr,.04f);
+    assert(flash_moves==before_poll+1);
+    mesh_pose.translation.x+=20;
+    on_post_tick(nullptr,.04f);
+    assert(flash_moves==before_poll+2&&std::fabs(moved_flash.translation.x-460)<.002f);
+    mesh_pose.translation.x-=20;
+    flash_parent=id(40);
+    on_post_tick(nullptr,.04f);
+    assert(flash_moves==before_poll+2);
+    flash_parent=id(51);menu_open=true;
+    on_post_tick(nullptr,.04f);
+    assert(flash_moves==before_poll+2);menu_open=false;
+    on_event("boltgun.muzzle.v1","off");
+    on_post_tick(nullptr,.04f);
+    assert(flash_moves==before_poll+2);
     assert(!supported_file(L"missing-file-for-muzzle-test.exe"));
     wchar_t exe[32768]{};GetModuleFileNameW(nullptr,exe,32768);
     assert(!supported_file(exe));assert(!supported_module(reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))));

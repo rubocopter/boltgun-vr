@@ -1,5 +1,5 @@
 {
-  "version": 19,
+  "version": 20,
   "source": "src\\lua\\boltgun_bolter3d.lua",
   "sha256": "471B1F71B60B50DD085B4B199A8D4BD72C4FE68A05CD326A3209559913F83192",
   "upgradeFrom": [
@@ -28,9 +28,9 @@
   "model": "10 original Boltgun firearm pickups (8 base game + 2 DLC)",
   "verifiedInGame": false,
   "previousVerifiedRevision": "E8FCCF017E79295FDE5D543AB1F3519DF1DCF4C8069FC44D23EE486561356D66",
-  "verificationScope": "Revision 19: validate component identity, retire previous-pawn ownership without mutating foreign objects, and wait for pawn/renderer readiness across save loads; offline validation only, headset verification required.",
+  "verificationScope": "Revision 20: local renderer-attached muzzle effects are aligned to each weapon barrel, including reused systems after engine ticks; native shot calibration retained; offline validation only, headset verification required.",
   "pluginSource": "build\\plugins\\boltgun_muzzle.dll",
-  "pluginSha256": "352DA85346A09ABEA432FBEC9D5459F1231BEB37DCE5FA90E963422AC9D79847",
+  "pluginSha256": "EF71110F10354A0DD9E0949D8C0460666D7CA00A724E99E3CB5F2E27630F9B99",
   "pluginUpgradeFrom": [
     "5880999425A29702D883ACC8F9B74C8FF155C5229C2D745F76B18A25D6253452",
     "0C6D16486FB1F284E8E07A8E791E197A37147E31AAF85C1B0D9F330A696A06E7",
@@ -42,7 +42,8 @@
     "19ECE38E28A431D36D7BB44A526AA61491865281B911DC262521AF98D8E8114B",
     "B00D0A7901EB70D41872745F3F63A1897B7279F3831C6131A63AE22E3A271A49",
     "0BB8821E50C77E41B5B9A75B96D55AEF281A14C1E4873D47ABA335B4D407FB5C",
-    "245932B756A95AB5D8D43EA4C4B9A62859DF653123A8EBE26F5C22922AACD9D8"
+    "245932B756A95AB5D8D43EA4C4B9A62859DF653123A8EBE26F5C22922AACD9D8",
+    "352DA85346A09ABEA432FBEC9D5459F1231BEB37DCE5FA90E963422AC9D79847"
   ],
   "supportedGameSha256": "BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A"
 }

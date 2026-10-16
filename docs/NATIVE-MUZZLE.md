@@ -14,7 +14,7 @@ The associated allowlist of exact firearm classes, pickup meshes and Niagara sys
 
 ## Niagara muzzle effects
 
-UEVR-owned post hooks observe reflected `SpawnSystemAtLocation` and `SpawnSystemAttached` calls. Only approved assets spawned at a location can be relocated, and only when attachment and world-transform checks pass. **Attached Niagara effects are deliberately left untouched.** Unknown assets, unresolved parent state, effects outside the pose guard and unrelated impact/enemy effects keep original behavior.
+UEVR-owned post hooks observe reflected `SpawnSystemAtLocation` and `SpawnSystemAttached` calls. Revision 20 also relocates exact approved attached effects when their attachment ancestry resolves to the current local weapon renderer, primary plane or renderer camera. Attachment and native effect lifetime are preserved. A bounded post-engine-tick pass (up to 128 components, at most 30 times per second) covers reused systems and reapplies the weapon muzzle after the native renderer updates. Each weapon uses its own mesh-local barrel landmark; no common camera-relative offset is guessed. Unknown assets, unresolved parent state, effects outside the pose guard and unrelated impact/enemy effects keep original behavior.
 
 Revision 16 adds six-second bounded diagnostic windows with hook-registration state, weapon identity and fallback reasons (`invalidComponent`, `invalidAsset`, `notAllowed`, `parentUnknown`, `parentPresent`, `poseUnavailable`, `transformRejected`). Counters reset on each new valid weapon/mesh lease. These diagnostics help identify why an effect remains offset; they do not automatically repair it. See [revision 16 diagnostic reference](history/2026-10-10-revision16.md).
 
@@ -26,6 +26,6 @@ The v3 Lua ownership journal can restore both components after a script reset an
 
 ## Validation boundary
 
-The latest current bridge, including revision 16 diagnostics, passed offline MSVC x64 `/W4 /WX` native harnesses and simulated Lua/Python cases. Earlier headset feedback confirms a visible Bolter and core gameplay, **but firearm visual effects remained incorrectly positioned**. This bridge still requires an in-headset test of logs while firing, muzzle/flash alignment on rotation, Machine Spirit variants, the other weapon profiles and cleanup across switches/exits. Revision 17 changes Lua weapon selection and recovery, not the native muzzle DLL. See [revision 17 notes](history/2026-10-10-revision17.md) and [status](STATUS.md).
+The revision 20 bridge, including attached/reused-effect coverage, passed offline MSVC x64 `/W4 /WX` native harnesses and simulated Lua/Python cases. Earlier headset feedback confirms a visible Bolter and core gameplay, **but firearm visual effects remained incorrectly positioned**. This bridge still requires an in-headset test of logs while firing, muzzle/flash alignment on rotation, Machine Spirit variants, the other weapon profiles and cleanup across switches/exits. Revision 17 changes Lua weapon selection and recovery, not the native muzzle DLL. See [revision 17 notes](history/2026-10-10-revision17.md) and [status](STATUS.md).
 
 The native module uses UEVR's vendored MIT API header at `dependencies/uevr/API.h`; UEVR and game assets are not bundled with this source repository. Local reverse-engineering archives are intentionally unpublished.
