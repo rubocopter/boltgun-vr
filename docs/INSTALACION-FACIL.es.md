@@ -1,6 +1,6 @@
 # Instalación guiada de Boltgun VR
 
-Esta es la **versión 1.0.0**. El estado actual y los límites de validación se describen en [STATUS.md](STATUS.md).
+Esta es la **versión 1.0.1**. El estado actual y los límites de validación se describen en [STATUS.md](STATUS.md).
 El ZIP no incluye UEVR ni descarga herramientas externas por su cuenta.
 
 1. Descarga **UEVR** desde las [versiones oficiales de praydog](https://github.com/praydog/UEVR/releases). Extráelo en una carpeta permanente; necesitarás `UEVRInjector.exe`.

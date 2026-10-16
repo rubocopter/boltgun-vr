@@ -25,7 +25,7 @@ The player archive contains a curated subset of these directories, one English
 root menu launcher and the compiled native plugins. The old starter profile and obsolete
 experimental probes were retired. Installation snapshots live in ignored
 `backups/install/`; the separate reinstall snapshot tool covers user calibration.
-The public v1.0.0 release does not mark the current revision as verified in VR.
+The public v1.0.1 release records maintainer confirmation in VR for the current revisions; see STATUS.md for the scope.
 The project has no blanket source-code reuse license;
 see [source and third-party notices](SOURCE-AND-NOTICES.md) before reusing code.
 The repository already has a public remote.

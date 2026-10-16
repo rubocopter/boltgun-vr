@@ -1,57 +1,37 @@
 # Current status and validation
 
-**15 October 2026 — v1.0.0 release snapshot.** Sense profile **v7**, 3D firearm arsenal **revision 17**, chainsword **package 4**. Current runtime behavior requires new headset verification.
+**v1.0.1 — 16 October 2026.** Sense profile **v7**, firearm arsenal **revision 20**, chainsword **package 5**.
 
-**16 October 2026 — local, unreleased correction.** The UEVR log from a crash
-after moving the weapon shows repeated engine-tick reentry through the optional
-two-hand `get_transform` query. Repository source now requires explicit `on` in
-`two_hand.mode` and guards reentrant callbacks. Offline tests cover this path;
-the correction has not been deployed to the live profile or verified in VR.
+The maintainer confirmed the latest corrections in VR on 16 October 2026, after testing the installed revision with PS VR2 Sense. The firearm manifest records `verifiedInGame: true`; the chainsword manifest records `runtimeVerified: true`. This is human headset validation, separately from the automated checks below.
 
-**16 October 2026 - firearm revision 18.** Save/map travel now discards renamed
-previous-pawn references and rebuilds visuals when the primary renderer changes.
-Installed locally with a backup; regression tests pass. Headset verification of
-loading another save remains pending (`verifiedInGame: false`).
-
-**16 October 2026 - firearm revision 19.** Headset feedback and the UEVR log
-confirmed revision 18 still stopped after a foreign-component cleanup error.
-Revision 19 validates component identities, retires previous-pawn ownership, and
-waits for the new pawn/renderer to initialize. Repeated save-load regressions
-pass offline. Revision 19 is installed locally with a verified backup; in-headset
-verification remains pending (`verifiedInGame: false`).
-
-**16 October 2026 - firearm revision 20 / chainsword package 5.** The supplied
-video confirms firearm visuals while the log shows the chainsword stopped on a
-component ownership change. Chainsword recovery now covers reused components
-and delayed renderers. Exact local attached firearm effects are positioned at
-the weapon barrel after renderer updates, including reused Niagara systems.
-Offline tests pass. Both corrections are installed locally with verified hashes
-and a backup; headset verification remains pending.
-
-| Component | Evidence | Next VR check |
+| Component | Current evidence | Scope and remaining limits |
 | --- | --- | --- |
-| PS VR2 Sense controls and weapon wheel | Earlier headset feedback and offline input tests | Current bindings, menu and wheel ergonomics |
-| Original-game 3D Bolter | Earlier headset footage confirms the model and tracking | Recoil, switching and muzzle/flash placement |
-| Ten-firearm arsenal (revision 17) | Offline weapon/class, ownership, same-class UObject replacement and failure-recovery tests | Full switching matrix, failed mesh recovery, nine estimated grips/landmarks and DLC |
-| Native muzzle bridge (revision 16) | Exact-game hash and native harness coverage | Correct position of effects, diagnostics, beams/hitscan bypass paths |
-| Tracked chainsword (package 4) | Earlier headset footage confirms appearance/tracking | Yaw/scale, teeth motion, stable ownership and gameplay feel |
-| Two-hand aim | Offline proximity/exit cases; disabled by default | Comfort and correct hand offsets if enabled |
-| FMalloc workaround | Configured | Exit and cleanup on real hardware |
+| Sense controls and weapon wheel | Maintainer VR feedback and offline input tests | Supplied PS VR2 Sense mapping; other controller profiles unvalidated |
+| 3D firearm recovery | Maintainer confirmed firearms stay 3D; repeated save-load regressions | DLC matrix and other game builds are not certified |
+| Firearm effects | Maintainer confirmation of the latest alignment correction; native harnesses | Exact allowed local effects only; unhooked beams/hitscan retain native paths |
+| Chainsword | Maintainer confirmation of the latest recovery/tracking correction; lifecycle tests | Other hardware and individual alignment preferences remain outside scope |
+| Two-hand aim | Offline tests; explicitly disabled unless opted in | Experimental comfort/offsets need separate validation |
 
-The maintained suite contains **165 Python/Lua cases**, **three chainsword converter cases**, **four native C++ harnesses**, and isolated PowerShell setup/restore checks. These establish local program contracts only.
+## Changes since v1.0.0
 
-## Firearm behavior and known limitations
+- Prevent engine-tick callback recursion in Sense tracking and require explicit `on` for proximity two-hand aiming.
+- Recognize the original Sense script for safe installation upgrades.
+- Rebuild firearm models after save loads, including renamed/recycled components and delayed pawn or renderer initialization.
+- Apply equivalent recovery safeguards to the chainsword while retaining Codex scale restoration and foreign-object protection.
+- Align approved local attached and reused Niagara effects with each weapon's barrel after renderer updates.
 
-The native bridge is restricted to executable SHA-256 `BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A`. Unknown game builds retain native firing. Projectile direction/spread are preserved. Attached effects outside verified local renderer ancestry, unhooked hitscan/beam paths, and effects not on the exact allowlist are not relocated; **the maintainer's last headset report found firearm effects visibly incorrect**.
+Earlier revisions 18 and 19 were intermediate corrections. Revision 18 still stopped on foreign-component cleanup; revision 19 fixed the firearm path, while the subsequent log revealed the corresponding chainsword failure. Release 1.0.1 contains the final revision 20/package 5 corrections confirmed by the maintainer.
 
-The Bolter muzzle landmark remains `(67.81414, 0, 53)` in mesh-local Unreal centimetres; other weapon landmarks are estimates pending calibration. Optional visual recoil moves a visible mesh while its firing reference stays stationary. Packaged defaults enable `recoil_enabled=1`, but customized settings without that key keep the model static. Haptics depend on successfully intercepted projectile spawns.
+## Offline validation
 
-Revision 16 adds passive Niagara fallback diagnostics with new-lease counter resets and hook/weapon identity fields. They help interpret effect paths but do not repair unsupported effects. See the [diagnostic reference](history/2026-10-10-revision16.md) and the [native muzzle guide](NATIVE-MUZZLE.md).
+The maintained suite contains **165 Python/Lua cases**, **three chainsword converter cases**, **four native C++ harnesses**, and isolated PowerShell setup/restore checks. MSVC x64 builds use `/W4 /WX`; source and rebuilt DLL hashes are checked before packaging. These checks establish program contracts and complement the maintainer's VR session.
 
-Revision 17 caches weapon-class resolutions, isolates mesh failure latches per firearm and notices same-class weapon UObject replacement while limiting failure-state probes to twice per second. Preview off/on clears failure latches. This revision was tested offline only and needs headset switching and recovery checks. See the [revision 17 notes](history/2026-10-10-revision17.md) and [arsenal guide](ARSENAL.md).
+## Known boundaries
 
-Meshes are loaded from the user's own game installation. There are no physical reloads or gesture-based damage. Codex scale alters presentation, not physical distance. Game-level changes, corrupted/missing optional meshes, DLC and exit cleanup still require live validation.
+The native bridge accepts executable SHA-256 `BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A`. Other game builds retain native firing. Projectile direction/spread are preserved. Effects outside the exact asset allowlist or verified local renderer ancestry are not moved. Beam/hitscan implementations bypassing the supported helper keep native origins.
 
-## Release boundary
+The Bolter muzzle landmark is `(67.81414, 0, 53)` in mesh-local Unreal centimetres. Other weapon landmarks derive from pickup geometry; the maintainer's confirmation does not imply exhaustive per-weapon or DLC calibration. Optional recoil moves the visible mesh while the firing reference remains stationary. Firearm assets load from the user's own game. Multi-Melta and Missile Launcher require DLC.
 
-The manifests retain **`verifiedInGame=false`** and **`runtimeVerified=false`** pending maintainer confirmation of this revision on a headset. The included controller mappings target the PS VR2 Sense setup through SteamVR's Oculus Touch binding; other controller profiles are not included or validated. Fresh-profile install and rollback have isolated checks. Refer to [build instructions](BUILD.md), [repository layout](REPOSITORY.md) and [third-party notices](SOURCE-AND-NOTICES.md).
+No physical reloads or gesture-based chainsword damage are implemented. Codex scaling changes presentation rather than physical distance. Other controller mappings are not supplied or validated.
+
+See [installation](EASY-SETUP.md), [native muzzle details](NATIVE-MUZZLE.md), [build instructions](BUILD.md), and [source/third-party notices](SOURCE-AND-NOTICES.md).

@@ -26,6 +26,6 @@ The v3 Lua ownership journal can restore both components after a script reset an
 
 ## Validation boundary
 
-The revision 20 bridge, including attached/reused-effect coverage, passed offline MSVC x64 `/W4 /WX` native harnesses and simulated Lua/Python cases. Earlier headset feedback confirms a visible Bolter and core gameplay, **but firearm visual effects remained incorrectly positioned**. This bridge still requires an in-headset test of logs while firing, muzzle/flash alignment on rotation, Machine Spirit variants, the other weapon profiles and cleanup across switches/exits. Revision 17 changes Lua weapon selection and recovery, not the native muzzle DLL. See [revision 17 notes](history/2026-10-10-revision17.md) and [status](STATUS.md).
+The revision 20 bridge, including attached/reused-effect coverage, passed offline MSVC x64 `/W4 /WX` native harnesses and simulated Lua/Python cases. The maintainer confirmed the current firearm effect alignment and gameplay in VR on 16 October 2026 with PS VR2 Sense. This confirmation covers the tested session; full DLC, Machine Spirit and other-hardware coverage is not implied. Revision 17 changes Lua weapon selection and recovery, not the native muzzle DLL. See [revision 17 notes](history/2026-10-10-revision17.md) and [status](STATUS.md).
 
 The native module uses UEVR's vendored MIT API header at `dependencies/uevr/API.h`; UEVR and game assets are not bundled with this source repository. Local reverse-engineering archives are intentionally unpublished.

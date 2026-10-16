@@ -3,7 +3,7 @@
 ## Project license
 
 The maintainer has not chosen a project-wide code license. Penumbra's GPL license
-does not carry over through documentation style. The v1.0.0 player release is
+does not carry over through documentation style. The v1.0.1 player release is
 provided with the validation limits listed in the status guide; publication does not grant a blanket license to
 reuse or redistribute the project's code. Third-party terms remain separate.
 

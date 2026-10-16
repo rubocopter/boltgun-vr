@@ -1,6 +1,7 @@
 {
   "version": 5,
-  "runtimeVerified": false,
+  "runtimeVerified": true,
+  "verificationScope": "Package 5: maintainer confirmed current chainsword recovery and tracking in VR on 16 October 2026 using PS VR2 Sense; other hardware remains unvalidated.",
   "files": [
     {
       "source": "src\\lua\\boltgun_chainsword.lua",

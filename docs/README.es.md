@@ -2,9 +2,9 @@
 
 Mod de **Warhammer 40,000: Boltgun** para PCVR basado en UEVR/OpenXR, desarrollado con **PS VR2 Sense**. Añade controles adaptados, una rueda para elegir grupos de armas y, como opciones experimentales, modelos 3D de las diez armas de fuego y una espada sierra que sigue la mano izquierda.
 
-**Estado: pre-alfa.** El código actual corresponde al **perfil Sense v7, arsenal 3D revisión 17 y chainsword paquete 4**. Se han probado en visor las mecánicas básicas, el Bolter y el seguimiento de la espada en revisiones anteriores. La revisión 17 y los efectos de disparo actuales todavía necesitan una nueva prueba real.
+**Versión validada en VR por el mantenedor el 16 de octubre de 2026.** Incluye el **perfil Sense v7, arsenal 3D revisión 20 y chainsword paquete 5**: corrige el cierre al mover el arma, la recuperación 3D al cargar partidas, la espada y la alineación de los efectos con el cañón. La validación corresponde a las partidas probadas con PS VR2 Sense; no certifica todas las armas DLC ni otros mandos.
 
-Está publicada la **versión 1.0.0** en [GitHub Releases](https://github.com/rubocopter/boltgun-vr/releases/latest), con un ZIP que incluye el menú en inglés y los plugins nativos compilados. No incluye el juego ni UEVR. El código fuente y las herramientas de compilación están en este repositorio.
+Está publicada la **versión 1.0.1** en [GitHub Releases](https://github.com/rubocopter/boltgun-vr/releases/latest), con un ZIP que incluye el menú en inglés y los plugins nativos compilados. No incluye el juego ni UEVR. El código fuente y las herramientas de compilación están en este repositorio.
 
 ## Qué puedes probar
 
@@ -12,7 +12,7 @@ Está publicada la **versión 1.0.0** en [GitHub Releases](https://github.com/ru
 - Rueda de armas: mantén R3, inclina el stick derecho y suelta para elegir; vuelve al centro para cancelar.
 - Armas 3D opcionales: usan mallas del juego instalado. Dos requieren el DLC. El prototipo restaura el arma original cuando no puede cargar una malla.
 - Espada sierra 3D opcional en la mano izquierda, conservando ataques y daño originales.
-- Retroceso visual y vibración en disparos interceptados, todavía sujetos a validación; ciertos efectos, rayos e impactos conservan las rutas originales.
+- Retroceso visual y vibración en disparos interceptados, con efectos locales compatibles alineados con el cañón; los efectos no incluidos y ciertas rutas de rayos e impactos conservan el comportamiento original.
 
 No hay recargas físicas ni daño causado por gestos con la espada. El modo de apuntado a dos manos se distribuye desactivado.
 

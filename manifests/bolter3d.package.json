@@ -26,9 +26,9 @@
     "1078EEABF4D12455A7550EE6E26CF83CC6A4790EDA8A2ED562934B4BF4B294BF"
   ],
   "model": "10 original Boltgun firearm pickups (8 base game + 2 DLC)",
-  "verifiedInGame": false,
+  "verifiedInGame": true,
   "previousVerifiedRevision": "E8FCCF017E79295FDE5D543AB1F3519DF1DCF4C8069FC44D23EE486561356D66",
-  "verificationScope": "Revision 20: local renderer-attached muzzle effects are aligned to each weapon barrel, including reused systems after engine ticks; native shot calibration retained; offline validation only, headset verification required.",
+  "verificationScope": "Revision 20: maintainer confirmed current VR corrections on 16 October 2026 using PS VR2 Sense: save-load recovery, chainsword recovery and supported firearm effect alignment. DLC weapons, other controller mappings and unhooked beam/hitscan paths are outside this confirmation.",
   "pluginSource": "build\\plugins\\boltgun_muzzle.dll",
   "pluginSha256": "EF71110F10354A0DD9E0949D8C0460666D7CA00A724E99E3CB5F2E27630F9B99",
   "pluginUpgradeFrom": [
