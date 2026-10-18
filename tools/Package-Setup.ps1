@@ -15,6 +15,7 @@ if ((Test-Path -LiteralPath $output) -and -not $Force) {
 }
 $staging=Join-Path $repo ('build\player-package-'+[guid]::NewGuid().ToString('N'))
 $rootFiles=@('README.md','CHANGELOG.md','deployment.json','Boltgun VR.cmd',
+    'LICENSE','COPYRIGHT_AND_REUSE.md',
     'assets/banner/boltgun-vr.png')
 $scriptFiles=@('Install.ps1','Restore.ps1','Setup-BoltgunVR.ps1','Menu.ps1',
     'Play-BoltgunVR.ps1','Bolter3D.ps1','Chainsword3D.ps1','Comprobar-perfil.ps1')
@@ -79,6 +80,11 @@ try {
     Add-Type -AssemblyName System.IO.Compression
     $zip=[IO.Compression.ZipFile]::OpenRead($output)
     try {
+        foreach ($required in @('LICENSE','COPYRIGHT_AND_REUSE.md','docs/SOURCE-AND-NOTICES.md','assets/chainsword/CREDITS.txt')) {
+            if (@($zip.Entries | Where-Object { $_.FullName.Replace('\\','/') -ceq $required }).Count -ne 1) {
+                throw "Required license/provenance file missing from ZIP: $required"
+            }
+        }
         $forbidden=@($zip.Entries | Where-Object {
             $_.FullName -match '(^|/)(UEVRInjector\.exe|\.git|research|backups|diagnostics|previews|superpowers)(/|$)' -or
             $_.FullName -match '\.(exe|pak|pdb|dmp)$'

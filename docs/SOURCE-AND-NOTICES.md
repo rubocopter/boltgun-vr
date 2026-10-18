@@ -2,10 +2,7 @@
 
 ## Project license
 
-The maintainer has not chosen a project-wide code license. Penumbra's GPL license
-does not carry over through documentation style. The v1.0.1 player release is
-provided with the validation limits listed in the status guide; publication does not grant a blanket license to
-reuse or redistribute the project's code. Third-party terms remain separate.
+Original project-authored code is licensed under **GPL-3.0-or-later**; see the full [LICENSE](../LICENSE) and [copyright and reuse scope](../COPYRIGHT_AND_REUSE.md). This choice is independent of Penumbra. Third-party UEVR, chainsword artwork and game materials retain the licenses and ownership recorded below. The already published v1.0.1 archive is not automatically repackaged by this change.
 
 ## UEVR API
 
