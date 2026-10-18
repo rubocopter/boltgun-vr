@@ -26,6 +26,6 @@ root menu launcher and the compiled native plugins. The old starter profile and 
 experimental probes were retired. Installation snapshots live in ignored
 `backups/install/`; the separate reinstall snapshot tool covers user calibration.
 The public v1.0.1 release records maintainer confirmation in VR for the current revisions; see STATUS.md for the scope.
-The project has no blanket source-code reuse license;
-see [source and third-party notices](SOURCE-AND-NOTICES.md) before reusing code.
+Original project-authored code is under [GPL-3.0-or-later](../LICENSE).
+For exceptions and redistribution requirements see [copyright and reuse](../COPYRIGHT_AND_REUSE.md) and [source and third-party notices](SOURCE-AND-NOTICES.md).
 The repository already has a public remote.

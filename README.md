@@ -94,4 +94,4 @@ See [build requirements](docs/BUILD.md) and [repository layout](docs/REPOSITORY.
 
 ---
 
-**Unofficial fan project.** Not affiliated with or endorsed by Auroch Digital, Games Workshop, Focus Entertainment, praydog, Valve or Sony Interactive Entertainment. Warhammer 40,000: Boltgun and UEVR are required separately. Original game assets are not redistributed. The credited chainsword model is by Kaiser-E (CC BY 4.0). There is currently **no project-wide source-code license**; see [source and third-party notices](docs/SOURCE-AND-NOTICES.md) before reuse or redistribution.
+**Unofficial fan project.** Not affiliated with or endorsed by Auroch Digital, Games Workshop, Focus Entertainment, praydog, Valve or Sony Interactive Entertainment. Warhammer 40,000: Boltgun and UEVR are required separately. Original game assets are not redistributed. The credited chainsword model is by Kaiser-E (CC BY 4.0). Original project-authored source code is under **[GPL-3.0-or-later](LICENSE)**; see [copyright and reuse scope](COPYRIGHT_AND_REUSE.md). UEVR, the credited chainsword artwork and game assets retain their own rights; consult [third-party notices](docs/SOURCE-AND-NOTICES.md).
