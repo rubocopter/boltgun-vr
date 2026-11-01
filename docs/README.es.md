@@ -6,6 +6,8 @@ Mod de **Warhammer 40,000: Boltgun** para PCVR basado en UEVR/OpenXR, desarrolla
 
 Está publicada la **versión 1.0.2** en [GitHub Releases](https://github.com/rubocopter/boltgun-vr/releases/latest), con un ZIP que incluye el menú en inglés, los plugins nativos compilados y la licencia del proyecto. Corrige la instalación cuando SteamVR genera un binding SystemButton incompatible: conserva ese archivo y permite continuar, dejando Options/Create para configurar manualmente. Este cambio tiene pruebas automáticas, pero aún no se ha comprobado en visor; los módulos VR mantienen las versiones validadas con 1.0.1. No incluye el juego ni UEVR.
 
+**En desarrollo (sin publicar):** la revisión 21 del arsenal incorpora apuntado experimental desde el arma rastreada, desactivado por defecto; los desvíos de rayos de Volkite/Gravgun tienen una segunda activación independiente. Esta revisión aún no se ha validado con el visor. La geometría de contacto de la espada y las políticas del puntero de menús solo tienen pruebas offline y no están conectadas al juego. Consulta las [interacciones experimentales](EXPERIMENTAL-INTERACTIONS.md).
+
 ## Qué puedes probar
 
 - Movimiento orientado con la cabeza, giro configurable y controles Sense.

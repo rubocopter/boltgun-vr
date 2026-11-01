@@ -27,3 +27,7 @@ No extracted game models, textures, executable or PAK files are included.
 The original starter profile is not bundled. Installation backs up the actual
 user files (or records their absence) to a private SHA-256-verified snapshot.
 Lupa/Pillow are installed by developers through pip, not redistributed here.
+
+## Prior open-source research
+
+[RolandWinston/Boltgun-VR](https://github.com/RolandWinston/Boltgun-VR) informed the investigation of weapon aiming, native trace paths, physical melee and UI pointing. The upstream repository provides a GNU GPL version 3 license file; check its copyright and licensing notices before reusing any upstream code. The experimental modules in this repository define local runtime contracts. Private analysis archives and extracted game resources are not redistributed.

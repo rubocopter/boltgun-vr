@@ -1,6 +1,6 @@
-# Experimental 3D firearm arsenal (revision 17)
+# Experimental 3D firearm arsenal
 
-The preview replaces the first-person sprite with a tracked original-game pickup mesh for the **currently equipped firearm**. The repository distributes only identifiers and loader code: meshes and materials are resolved from the player's own installed game. The feature remains **experimental**, and the current revision has not been confirmed in VR.
+The preview replaces the first-person sprite with a tracked original-game pickup mesh for the **currently equipped firearm**. The repository distributes only identifiers and loader code: meshes and materials are resolved from the player's own installed game. The feature remains **experimental**. Revision 20 was confirmed in VR on 16 October 2026; unreleased revision 21 has only offline verification.
 
 ## Supported firearms
 
@@ -29,10 +29,10 @@ Ownership journaling protects existing components and supports restoration acros
 
 The packaged default `profile/defaults/bolter3d.default.settings` enables `muzzle_enabled=1` and `recoil_enabled=1`. The model and firing reference use the same grip calibration, but recoil moves **only the visible mesh** after a successful supported native projectile spawn; the invisible reference holds the firing origin steady. A missing `recoil_enabled` key in older customized settings disables recoil. `muzzle_enabled=0` disables origin redirection while leaving the weapon model available. Settings refresh approximately every 250 ms.
 
-The Bolter uses the preserved landmark `(67.81414, 0, 53)` in local Unreal centimetres. The other nine `*_muzzle_x/y/z` landmarks are **estimates** from original pickup geometry, including the midpoint of the Multi-Melta barrels. Each firearm also has a `*_muzzle_enabled` switch. Native direction/spread, game damage and reload logic stay unchanged. Pickup meshes do not provide hand-operated reload animation.
+The Bolter uses the preserved landmark `(67.81414, 0, 53)` in local Unreal centimetres. The other nine `*_muzzle_x/y/z` landmarks are **estimates** from original pickup geometry, including the midpoint of the Multi-Melta barrels. Each firearm also has a `*_muzzle_enabled` switch. The released revision preserves native direction/spread, game damage and reload logic. Unreleased revision 21 can alter projectile direction with `freeaim_enabled=1` (default `0`); native ray hooks require an additional opt-in. Pickup meshes do not provide hand-operated reload animation.
 
-The bridge requires a verified game binary, equipped matching weapon and mesh, correct owner, live headset/controller state and engine-thread execution. Supported projectiles and eligible location-spawn Niagara may use the replacement muzzle; attached effects and bypassing beam/hitscan paths retain original behavior. See [native muzzle implementation](NATIVE-MUZZLE.md) and [revision 16 diagnostics](history/2026-10-10-revision16.md).
+The bridge requires a verified game binary, equipped matching weapon and mesh, correct owner, live headset/controller state and engine-thread execution. Supported projectiles and eligible local Niagara systems, including verified attached/reused effects, may use the replacement muzzle. Other beam/hitscan paths retain native behavior. See [native muzzle implementation](NATIVE-MUZZLE.md), [experimental interactions](EXPERIMENTAL-INTERACTIONS.md), and [revision 16 diagnostics](history/2026-10-10-revision16.md).
 
 ## Test status
 
-Earlier headset feedback confirms a 3D Bolter was visible; it also reports incorrectly positioned firearm effects. The current ten-firearm and lifecycle contracts have **offline tests only**. The next headset check must cover weapon switches, an unavailable mesh followed by a working firearm, same-class weapon-instance replacement, DLC weapons, recoil, muzzle effects and restoration. `verifiedInGame=false` and `runtimeVerified=false` remain in the package manifests. See [current validation](STATUS.md).
+Maintainer headset feedback confirms revision 20 firearm recovery and effect alignment in a PS VR2 Sense session. The new revision 21 free-aim and scoped beam changes have **offline tests only**; `verifiedInGame: false` records that fact. The next headset check should cover stereo capture thread/timing, projectile and beam direction, collision behavior, effects and fallbacks, followed by broader DLC coverage. The separately packaged chainsword revision remains historically verified. See [current validation](STATUS.md).

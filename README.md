@@ -31,6 +31,9 @@ Latest release: **v1.0.2** · [Changelog](CHANGELOG.md)
 > [!IMPORTANT]
 > **Version 1.0.2 — installer compatibility update (1 November 2026).** If SteamVR generates an incompatible Oculus Touch SystemButton mapping, setup preserves that binding and continues with the rest of the installation. The Sense profile v7 / 3D arsenal revision 20 / chainsword package 5 runtime is unchanged from v1.0.1, which the maintainer validated in VR on 16 October 2026. The new installer fallback has offline test coverage but no new headset confirmation. DLC weapons and other controller mappings are not independently certified. [Download the player package](https://github.com/rubocopter/boltgun-vr/releases/latest).
 
+> [!NOTE]
+> **Unreleased development: firearm revision 21.** Experimental controller-directed projectile aim is opt-in and **off by default**. Volkite/Gravgun trace detours additionally require the process-start environment variable `BOLTGUN_EXPERIMENTAL_BEAM_HOOKS=1`. The revised native runtime is **not yet verified in VR**; the last maintainer-confirmed version remains revision 20. Standalone controller tracking, chainsword sweep and menu pointer policies are **offline-only** and do not currently provide contact damage or clickable VR menus. See [experimental interaction design](docs/EXPERIMENTAL-INTERACTIONS.md).
+
 ## What changes in VR
 
 - **Motion controls.** Head-oriented movement, turning, pause/recenter mappings and PS VR2 Sense button assignments.
@@ -39,7 +42,7 @@ Latest release: **v1.0.2** · [Changelog](CHANGELOG.md)
 - **Optional chainsword.** A separate tracked model on the left controller. Attacks, damage and sounds still use the original game's mechanics.
 - **Presentation tweaks.** Reduced Codex reading scale, comfort options and a normally hidden UEVR menu.
 
-Firearms have experimental visual recoil and firing haptics on intercepted projectile spawns. Native aim and spread are preserved. Supported local muzzle effects, including attached and reused Niagara systems, follow each weapon barrel. Effects outside the exact allowlist and unhooked beam/hitscan paths retain native behavior. Physical reloads and gesture-based sword damage are not implemented.
+Firearms have experimental visual recoil and firing haptics on intercepted projectile spawns. The **released** runtime preserves native aim and spread; unreleased revision 21 adds optional frame-gated controller-directed projectile aim and separately gated beam experiments. Supported local muzzle effects, including attached and reused Niagara systems, follow each weapon barrel. Effects outside the exact allowlist and unhooked beam/hitscan paths retain native behavior. Physical reloads and gesture-based sword damage are not implemented.
 
 ## Install
 
@@ -72,6 +75,7 @@ The v1.0.1 runtime, retained in v1.0.2, keeps the 3D mode through supported save
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | [Arsenal implementation](docs/ARSENAL.md) |
 | [Installation & restore](docs/INSTALL.md) | [Native muzzle bridge](docs/NATIVE-MUZZLE.md) |
 | [Headset validation & limitations](docs/STATUS.md) | [Chainsword implementation](docs/CHAINSAW.md) |
+| | [Experimental interactions (unreleased)](docs/EXPERIMENTAL-INTERACTIONS.md) |
 | [Windows reinstall & backup](docs/REINSTALL.md) | [Source, licensing & credits](docs/SOURCE-AND-NOTICES.md) |
 
 <details>
