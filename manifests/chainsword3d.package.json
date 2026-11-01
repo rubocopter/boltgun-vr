@@ -1,7 +1,8 @@
 {
-  "version": 5,
-  "runtimeVerified": true,
-  "verificationScope": "Package 5: maintainer confirmed current chainsword recovery and tracking in VR on 16 October 2026 using PS VR2 Sense; other hardware remains unvalidated.",
+  "version": 6,
+  "runtimeVerified": false,
+  "previousVerifiedVersion": 5,
+  "verificationScope": "Package 6: optional read-only grip-motion diagnostics and no contact damage; new native DLL not verified in headset. Package 5 recovery and tracking were confirmed with PS VR2 Sense on 16 October 2026.",
   "files": [
     {
       "source": "src\\lua\\boltgun_chainsword.lua",
@@ -18,12 +19,13 @@
     {
       "source": "build\\plugins\\boltgun_chainsword.dll",
       "target": "plugins\\boltgun_chainsword.dll",
-      "sha256": "5EA8CF04692245EA1E1BD6CE8AD92DAB12D1EA261CCB7C9BF8E74E2E91CECEE9",
+      "sha256": "FEF06E3C4AFDFFBB32C8001C9B9017BBE8224A05BB59C19CCC336A3AB2767CD7",
       "upgradeFrom": [
         "680BD5A67DBD4F78E55D35A00FFECCBED051BEFCB12776F2BF498622366A52BF",
         "299AA89DA0BFA3594BC07935A7FBCACA553F515C78884A42813505D1B818F409",
         "A907A3762A2CEE60FA6B03792F68558052E3AE14A4D0E1B708D2B0D2ACAFC46A",
-        "9CEA66F61F16B67DE5BAA89C652B9D501FA5D1B2965436499C57F53A2528F8A9"
+        "9CEA66F61F16B67DE5BAA89C652B9D501FA5D1B2965436499C57F53A2528F8A9",
+        "5EA8CF04692245EA1E1BD6CE8AD92DAB12D1EA261CCB7C9BF8E74E2E91CECEE9"
       ]
     },
     {

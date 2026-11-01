@@ -29,6 +29,7 @@ static int fake_pawn{},fake_component{},fake_class{},fake_function{},fake_update
 static bool correct_owner=true,native=true;
 static bool pressed{},hmd=true,ui=false;
 static bool zero_left{};
+static UEVR_Vector3f grip_position{};
 static int calls{},updates{},allocated{},freed{};
 static std::set<void*> allocations;
 static std::vector<chainsword::V3> copied_positions;
@@ -100,6 +101,10 @@ static UEVR_InputSourceHandle left(){return zero_left?nullptr:handle<UEVR_InputS
 static bool trigger(UEVR_ActionHandle target,UEVR_InputSourceHandle source){
     assert(target==handle<UEVR_ActionHandle>(&fake_action) && source==left());return pressed;
 }
+static UEVR_TrackedDeviceIndex left_index(){return 0;}
+static void grip(UEVR_TrackedDeviceIndex index,UEVR_Vector3f* position,UEVR_Quaternionf* rotation){
+    assert(index==0);*position=grip_position;*rotation={1,0,0,0};
+}
 int main(){
     UEVR_SDKData sdk{};UEVR_PluginInitializeParam input{};
     UEVR_SDKFunctions funcs{};funcs.get_local_pawn=local_pawn;
@@ -125,6 +130,7 @@ int main(){
     UEVR_VRData vrdata{};vrdata.is_hmd_active=active;vrdata.is_using_controllers=controllers;
     vrdata.is_openxr=openxr;
     vrdata.get_action_handle=action;vrdata.get_left_joystick_source=left;vrdata.is_action_active=trigger;
+    vrdata.get_left_controller_index=left_index;vrdata.get_grip_pose=grip;
     input.sdk=&sdk;input.vr=&vrdata;input.functions=&interface_functions;api=&input;
     mesh.positions={{0,0,0},{1,0,0},{0,1,0}};mesh.normals={{0,0,1},{0,0,1},{0,0,1}};
     mesh.uvs={{0,0},{1,0},{0,1}};mesh.indices={0,1,2};
@@ -149,6 +155,29 @@ int main(){
     correct_owner=false;assert(!update_section(obj(&fake_pawn),obj(&fake_component)));
     correct_owner=true;
     assert(updates==4&&allocated==freed&&allocations.empty());
+    // A new, opt-in probe samples only on a live owned blade with L2 held.
+    probe_enabled=true;pressed=true;
+    grip_position={0,0,0};tick(nullptr,.05f);
+    assert(grip_probe.primed&&grip_probe.frames==0);
+    grip_position={.025f,0,0};tick(nullptr,.05f);
+    assert(grip_probe.frames==1&&grip_probe.peak_linear>.4f);
+    grip_position={.05f,0,0};tick(nullptr,.5f);
+    assert(!grip_probe.primed&&grip_probe.frames==0);
+    grip_position={0,0,0};tick(nullptr,.05f);
+    assert(grip_probe.primed&&grip_probe.frames==0);
+    animation_disabled=true;tick(nullptr,.05f);
+    assert(!grip_probe.primed);animation_disabled=false;
+    pressed=false;tick(nullptr,.05f);
+    assert(!grip_probe.primed&&grip_probe.frames==0);
+    ui=true;pressed=true;tick(nullptr,.05f);
+    assert(!grip_probe.primed);ui=false;
+    probe_enabled=false;pressed=false;
+    chainsword::MotionProbe malformed{};
+    const UEVR_Vector3f at_origin{};
+    const UEVR_Quaternionf identity{1,0,0,0};
+    assert(!malformed.sample(at_origin,identity,.02f)&&malformed.primed);
+    assert(!malformed.sample({100,0,0},identity,.02f)&&!malformed.primed);
+    assert(!malformed.sample(at_origin,{0,0,0,0},.02f)&&!malformed.primed);
     animated_pawn=nullptr;animated_component=nullptr;teeth.teeth.clear();
     correct_owner=false;assert(!fill(obj(&fake_pawn),obj(&fake_component)));correct_owner=true;
     props[1].ref=false;assert(!fill(obj(&fake_pawn),obj(&fake_component)));props[1].ref=true;

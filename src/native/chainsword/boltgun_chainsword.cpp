@@ -6,8 +6,10 @@
 #include <fstream>
 #include <filesystem>
 #include <iterator>
+#include <string>
 #include "../../../dependencies/uevr/API.h"
 #include "mesh_data.hpp"
+#include "motion_probe.hpp"
 #pragma comment(lib,"bcrypt.lib")
 static const UEVR_PluginInitializeParam* api{};
 static std::atomic<DWORD> engine_thread{};
@@ -18,6 +20,8 @@ static UEVR_UObjectHandle animated_pawn{},animated_component{};
 static UEVR_ActionHandle left_trigger{};
 static bool animation_disabled{},animation_moving{},trigger_warning{};
 static float animation_phase{},animation_elapsed{};
+static bool probe_enabled{};
+static chainsword::MotionProbe grip_probe;
 struct Array {void* data{};int32_t num{},max{};};
 static_assert(sizeof(Array)==16 && sizeof(chainsword::V3)==12 && sizeof(chainsword::V2)==8);
 static bool live(UEVR_UObjectHandle obj){return obj&&api->sdk->uobject_hook->exists(obj);}
@@ -129,12 +133,37 @@ static bool update_section(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component)
     api->sdk->uobject->process_event(component,fn,params.data());
     return true;
 }
+static void probe_tick(bool pressed,float seconds){
+    if(!probe_enabled)return;
+    if(!pressed||!api->vr->is_openxr||!api->vr->is_openxr()||
+       !api->vr->get_left_controller_index||!api->vr->get_grip_pose){
+        grip_probe.reset();return;
+    }
+    __try {
+        const auto index=api->vr->get_left_controller_index();
+        // Index zero is valid; -1 denotes an unavailable device.
+        if(index<0||index>63){grip_probe.reset();return;}
+        UEVR_Vector3f position{};UEVR_Quaternionf rotation{};
+        api->vr->get_grip_pose(index,&position,&rotation);
+        if(grip_probe.sample(position,rotation,seconds)&&grip_probe.report_due()){
+            api->functions->log_info("[Boltgun Chainsword 3D] Passive left grip probe: samples=%d peak_linear=%.3f units/s peak_angular=%.1f deg/s (no collision or damage)",
+                grip_probe.frames,grip_probe.peak_linear,grip_probe.peak_angular);
+            grip_probe.clear_interval();
+        }
+    }__except(EXCEPTION_EXECUTE_HANDLER){
+        probe_enabled=false;grip_probe.reset();
+        api->functions->log_error("[Boltgun Chainsword 3D] Passive grip probe disabled after native API fault");
+    }
+}
 static void tick(UEVR_UGameEngineHandle,float delta){
     engine_thread.store(GetCurrentThreadId());
-    if(disabled||animation_disabled||!animated_pawn||!animated_component||teeth.teeth.empty())return;
+    if(disabled||animation_disabled||!animated_pawn||!animated_component||teeth.teeth.empty()){
+        grip_probe.reset();return;
+    }
     __try{
         if(!owned_component(animated_pawn,animated_component)){
-            animated_pawn=nullptr;animated_component=nullptr;animation_moving=false;return;
+            animated_pawn=nullptr;animated_component=nullptr;animation_moving=false;
+            grip_probe.reset();return;
         }
         const bool ready=api->vr->is_hmd_active()&&api->vr->is_using_controllers()&&
             !api->functions->is_drawing_ui();
@@ -150,6 +179,9 @@ static void tick(UEVR_UGameEngineHandle,float delta){
         const bool pressed=ready&&left_trigger&&(left||api->vr->is_openxr())&&
             api->vr->is_action_active(left_trigger,left);
         const float seconds=std::isfinite(delta)?(std::min)(.1f,(std::max)(0.f,delta)):0.f;
+        // Keep the raw frame duration for diagnostics: a hitch must invalidate
+        // the sample rather than produce a misleading motion rate.
+        probe_tick(pressed,delta);
         if(pressed){
             animation_phase=std::fmod(animation_phase+seconds*6.2831853f*6.f,6.2831853f);
             animation_elapsed+=seconds;
@@ -168,6 +200,7 @@ static void tick(UEVR_UGameEngineHandle,float delta){
         animation_moving=pressed;
     }__except(EXCEPTION_EXECUTE_HANDLER){
         animation_disabled=true;
+        grip_probe.reset();
         teeth.reset(mesh);
         api->functions->log_error("[Boltgun Chainsword 3D] Tooth update disabled after native API fault");
     }
@@ -177,6 +210,7 @@ static void event_inner(const char* data) {
     if(!data||sscanf_s(data,"%llu|%llu%n",&owner,&component,&consumed)!=2||data[consumed])return;
     teeth.reset(mesh);
     animation_moving=false;animation_elapsed=0;
+    grip_probe.reset();
     const auto pawn=reinterpret_cast<UEVR_UObjectHandle>(owner);
     const auto visual=reinterpret_cast<UEVR_UObjectHandle>(component);
     const bool ok=fill(pawn,visual);
@@ -227,6 +261,14 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
     // has no get_persistent_dir. Supply a UTF-8 absolute filename only after
     // the actual native mesh and packaged texture are present.
     const auto root=std::filesystem::path(dir);
+    // Explicit diagnostic opt-in. Never install or change the live profile.
+    // This is a read-only sample probe with no gameplay effects.
+    {
+        std::ifstream config(root/L"data/chainsword3d.physical_probe",std::ios::binary);
+        std::string value;
+        if(config&&std::getline(config,value)&&(value=="on"||value=="on\r")&&
+           config.peek()==std::char_traits<char>::eof()) probe_enabled=true;
+    }
     const auto texture=root/L"data/chainsword3d/chainsword_color.png";
     if(!std::filesystem::is_regular_file(texture))return true;
     const auto path=texture.generic_u8string();
@@ -240,6 +282,7 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
     if(!api->sdk->callbacks->on_pre_engine_tick||!api->callbacks->on_custom_event)return true;
     api->sdk->callbacks->on_pre_engine_tick(tick);api->callbacks->on_custom_event(event);
     api->functions->log_info("[Boltgun Chainsword 3D] External mesh bridge loaded; no native hooks installed");
+    if(probe_enabled)api->functions->log_info("[Boltgun Chainsword 3D] Passive grip diagnostics enabled; no physical melee damage");
     return true;
 }
 
