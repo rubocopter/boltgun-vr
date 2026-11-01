@@ -333,7 +333,8 @@ class BolterPreviewTests(unittest.TestCase):
                 self.assertFalse(ctx.components[2].visible)
                 events = [e.data for e in ctx.events.values() if e.data != 'off']
                 parts = events[-1].split('|')
-                self.assertEqual(len(parts), 14)
+                self.assertEqual(len(parts), 15)
+                self.assertEqual(parts[-1], '0')
                 self.assertNotEqual(parts[2], parts[6])
                 self.lua.globals().files['bolter3d.mode'] = 'off'
                 self.tick(1)
@@ -357,8 +358,24 @@ class BolterPreviewTests(unittest.TestCase):
         parts=events[0].split('|')
         self.assertEqual(parts[:3],['1001','1003','2002'])
         self.assertEqual(parts[6],'2001')
-        self.assertEqual(len(parts),14)
+        self.assertEqual(len(parts),15)
+        self.assertEqual(parts[-1],'0')
         self.assertEqual(self.lua.globals().files['bolter3d.owned'].split('\n')[0],'v3')
+
+    def test_freeaim_opt_in_is_explicit_for_both_lease_formats(self):
+        for recoil, expected_fields in ((0,7),(1,15)):
+            with self.subTest(recoil=recoil):
+                self.setUp()
+                self.lua.globals().files['bolter3d.settings'] = (
+                    f'recoil_enabled={recoil}\nfreeaim_enabled=1')
+                self.tick()
+                ctx=self.lua.globals().ctx
+                events=[e.data for e in ctx.events.values()
+                        if e.name=='boltgun.muzzle.v1' and e.data!='off']
+                self.assertTrue(events)
+                parts=events[-1].split('|')
+                self.assertEqual(len(parts),expected_fields)
+                self.assertEqual(parts[-1],'1')
 
     def test_bolter_recoil_cleans_up_both_components_and_recovers(self):
         self.lua.globals().files['bolter3d.settings']='recoil_enabled=1'
@@ -398,7 +415,8 @@ class BolterPreviewTests(unittest.TestCase):
         self.assertEqual(ctx.created,3)
         self.assertTrue(ctx.components[3].visible)
         parts=[e.data for e in ctx.events.values() if e.data!='off'][-1].split('|')
-        self.assertEqual(len(parts),6)
+        self.assertEqual(len(parts),7)
+        self.assertEqual(parts[-1],'0')
         self.lua.globals().files['bolter3d.mode']='off'
         self.tick(1)
         self.assertEqual(ctx.destroyed,3)

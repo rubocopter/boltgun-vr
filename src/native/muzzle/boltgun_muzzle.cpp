@@ -61,8 +61,36 @@ struct Lease {
     UEVR_UObjectHandle visual{};
     Vec3 base_location{};
     Quat base_rotation{0,0,0,1};
+    UEVR_UFunctionHandle barrel_fn{};
+    bool freeaim{};
 };
 static Lease g_lease{};
+// Engine-thread-only render capture; invalidated on every ownership change.
+static Transform g_display_pose{};
+static ULONGLONG g_display_at{},g_engine_frame{},g_display_frame{};
+static unsigned long long g_lease_generation{1},g_display_generation{};
+static std::atomic<unsigned long> g_freeaim_shots{},g_freeaim_fallback{};
+static std::atomic<unsigned long> g_stereo_calls{},g_stereo_other_thread{},g_stereo_captures{};
+// A scoped beam can only redirect a native trace while its owning weapon's
+// original FX/fire routine is executing on the captured engine thread.
+struct BeamScope {
+    Transform muzzle{};
+    UEVR_UObjectHandle weapon{};
+    Vec3 from{},to{};
+    bool active{},traced{};
+    std::array<unsigned char,14> padding{}; // Explicit 16-byte struct alignment.
+};
+using BeamFxFn=void(*)(UEVR_UObjectHandle);
+using GravFxFn=void(*)(UEVR_UObjectHandle,float);
+using SphereFn=bool(*)(UEVR_UObjectHandle,const Vec3*,const Vec3*,float,uint64_t,
+    bool,const void*,uint8_t,void*,bool,const void*,const void*,float);
+static thread_local BeamScope g_beam_scope{};
+static BeamFxFn g_volkite_fx_original{},g_volkite_fire_original{},g_grav_fire_original{};
+static GravFxFn g_grav_fx_original{};
+static SphereFn g_sphere_original{};
+static std::atomic<bool> g_beam_hooked{};
+static std::atomic<unsigned long> g_beam_traces{},g_beam_redirects{},g_beam_fx_moves{};
+static std::atomic<bool> g_capture_revoked{};
 static UEVR_UObjectHandle g_recoil_target{},g_recoil_owner{};
 static Vec3 g_recoil_base{};
 static Quat g_recoil_rotation{0,0,0,1};
@@ -236,6 +264,34 @@ static bool read_pose(Transform& pose) {
     g_api->sdk->uobject->process_event(g_lease.mesh,g_lease.transform_fn,&pose);
     return true;
 }
+// Capture after the stereo pair, once UEVR has positioned its tracked mesh.
+// A later spawn must prove this is still the current weapon and render frame.
+static void on_stereo(UEVR_StereoRenderingDeviceHandle,int index,float,
+                      UEVR_Vector3f*,UEVR_Rotatorf*,bool) {
+    g_stereo_calls.fetch_add(1,std::memory_order_relaxed);
+    if(GetCurrentThreadId()!=g_engine_thread.load()) {
+        g_stereo_other_thread.fetch_add(1,std::memory_order_relaxed);
+        return;
+    }
+    if((index+1)%2!=0||
+       !g_enabled.load()||!g_lease.freeaim||!g_lease.ready) return;
+    const auto now=GetTickCount64();
+    if(!may_override(true,now,g_lease.heartbeat,
+        reinterpret_cast<uintptr_t>(g_lease.weapon),
+        reinterpret_cast<uintptr_t>(g_lease.weapon),
+        g_api->vr->is_hmd_active()&&g_api->vr->is_using_controllers(),
+        g_api->functions->is_drawing_ui(),true)) return;
+    __try {
+        Transform pose{};Quat rotation{};
+        if(read_pose(pose)&&finite(pose.translation)&&normalized(pose.rotation,rotation)) {
+            g_display_pose=pose;g_display_at=now;
+            g_display_frame=g_engine_frame;g_display_generation=g_lease_generation;
+            g_stereo_captures.fetch_add(1,std::memory_order_relaxed);
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        g_display_at=0;g_faulted.store(true);g_enabled.store(false);
+    }
+}
 static UEVR_UObjectHandle spawn_detour(UEVR_UObjectHandle world,UEVR_UClassHandle cls,
                                       void* data,const Transform* original,UEVR_UObjectHandle weapon) {
     g_spawn_calls.fetch_add(1,std::memory_order_relaxed);
@@ -256,9 +312,27 @@ static UEVR_UObjectHandle spawn_detour(UEVR_UObjectHandle world,UEVR_UClassHandl
     __except(EXCEPTION_EXECUTE_HANDLER) { g_enabled.store(false);g_faulted.store(true); }
     if(!valid_pose||!muzzle_transform(pose,g_lease.muzzle,*original,*original,updated))
         return g_spawn_original(world,cls,data,original,weapon);
-    // Change origin only. Keep native orientation, spread, payload, ownership,
-    // class and collision behavior; call the native spawn exactly once.
-    updated.rotation=original->rotation;
+    // Legacy path remains translation-only. Opt-in aim needs the captured
+    // displayed mesh and an unspread reflected barrel baseline.
+    bool aimed=false;
+    if(may_redirect_freeaim(g_lease.freeaim,g_lease.ready,now,g_lease.heartbeat,
+        g_display_at,g_engine_frame,g_display_frame,
+        g_display_generation==g_lease_generation)&&g_lease.barrel_fn) {
+        __try {
+            Transform baseline{},candidate{};
+            g_api->sdk->uobject->process_event(g_lease.weapon,g_lease.barrel_fn,&baseline);
+            if(muzzle_transform(g_display_pose,g_lease.muzzle,*original,baseline,candidate)) {
+                updated=candidate;aimed=true;
+            }
+        } __except(EXCEPTION_EXECUTE_HANDLER) {
+            g_faulted.store(true);g_enabled.store(false);
+        }
+    }
+    if(aimed) g_freeaim_shots.fetch_add(1,std::memory_order_relaxed);
+    else {
+        updated.rotation=original->rotation;
+        if(g_lease.freeaim) g_freeaim_fallback.fetch_add(1,std::memory_order_relaxed);
+    }
     g_spawn_redirected.fetch_add(1,std::memory_order_relaxed);
     const auto spawned=g_spawn_original(world,cls,data,&updated,weapon);
     if(!spawned) track(SpawnFailed);
@@ -379,6 +453,124 @@ static bool flash_set_contract(UEVR_UFunctionHandle fn,int& transform_offset) {
     }
     transform_offset=offset;
     return true;
+}
+
+static BeamScope begin_beam(UEVR_UObjectHandle weapon) {
+    BeamScope scope{};
+    if(!g_beam_hooked.load()||GetCurrentThreadId()!=g_engine_thread.load()||
+       !g_enabled.load()||!g_lease.ready||!g_lease.freeaim||
+       (g_lease.profile!=6&&g_lease.profile!=7)||weapon!=g_lease.weapon||
+       !g_lease.barrel_fn) return scope;
+    const auto now=GetTickCount64();
+    if(!may_override(true,now,g_lease.heartbeat,
+        reinterpret_cast<uintptr_t>(weapon),reinterpret_cast<uintptr_t>(g_lease.weapon),
+        g_api->vr->is_hmd_active()&&g_api->vr->is_using_controllers(),
+        g_api->functions->is_drawing_ui(),true)||
+       !may_redirect_freeaim(true,true,now,g_lease.heartbeat,g_display_at,
+          g_engine_frame,g_display_frame,g_display_generation==g_lease_generation)||
+       now<g_lease.created||now-g_lease.created<100||
+       !live(g_lease.pawn)||!live(weapon)||!live(g_lease.mesh)||
+       g_api->sdk->functions->get_local_pawn(0)!=g_lease.pawn||
+       g_api->sdk->uobject->get_outer(g_lease.mesh)!=g_lease.pawn||
+       !equipped_weapon(g_lease.pawn,weapon)) return scope;
+    __try {
+        Transform native{},muzzle{};
+        g_api->sdk->uobject->process_event(weapon,g_lease.barrel_fn,&native);
+        if(muzzle_transform(g_display_pose,g_lease.muzzle,native,native,muzzle)) {
+            scope.weapon=weapon;scope.muzzle=muzzle;scope.active=true;
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        g_enabled.store(false);g_faulted.store(true);
+    }
+    return scope;
+}
+
+static bool beam_sphere_detour(UEVR_UObjectHandle world,const Vec3* start,const Vec3* end,
+    float radius,uint64_t profile,bool complex,const void* ignore,uint8_t debug,
+    void* hit,bool ignore_self,const void* color,const void* hit_color,float draw_time) {
+    Vec3 shifted_start{},shifted_end{};
+    auto& scope=g_beam_scope;
+    const bool redirected=GetCurrentThreadId()==g_engine_thread.load()&&
+        g_beam_hooked.load()&&g_enabled.load()&&scope.active&&
+        world==scope.weapon&&world==g_lease.weapon&&
+        start&&end&&beam_ray(scope.muzzle,*start,*end,shifted_start,shifted_end);
+    // Forward every trace argument unchanged except the two verified ray endpoints.
+    const bool result=g_sphere_original(world,redirected?&shifted_start:start,
+        redirected?&shifted_end:end,radius,profile,complex,ignore,debug,
+        hit,ignore_self,color,hit_color,draw_time);
+    if(scope.active&&world==scope.weapon) {
+        g_beam_traces.fetch_add(1,std::memory_order_relaxed);
+        if(redirected) {
+            scope.traced=true;scope.from=shifted_start;scope.to=shifted_end;
+            g_beam_redirects.fetch_add(1,std::memory_order_relaxed);
+        }
+    }
+    return result;
+}
+
+static void align_beam_component(UEVR_UObjectHandle weapon,const wchar_t* key,
+                                 const BeamScope& scope) {
+    if(!scope.active||!scope.traced||weapon!=g_lease.weapon) return;
+    auto* data=g_api->sdk->uobject->get_property_data(weapon,key);
+    UEVR_UObjectHandle component{};
+    if(data) std::memcpy(&component,data,sizeof(component));
+    if(!live(component)||g_api->sdk->uobject->get_outer(component)!=weapon) return;
+    const auto type=reinterpret_cast<UEVR_UStructHandle>(g_api->sdk->uobject->get_class(component));
+    const auto getter=g_api->sdk->ustruct->find_function(type,L"K2_GetComponentToWorld");
+    const auto setter=g_api->sdk->ustruct->find_function(type,L"K2_SetWorldTransform");
+    int offset{};
+    if(!transform_contract(getter)||!flash_set_contract(setter,offset)) return;
+    Transform pose{};
+    g_api->sdk->uobject->process_event(component,getter,&pose);
+    Quat previous{};
+    if(!finite(pose.translation)||!normalized(pose.rotation,previous)) return;
+    pose.translation=scope.muzzle.translation;
+    // The authored beam stretches along -X; retain that effect convention.
+    pose.rotation=multiply(scope.muzzle.rotation,{0,0,1,0});
+    if(g_lease.profile==7&&std::wcscmp(key,L"LaserFXSystem")==0)
+        pose.translation=grav_beam_owner_origin(scope.muzzle.translation,pose.rotation);
+    alignas(16) unsigned char params[512]{};
+    std::memcpy(params+offset,&pose,sizeof(pose));
+    g_api->sdk->uobject->process_event(component,setter,params);
+    g_beam_fx_moves.fetch_add(1,std::memory_order_relaxed);
+}
+
+static void align_beam_fx(const BeamScope& scope) {
+    if(!scope.active||!scope.traced||GetCurrentThreadId()!=g_engine_thread.load()||
+       !g_enabled.load()) return;
+    __try {
+        align_beam_component(scope.weapon,L"LaserFXSystem",scope);
+        align_beam_component(scope.weapon,L"LaserMuzzelFlashComponent",scope);
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        g_enabled.store(false);g_faulted.store(true);
+    }
+}
+
+static void volkite_fx_detour(UEVR_UObjectHandle weapon) {
+    const auto previous=g_beam_scope;
+    g_beam_scope=previous.active?previous:begin_beam(weapon);
+    g_volkite_fx_original(weapon);
+    align_beam_fx(g_beam_scope);
+    g_beam_scope=previous;
+}
+static void volkite_fire_detour(UEVR_UObjectHandle weapon) {
+    const auto previous=g_beam_scope;
+    g_beam_scope=previous.active?previous:begin_beam(weapon);
+    g_volkite_fire_original(weapon);
+    g_beam_scope=previous;
+}
+static void grav_fx_detour(UEVR_UObjectHandle weapon,float delta) {
+    const auto previous=g_beam_scope;
+    g_beam_scope=previous.active?previous:begin_beam(weapon);
+    g_grav_fx_original(weapon,delta);
+    align_beam_fx(g_beam_scope);
+    g_beam_scope=previous;
+}
+static void grav_fire_detour(UEVR_UObjectHandle weapon) {
+    const auto previous=g_beam_scope;
+    g_beam_scope=previous.active?previous:begin_beam(weapon);
+    g_grav_fire_original(weapon);
+    g_beam_scope=previous;
 }
 
 static bool local_flash_parent(UEVR_UObjectHandle parent) {
@@ -553,6 +745,7 @@ static void on_post_tick(UEVR_UGameEngineHandle,float delta) {
 
 static void on_tick(UEVR_UGameEngineHandle,float delta) {
     g_engine_thread.store(GetCurrentThreadId());
+    ++g_engine_frame;
     tick_recoil(delta);
     if(!g_enabled.load()||!g_lease.ready) {
         g_diagnostics_since=0;
@@ -568,6 +761,14 @@ static void on_tick(UEVR_UGameEngineHandle,float delta) {
     g_api->functions->log_info("[Boltgun muzzle 3D] Projectile spawn diagnostic %u: calls=%lu redirected=%lu",
         g_diagnostic_windows,g_spawn_calls.exchange(0,std::memory_order_relaxed),
         g_spawn_redirected.exchange(0,std::memory_order_relaxed));
+    g_api->functions->log_info("[Boltgun muzzle 3D] Experimental free aim: redirected=%lu fallback=%lu",
+        g_freeaim_shots.exchange(0),g_freeaim_fallback.exchange(0));
+    g_api->functions->log_info("[Boltgun muzzle 3D] Stereo sampling: callbacks=%lu otherThread=%lu captured=%lu",
+        g_stereo_calls.exchange(0),g_stereo_other_thread.exchange(0),
+        g_stereo_captures.exchange(0));
+    g_api->functions->log_info("[Boltgun muzzle 3D] Scoped beam: hooked=%d traces=%lu redirected=%lu visuals=%lu",
+        int(g_beam_hooked.load()),g_beam_traces.exchange(0),
+        g_beam_redirects.exchange(0),g_beam_fx_moves.exchange(0));
     g_api->functions->log_info("[Boltgun muzzle 3D] Shot feedback: spawned=%lu null=%lu queued=%lu noVisual=%lu capped=%lu discarded=%lu consumed=%lu",
         g_feedback[SpawnSucceeded].exchange(0),g_feedback[SpawnFailed].exchange(0),
         g_feedback[ShotQueued].exchange(0),g_feedback[ShotNoVisual].exchange(0),
@@ -599,16 +800,28 @@ static void on_tick(UEVR_UGameEngineHandle,float delta) {
 static void event_inner(const char* text) {
     unsigned long long p{},w{},m{},v{};
     float x{},y{},z{},bx{},by{},bz{},qx{},qy{},qz{},qw{};
-    int count{};
+    int count{},aim_flag{};
+    const int extended_aim=sscanf_s(text,
+        "%llu|%llu|%llu|%f|%f|%f|%llu|%f|%f|%f|%f|%f|%f|%f|%d%n",
+        &p,&w,&m,&x,&y,&z,&v,&bx,&by,&bz,&qx,&qy,&qz,&qw,&aim_flag,&count);
+    const bool has_extended_aim=extended_aim==15&&text[count]=='\0';
+    count=0;
     const int extended=sscanf_s(text,
         "%llu|%llu|%llu|%f|%f|%f|%llu|%f|%f|%f|%f|%f|%f|%f%n",
         &p,&w,&m,&x,&y,&z,&v,&bx,&by,&bz,&qx,&qy,&qz,&qw,&count);
-    const bool has_visual=extended==14&&text[count]=='\0';
+    const bool has_visual=has_extended_aim||(extended==14&&text[count]=='\0');
+    count=0;
+    const bool has_legacy_aim=!has_visual&&sscanf_s(text,
+        "%llu|%llu|%llu|%f|%f|%f|%d%n",
+        &p,&w,&m,&x,&y,&z,&aim_flag,&count)==7&&text[count]=='\0';
     count=0;
     const bool legacy=!has_visual&&sscanf_s(text,"%llu|%llu|%llu|%f|%f|%f%n",
         &p,&w,&m,&x,&y,&z,&count)==6&&text[count]=='\0';
+    const bool opt_field=has_extended_aim||has_legacy_aim;
+    const bool freeaim=opt_field&&aim_flag==1;
     Quat base_rotation{};
-    if((!has_visual&&!legacy)||!finite({x,y,z})||
+    if((!has_visual&&!legacy&&!has_legacy_aim)||(opt_field&&aim_flag!=0&&aim_flag!=1)||
+       !finite({x,y,z})||
        std::fabs(x)>200||std::fabs(y)>200||std::fabs(z)>200||
        (has_visual&&(!finite({bx,by,bz})||
          std::fabs(bx)>300||std::fabs(by)>300||std::fabs(bz)>300||
@@ -618,7 +831,7 @@ static void event_inner(const char* text) {
     const auto pawn=reinterpret_cast<UEVR_UObjectHandle>(p);
     const auto weapon=reinterpret_cast<UEVR_UObjectHandle>(w);
     const auto mesh=reinterpret_cast<UEVR_UObjectHandle>(m);
-    const auto visual=reinterpret_cast<UEVR_UObjectHandle>(v);
+    const auto visual=has_visual?reinterpret_cast<UEVR_UObjectHandle>(v):nullptr;
     g_enabled.store(false);
     if(mesh==g_rejected_mesh) return;
     if(!live(pawn)||!live(weapon)||!live(mesh)||g_api->sdk->functions->get_local_pawn(0)!=pawn||
@@ -645,8 +858,9 @@ static void event_inner(const char* text) {
     // Verify actual equipped weapon using reflected object properties, never offsets.
     if(!equipped_weapon(pawn,weapon)) return;
     const auto now=GetTickCount64();
+    if(g_capture_revoked.exchange(false)) g_display_at=0;
     const bool changed=mesh!=g_lease.mesh||weapon!=g_lease.weapon||pawn!=g_lease.pawn||
-                       visual!=g_lease.visual;
+                       visual!=g_lease.visual||freeaim!=g_lease.freeaim;
     if(changed||!g_lease.transform_fn) {
         if(!reset_recoil()||g_faulted.load()) return;
         const auto cls=g_api->sdk->uobject->get_class(mesh);
@@ -659,6 +873,8 @@ static void event_inner(const char* text) {
         }
         g_lease={pawn,weapon,mesh,fn,{x,y,z},now,now,true,profile,
                  visual,{bx,by,bz},has_visual?base_rotation:Quat{0,0,0,1}};
+        g_lease.barrel_fn=barrel;g_lease.freeaim=freeaim;
+        ++g_lease_generation;g_display_at=0;
         g_diagnostics_since=0;
         g_diagnostic_windows=0;
         for(auto& counter : g_gate) counter.exchange(0,std::memory_order_relaxed);
@@ -685,7 +901,11 @@ static void event_inner(const char* text) {
 static void on_event(const char* name,const char* text) {
     if(!name||std::strcmp(name,"boltgun.muzzle.v1")!=0) return;
     if(!text||std::strcmp(text,"off")==0) {
-        g_enabled.store(false);g_recoil_cancelled.store(true);return;
+        g_enabled.store(false);g_recoil_cancelled.store(true);
+        // Custom events may arrive from another thread; invalidate on the
+        // engine thread before accepting a renewed lease.
+        g_capture_revoked.store(true);
+        return;
     }
     if(g_faulted.load()) return; // One native/API fault disables this session.
     if(GetCurrentThreadId()!=g_engine_thread.load()) return;
@@ -731,6 +951,27 @@ static bool supported_module(unsigned char* module) {
     return std::memcmp(module+0x107d1d0,prefix,sizeof(prefix))==0&&
            std::memcmp(module+0x10616a0,spawn_prefix,sizeof(spawn_prefix))==0;
 }
+static bool supported_beam_module(const unsigned char* module) {
+    struct Prefix { uintptr_t address;std::array<unsigned char,16> bytes; };
+    const Prefix checks[]={
+        {0x2c5b940,{0x40,0x53,0x55,0x56,0x57,0x41,0x54,0x41,0x56,0x41,0x57,0x48,0x81,0xec,0xe0,0x00}},
+        {0x10a5c50,{0x48,0x8b,0xc4,0x48,0x89,0x58,0x10,0x55,0x48,0x8d,0x68,0x88,0x48,0x81,0xec,0x70}},
+        {0x107a470,{0x48,0x8b,0xc4,0x55,0x57,0x48,0x8d,0xa8,0xf8,0xfe,0xff,0xff,0x48,0x81,0xec,0xf8}},
+        {0x10a5630,{0x48,0x8b,0xc4,0x48,0x89,0x58,0x18,0x55,0x56,0x57,0x48,0x8d,0xa8,0xa8,0xfe,0xff}},
+        {0x1077dc0,{0x4c,0x8b,0xdc,0x55,0x49,0x8d,0xab,0x28,0xff,0xff,0xff,0x48,0x81,0xec,0xd0,0x01}}
+    };
+    for(const auto& check:checks)
+        if(std::memcmp(module+check.address,check.bytes.data(),check.bytes.size())!=0) return false;
+    return true;
+}
+// A mismatched SphereTrace ABI could affect normal gameplay merely by being
+// hooked. Require explicit process-start opt-in before registering any of the
+// five experimental detours, independent of Lua's per-weapon free-aim switch.
+static bool experimental_beam_hooks_requested() {
+    wchar_t value[2]{};
+    return GetEnvironmentVariableW(L"BOLTGUN_EXPERIMENTAL_BEAM_HOOKS",value,2)==1&&
+           value[0]==L'1';
+}
 extern "C" __declspec(dllexport) void uevr_plugin_required_version(UEVR_PluginVersion* version) {
     if(version) *version={2,39,0};
 }
@@ -748,6 +989,8 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
        !api->sdk->callbacks->on_pre_engine_tick||!api->sdk->fstructproperty||!api->sdk->uscriptstruct) return false;
     if(api->sdk->callbacks->on_post_engine_tick)
         api->sdk->callbacks->on_post_engine_tick(on_post_tick);
+    if(api->sdk->callbacks->on_post_calculate_stereo_view_offset)
+        api->sdk->callbacks->on_post_calculate_stereo_view_offset(on_stereo);
     // Callback registration precedes the hook. Once hooked, initialization
     // must succeed so UEVR retains this DLL and its managed trampoline together.
     if(!api->sdk->callbacks->on_pre_engine_tick(on_tick)||!api->callbacks->on_custom_event(on_event))
@@ -756,6 +999,27 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
         reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))+0x10616a0,
         reinterpret_cast<void*>(spawn_detour),reinterpret_cast<void**>(&g_spawn_original));
     if(id<0) api->functions->log_warn("[Boltgun muzzle 3D] Hook unavailable; retaining native firing");
-    else api->functions->log_info("[Boltgun muzzle 3D] Revision 20: local attached effects follow firearm muzzles after renderer ticks");
+    else api->functions->log_info("[Boltgun muzzle 3D] Revision 21: optional frame-gated free aim; legacy origin-only firing remains default");
+    auto* module=reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr));
+    if(id>=0&&experimental_beam_hooks_requested()&&supported_beam_module(module)) {
+        // Retain every installed trampoline even if a later registration fails.
+        // The opt-in beam scope remains inert unless all five hooks succeed.
+        struct Hook { uintptr_t rva;void* replacement;void** original; };
+        const Hook hooks[]={
+            {0x2c5b940,reinterpret_cast<void*>(beam_sphere_detour),reinterpret_cast<void**>(&g_sphere_original)},
+            {0x10a5c50,reinterpret_cast<void*>(volkite_fx_detour),reinterpret_cast<void**>(&g_volkite_fx_original)},
+            {0x107a470,reinterpret_cast<void*>(volkite_fire_detour),reinterpret_cast<void**>(&g_volkite_fire_original)},
+            {0x10a5630,reinterpret_cast<void*>(grav_fx_detour),reinterpret_cast<void**>(&g_grav_fx_original)},
+            {0x1077dc0,reinterpret_cast<void*>(grav_fire_detour),reinterpret_cast<void**>(&g_grav_fire_original)}
+        };
+        bool complete=true;
+        for(const auto& hook:hooks)
+            if(api->functions->register_inline_hook(module+hook.rva,hook.replacement,hook.original)<0) {
+                complete=false;break;
+            }
+        g_beam_hooked.store(complete);
+        if(complete) api->functions->log_info("[Boltgun muzzle 3D] Scoped Volkite/Gravgun native ray hooks ready (free aim opt-in)");
+        else api->functions->log_warn("[Boltgun muzzle 3D] Beam hook incomplete; scoped redirection disabled");
+    } else if(id>=0) api->functions->log_info("[Boltgun muzzle 3D] Experimental beam hooks disabled or signature mismatch; native beams untouched");
     return true;
 }

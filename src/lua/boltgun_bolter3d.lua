@@ -70,12 +70,12 @@ local required = {'SetHiddenInGame','SetVisibility','SetCollisionEnabled','SetGe
     'SetMaterial','SetRelativeScale3D','K2_DestroyComponent'}
 local defaults = {scale=.5,x=0,y=0,z=0,yaw=0,pitch=0,roll=0,
     muzzle_enabled=1,muzzle_x=67.81414,muzzle_y=0,muzzle_z=53,
-    grip_x=-48,grip_y=0,grip_z=24,recoil_enabled=0}
+    grip_x=-48,grip_y=0,grip_z=24,recoil_enabled=0,freeaim_enabled=0}
 local limits = {scale={.2,.85},x={-60,60},y={-60,60},z={-60,60},
     yaw={-180,180},pitch={-180,180},roll={-180,180},
     grip_x={-100,100},grip_y={-100,100},grip_z={-100,100},
     muzzle_enabled={0,1},muzzle_x={-200,200},muzzle_y={-200,200},muzzle_z={-200,200},
-    recoil_enabled={0,1}}
+    recoil_enabled={0,1},freeaim_enabled={0,1}}
 for _, item in ipairs(arsenal) do
     if item.id ~= 'bolter' then
         local prefix = item.id .. '_muzzle_'
@@ -133,6 +133,7 @@ local function publish_muzzle(weapon)
             owned:get_address(),base_location.x,base_location.y,base_location.z,
             base_rotation.x,base_rotation.y,base_rotation.z,base_rotation.w)
     end
+    text = text .. '|' .. tostring(settings.freeaim_enabled)
     local ok = pcall(dispatch, 'boltgun.muzzle.v1', text)
     muzzle_published = ok
     if not ok then

@@ -21,6 +21,19 @@ static UEVR_Vector3f recoil_location{};
 static UEVR_Quaternionf recoil_rotation{};
 static UEVR_UObjectHandle expired_object{};
 static bool fail_recoil_rotation=false,fail_spawn=false;
+static int beam_native_calls{},beam_fx_calls{};
+static Vec3 beam_native_start{},beam_native_end{};
+static bool beam_sphere_native(UEVR_UObjectHandle,const Vec3* start,const Vec3* end,
+    float,uint64_t,bool,const void*,uint8_t,void*,bool,const void*,const void*,float) {
+    ++beam_native_calls;
+    beam_native_start=start?*start:Vec3{};beam_native_end=end?*end:Vec3{};
+    return false;
+}
+static void beam_fire_native(UEVR_UObjectHandle weapon) {
+    ++beam_fx_calls;
+    const Vec3 start{500,600,700},end{1500,600,700};
+    beam_sphere_detour(weapon,&start,&end,3,1,false,nullptr,0,nullptr,false,nullptr,nullptr,0);
+}
 static bool fail_property_query=false;
 static Transform moved_flash{};
 static UEVR_UObjectHandle flash_parent{};
@@ -69,6 +82,8 @@ static const wchar_t* mesh_names[]={L"M_Pickups_Boltgun",L"M_ShotgunPickup",L"M_
     L"M_VengeanceLauncher_Pickup",L"M_Meltagun_Pickup",L"M_VolkiteCaliverPickup",L"M_GravgunPickup",
     L"M_Pickup_MultiMelta",L"M_Pickup_MissileLauncher"};
 static bool input_parameter=false;
+static bool mock_barrel=false;
+static Transform unspread_barrel={{0,0,0,1},{500,600,700},0,{1,1,1},0};
 static UEVR_UClassHandle klass(UEVR_UObjectHandle obj) {
     return reinterpret_cast<UEVR_UClassHandle>(uintptr_t(obj==id(2)?
         20+selected_type*50+(machine_spirit?10:0)+(spoof_class?1:0):21));
@@ -146,6 +161,9 @@ static UEVR_FNameHandle get_fname(UEVR_UObjectHandle obj) {
 static UEVR_UScriptStructHandle struct_desc(UEVR_FStructPropertyHandle) { return reinterpret_cast<UEVR_UScriptStructHandle>(22); }
 static int struct_size(UEVR_UScriptStructHandle) { return 48; }
 static void process(UEVR_UObjectHandle object,UEVR_UFunctionHandle fn,void* params) {
+    if(object==id(2)&&mock_barrel) {
+        std::memcpy(params,&unspread_barrel,sizeof(unspread_barrel));return;
+    }
     if(object==id(6)&&fn==reinterpret_cast<UEVR_UFunctionHandle>(43)) {
         Transform flash={{0,0,0,1},{500,500,600},0,{1,1,1},0};
         std::memcpy(params,&flash,sizeof(flash));return;
@@ -306,7 +324,7 @@ int main() {
     const int previous_logs=logs;
     g_diagnostics_since=GetTickCount64()-7000;
     on_tick(nullptr,0);
-    assert(logs==previous_logs+5&&g_gate[Called].load()==0);
+    assert(logs==previous_logs+8&&g_gate[Called].load()==0);
     assert(std::strstr(flash_diagnostic,"invalidComponent=1"));
     assert(std::strstr(flash_diagnostic,"invalidAsset=1"));
     assert(std::strstr(flash_diagnostic,"parentUnknown=1"));
@@ -315,7 +333,7 @@ int main() {
     assert(std::strstr(flash_diagnostic,"transformRejected=1"));
     assert(std::strstr(flash_diagnostic,"notAllowed=1"));
     on_tick(nullptr,0);
-    assert(logs==previous_logs+5); // No diagnostic flood on every tick.
+    assert(logs==previous_logs+8); // No diagnostic flood on every tick.
     g_diagnostics_since=GetTickCount64()-7000;
     on_tick(nullptr,0);
     assert(std::strstr(flash_diagnostic,"parentUnknown=0"));
@@ -594,6 +612,64 @@ int main() {
     on_event("boltgun.muzzle.v1","off");
     on_post_tick(nullptr,.04f);
     assert(flash_moves==before_poll+2);
+    // Seven-field leases opt into stereo-captured aim. Preserve native spread,
+    // original caller bytes and single-spawn behavior, including fallbacks.
+    selected_type=0;mock_barrel=true;
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|1");
+    assert(g_enabled&&g_lease.freeaim&&g_lease.visual==nullptr);
+    g_lease.created=GetTickCount64()-200;
+    g_engine_frame=20;
+    mesh_pose.rotation={0,0,.70710678f,.70710678f};
+    on_stereo(nullptr,1,0,nullptr,nullptr,false);
+    assert(g_display_at!=0&&g_display_frame==20);
+    const int before_aim_spawn=spawn_calls;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    assert(spawn_calls==before_aim_spawn+1&&g_freeaim_shots.load()==1);
+    assert(spawned.rotation.z>.7f&&shot.rotation.z<.1f);
+    assert(shot.translation.x==500);
+    // A stale stereo sample, a different generation, and revocation fall back.
+    g_display_frame=17;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    assert(spawned.rotation.z==shot.rotation.z);
+    g_display_frame=20;g_display_generation=0;
+    spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
+    assert(spawned.rotation.z==shot.rotation.z);
+    on_event("boltgun.muzzle.v1","off");
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|1");
+    assert(g_display_at==0&&g_lease.freeaim);
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|0");
+    assert(!g_lease.freeaim);
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1|1");
+    assert(g_lease.freeaim&&g_lease.visual==id(4));
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|4|12|24|0|0|0|0|1|0");
+    assert(!g_lease.freeaim&&g_lease.visual==id(4));
+    // Volkite native trace receives an owned hand-directed ray, with original
+    // collision arguments and call count preserved. Other owners pass through.
+    selected_type=6;mock_barrel=true;g_beam_hooked=true;
+    g_sphere_original=beam_sphere_native;g_volkite_fire_original=beam_fire_native;
+    on_event("boltgun.muzzle.v1","1|2|3|67.81414|0|53|1");
+    g_lease.created=GetTickCount64()-200;g_engine_frame=30;
+    on_stereo(nullptr,1,0,nullptr,nullptr,false);
+    const auto owned_beam=begin_beam(id(2));
+    assert(owned_beam.active&&owned_beam.weapon==id(2));
+    volkite_fire_detour(id(2));
+    assert(beam_fx_calls==1&&beam_native_calls==1);
+    assert(std::fabs(beam_native_start.x-400.f)<.003f);
+    assert(std::fabs(beam_native_start.y-533.90707f)<.003f);
+    assert(std::fabs(beam_native_end.y-1533.90707f)<.003f);
+    assert(!g_beam_scope.active); // Outer scope restored after native firing.
+    const Vec3 beam_start{500,600,700},beam_end{1500,600,700};
+    beam_sphere_detour(id(9),&beam_start,&beam_end,3,1,false,nullptr,0,nullptr,false,nullptr,nullptr,0);
+    assert(beam_native_calls==2&&beam_native_start.x==500&&beam_native_end.x==1500);
+    menu_open=true;assert(!begin_beam(id(2)).active);menu_open=false;
+    g_display_frame=27;assert(!begin_beam(id(2)).active);
+    g_display_frame=30;g_display_generation=0;assert(!begin_beam(id(2)).active);
+    g_display_generation=g_lease_generation;
+    g_engine_thread=0;assert(!begin_beam(id(2)).active);
+    g_engine_thread=GetCurrentThreadId();
+    on_event("boltgun.muzzle.v1","off");assert(!begin_beam(id(2)).active);
+    g_beam_hooked=false;
+    mock_barrel=false;mesh_pose.rotation={0,0,0,1};
     assert(!supported_file(L"missing-file-for-muzzle-test.exe"));
     wchar_t exe[32768]{};GetModuleFileNameW(nullptr,exe,32768);
     assert(!supported_file(exe));assert(!supported_module(reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))));

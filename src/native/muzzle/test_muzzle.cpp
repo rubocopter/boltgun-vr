@@ -66,5 +66,17 @@ int main() {
     flash.translation={150,280,390};mesh.scale.x=0;
     assert(!flash_transform(mesh,{67.81414f,0,53},flash,out));
     assert(!may_override(true,1000,0,1,1,true,false,true));
+    // An opt-in free-aim shot requires a fresh captured stereo frame from
+    // the same weapon/mesh continuity. Both current and prior frame are valid.
+    assert(may_redirect_freeaim(true,true,1000,950,980,10,10,true));
+    assert(may_redirect_freeaim(true,true,1000,950,980,10,9,true));
+    assert(!may_redirect_freeaim(false,true,1000,950,980,10,10,true));
+    assert(!may_redirect_freeaim(true,false,1000,950,980,10,10,true));
+    assert(!may_redirect_freeaim(true,true,1000,950,980,10,10,false));
+    assert(!may_redirect_freeaim(true,true,1000,400,980,10,10,true));
+    assert(!may_redirect_freeaim(true,true,1000,950,900,10,10,true));
+    assert(!may_redirect_freeaim(true,true,1000,950,1001,10,10,true));
+    assert(!may_redirect_freeaim(true,true,1000,950,980,10,8,true));
+    assert(!may_redirect_freeaim(true,true,1000,950,980,9,10,true));
     std::puts("native muzzle: geometry/lifecycle assertions passed");
 }

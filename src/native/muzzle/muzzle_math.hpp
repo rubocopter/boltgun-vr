@@ -65,6 +65,42 @@ inline bool may_override(bool ready, uint64_t now, uint64_t heartbeat,
            weapon!=0 && vr_active && !menu && engine_thread;
 }
 
+// Stereo callback pose must be recent and from this weapon/mesh generation.
+// Accept the current or immediately preceding engine tick, never a future or
+// skipped frame. A capture alone cannot extend an expired Lua ownership lease.
+inline bool may_redirect_freeaim(bool opted_in,bool owned,uint64_t now,
+    uint64_t heartbeat,uint64_t captured,uint64_t engine_frame,
+    uint64_t captured_frame,bool same_continuity) {
+    return opted_in&&owned&&same_continuity&&heartbeat&&captured&&
+           now>=heartbeat&&now-heartbeat<=500&&now>=captured&&
+           now-captured<=75&&engine_frame&&captured_frame&&
+           captured_frame<=engine_frame&&engine_frame-captured_frame<=1;
+}
+
+// Hitscan beams are traced along the tracked barrel's forward axis. Preserve
+// the native trace distance and reject invalid endpoints before calling UE.
+inline bool beam_ray(const Transform& muzzle,Vec3 native_start,Vec3 native_end,
+                     Vec3& start,Vec3& end,float preferred_length=0) {
+    Quat rotation{};
+    if(!normalized(muzzle.rotation,rotation)||!finite(muzzle.translation)||
+       !finite(native_start)||!finite(native_end)) return false;
+    const double dx=double(native_end.x)-native_start.x;
+    const double dy=double(native_end.y)-native_start.y;
+    const double dz=double(native_end.z)-native_start.z;
+    const double natural=std::sqrt(dx*dx+dy*dy+dz*dz);
+    const double length=preferred_length>0?preferred_length:natural;
+    if(!std::isfinite(length)||length<=.01||length>=100000) return false;
+    const Vec3 forward=rotate(rotation,{1,0,0});
+    start=muzzle.translation;
+    end={float(start.x+length*forward.x),float(start.y+length*forward.y),
+         float(start.z+length*forward.z)};
+    return finite(end);
+}
+inline Vec3 grav_beam_owner_origin(Vec3 muzzle,Quat rotation) {
+    const Vec3 offset=rotate(rotation,{-8.f,8.f,-5.f});
+    return {muzzle.x-offset.x,muzzle.y-offset.y,muzzle.z-offset.z};
+}
+
 inline bool is_bolter_flash(const wchar_t* name) {
     if(!name) return false;
     const wchar_t* const names[]={L"NS_Boltgun_Muzzleflash_Standard",

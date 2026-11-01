@@ -9,6 +9,8 @@ grip_x=-48
 grip_y=0
 grip_z=24
 muzzle_enabled=1
+# Experimental firearm direction from the tracked weapon; 0 preserves native aim.
+freeaim_enabled=0
 muzzle_x=67.81414
 muzzle_y=0
 muzzle_z=53
