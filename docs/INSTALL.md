@@ -2,8 +2,9 @@
 
 For the player-facing double-click flow, start with the [guided setup](EASY-SETUP.md)
 or the [Spanish instructions](INSTALACION-FACIL.es.md). A local ZIP can be built
-using `tools/Package-Setup.ps1` after [compiling the plugins](BUILD.md); there is
-no published release. Keep Boltgun closed during installation/restoration.
+using `tools/Package-Setup.ps1` after [compiling the plugins](BUILD.md), or
+downloaded from [GitHub Releases](https://github.com/rubocopter/boltgun-vr/releases/latest).
+Keep Boltgun closed during installation/restoration.
 
 ## Base profile
 

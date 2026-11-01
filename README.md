@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version: 1.0.1" src="https://img.shields.io/badge/version-1.0.1-58744e?style=flat-square">
+  <img alt="Version: 1.0.2" src="https://img.shields.io/badge/version-1.0.2-58744e?style=flat-square">
   <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square">
   <img alt="VR: UEVR and OpenXR" src="https://img.shields.io/badge/VR-UEVR%20%2F%20OpenXR-456779?style=flat-square">
   <img alt="Controllers: PS VR2 Sense" src="https://img.shields.io/badge/controllers-PS%20VR2%20Sense-555555?style=flat-square">
@@ -19,7 +19,7 @@
   optional tracked 3D firearms and a tracked chainsword.
 </p>
 
-Latest release: **v1.0.1** · [Changelog](CHANGELOG.md)
+Latest release: **v1.0.2** · [Changelog](CHANGELOG.md)
 
 <p align="center">
   <a href="docs/EASY-SETUP.md"><b>Get started →</b></a>
@@ -29,7 +29,7 @@ Latest release: **v1.0.1** · [Changelog](CHANGELOG.md)
 </p>
 
 > [!IMPORTANT]
-> **Version 1.0.1 — validated in VR by the maintainer on 16 October 2026.** Sense profile v7 / 3D arsenal revision 20 / chainsword package 5. This update fixes the tracking callback crash, restores 3D weapons across save loads, recovers the chainsword and aligns supported firearm effects with their barrels. Validation covers the maintainer's PS VR2 Sense setup and tested gameplay; DLC weapons and other controller mappings are not independently certified. [Download the player package](https://github.com/rubocopter/boltgun-vr/releases/latest).
+> **Version 1.0.2 — installer compatibility update (1 November 2026).** If SteamVR generates an incompatible Oculus Touch SystemButton mapping, setup preserves that binding and continues with the rest of the installation. The Sense profile v7 / 3D arsenal revision 20 / chainsword package 5 runtime is unchanged from v1.0.1, which the maintainer validated in VR on 16 October 2026. The new installer fallback has offline test coverage but no new headset confirmation. DLC weapons and other controller mappings are not independently certified. [Download the player package](https://github.com/rubocopter/boltgun-vr/releases/latest).
 
 ## What changes in VR
 
@@ -43,7 +43,7 @@ Firearms have experimental visual recoil and firing haptics on intercepted proje
 
 ## Install
 
-The [v1.0.1 release](https://github.com/rubocopter/boltgun-vr/releases/latest) includes a player ZIP with the compiled native plugins and the English menu launcher. UEVR and game files are not included. Source and build instructions remain available in this repository.
+The [v1.0.2 release](https://github.com/rubocopter/boltgun-vr/releases/latest) includes a player ZIP with the compiled native plugins, the English menu launcher, license and third-party notices. UEVR and game files are not included. Source and build instructions remain available in this repository.
 
 1. Install your own copy of **Warhammer 40,000: Boltgun** on Windows and set up SteamVR/OpenXR with your PCVR headset and motion controllers.
 2. Get [UEVR from praydog's official releases](https://github.com/praydog/UEVR/releases). Maintainers can compile the two native plugins using [build instructions](docs/BUILD.md), verify their hashes and create a local player ZIP.
@@ -61,7 +61,7 @@ For prerequisites, exact file locations, backups and restoring your previous pro
 | Native muzzle bridge | Maintainer-confirmed barrel effect alignment; native harnesses | Unsupported beam/hitscan and unrelated effect paths |
 | Tracked chainsword (package 5) | Maintainer-confirmed recovery and tracking | Other hardware and individual alignment preferences |
 
-Version 1.0.1 keeps the 3D mode through supported save-load transitions and prevents stale component references from permanently disabling the firearm or chainsword modules. Two-hand aiming is explicitly opt-in. Read [validation scope and limitations](docs/STATUS.md) for the tested boundary.
+The v1.0.1 runtime, retained in v1.0.2, keeps the 3D mode through supported save-load transitions and prevents stale component references from permanently disabling the firearm or chainsword modules. Two-hand aiming is explicitly opt-in. Read [validation scope and limitations](docs/STATUS.md) for the tested boundary.
 
 ## Documentation
 

@@ -1,8 +1,8 @@
 # Current status and validation
 
-**v1.0.1 — 16 October 2026.** Sense profile **v7**, firearm arsenal **revision 20**, chainsword **package 5**.
+**v1.0.2 — 1 November 2026.** Sense profile **v7**, firearm arsenal **revision 20**, chainsword **package 5** (runtime unchanged since v1.0.1).
 
-The maintainer confirmed the latest corrections in VR on 16 October 2026, after testing the installed revision with PS VR2 Sense. The firearm manifest records `verifiedInGame: true`; the chainsword manifest records `runtimeVerified: true`. This is human headset validation, separately from the automated checks below.
+The maintainer confirmed the runtime corrections in VR on 16 October 2026 (v1.0.1), after testing the installed revision with PS VR2 Sense. The firearm manifest records `verifiedInGame: true`; the chainsword manifest records `runtimeVerified: true` for those unchanged runtime revisions. Version 1.0.2 changes the installer to preserve incompatible SteamVR bindings; this fallback is covered by isolated tests but has not been reconfirmed in VR.
 
 | Component | Current evidence | Scope and remaining limits |
 | --- | --- | --- |

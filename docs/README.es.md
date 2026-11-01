@@ -4,7 +4,7 @@ Mod de **Warhammer 40,000: Boltgun** para PCVR basado en UEVR/OpenXR, desarrolla
 
 **Versión validada en VR por el mantenedor el 16 de octubre de 2026.** Incluye el **perfil Sense v7, arsenal 3D revisión 20 y chainsword paquete 5**: corrige el cierre al mover el arma, la recuperación 3D al cargar partidas, la espada y la alineación de los efectos con el cañón. La validación corresponde a las partidas probadas con PS VR2 Sense; no certifica todas las armas DLC ni otros mandos.
 
-Está publicada la **versión 1.0.1** en [GitHub Releases](https://github.com/rubocopter/boltgun-vr/releases/latest), con un ZIP que incluye el menú en inglés y los plugins nativos compilados. No incluye el juego ni UEVR. El código fuente y las herramientas de compilación están en este repositorio.
+Está publicada la **versión 1.0.2** en [GitHub Releases](https://github.com/rubocopter/boltgun-vr/releases/latest), con un ZIP que incluye el menú en inglés, los plugins nativos compilados y la licencia del proyecto. Corrige la instalación cuando SteamVR genera un binding SystemButton incompatible: conserva ese archivo y permite continuar, dejando Options/Create para configurar manualmente. Este cambio tiene pruebas automáticas, pero aún no se ha comprobado en visor; los módulos VR mantienen las versiones validadas con 1.0.1. No incluye el juego ni UEVR.
 
 ## Qué puedes probar
 
@@ -27,4 +27,4 @@ Consulta la [instalación guiada](INSTALACION-FACIL.es.md) o la [guía avanzada 
 | [Solución de problemas](TROUBLESHOOTING.md) | [Arsenal](ARSENAL.md) |
 | [Copias y recuperación de Windows](REINSTALL.md) | [Créditos y licencias](SOURCE-AND-NOTICES.md) |
 
-Proyecto de aficionados, sin afiliación con los titulares del juego, UEVR o los fabricantes de visores. La espada externa es de Kaiser-E (CC BY 4.0) y conserva sus créditos. **El código propio todavía no tiene una licencia general elegida**; consulta [los avisos de terceros](SOURCE-AND-NOTICES.md).
+Proyecto de aficionados, sin afiliación con los titulares del juego, UEVR o los fabricantes de visores. El código original del proyecto tiene licencia **GPL-3.0-or-later**; la espada externa es de Kaiser-E (CC BY 4.0) y conserva sus créditos. Consulta [la licencia](../LICENSE), [los términos de reutilización](../COPYRIGHT_AND_REUSE.md) y [los avisos de terceros](SOURCE-AND-NOTICES.md).

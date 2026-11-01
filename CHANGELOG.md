@@ -1,12 +1,15 @@
 # Changelog
 
-## Unreleased
+## v1.0.2 — 1 November 2026
 
 - Keep guided installation working when SteamVR generates an Oculus Touch
   binding without a unique PS VR2 SystemButton mapping, with an unfamiliar
   mapping path, or with a conflicting Create output. Warn and preserve the
   existing binding byte for byte; users of other controllers must configure
   Options/Create manually. Add isolated regression coverage for issue #1.
+- Include the GPL-3.0-or-later license for original project code, explicit
+  third-party rights and corresponding-source guidance in the repository and
+  player package.
 
 ## v1.0.1 — 16 October 2026
 

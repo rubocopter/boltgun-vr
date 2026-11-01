@@ -19,7 +19,7 @@
 - Crash after moving a controller: check the UEVR log for repeated
   `boltgun_sense.lua` / `get_transform` / `update_two_hand` frames. The original
   v1.0.0 script unintentionally enabled proximity two-hand aiming by default and
-  could recursively enter the engine-tick callback. The unreleased source fix
+  could recursively enter the engine-tick callback. The fix included since v1.0.1
   makes this mode opt-in and guards nested ticks. Do not enable the mode while
   testing the original v1.0.0 script.
 
