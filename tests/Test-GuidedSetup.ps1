@@ -102,6 +102,31 @@ Assert (Test-Path -LiteralPath (Join-Path $profile 'plugins\boltgun_chainsword.d
 Assert ((Get-Content -LiteralPath (Join-Path $profile 'data\bolter3d.mode') -Raw).Trim() -eq 'preview') '3D arsenal mode incorrect.'
 Assert ((Get-Content -LiteralPath (Join-Path $profile 'data\chainsword3d.mode') -Raw).Trim() -eq 'preview') 'Chainsword mode incorrect.'
 
+# SteamVR can generate a generic Oculus Touch binding without the PS VR2
+# SystemButton mapping. This optional adaptation must not block guided setup.
+foreach ($case in @(
+    @{ name='missing'; paths=@() },
+    @{ name='ambiguous'; paths=@('/user/hand/left/input/menu','/user/hand/right/input/menu') },
+    @{ name='unrecognized'; paths=@('/user/hand/right/input/menu') },
+    @{ name='collision'; paths=@('/user/hand/left/input/menu'); collision=$true }
+)) {
+    $sources=@(@{path='/user/hand/left/input/trigger';mode='button';inputs=@{click=@{output='/actions/defaultopenxr/in/trigger'}}})
+    foreach ($path in $case.paths) {
+        $sources+=@{path=$path;mode='button';inputs=@{click=@{output='/actions/defaultopenxr/in/systembutton'}}}
+    }
+    if ($case.collision) {
+        $sources+=@{path='/user/hand/right/input/a';mode='button';inputs=@{click=@{output='/actions/defaultopenxr/in/thumbresttouchleft'}}}
+    }
+    $fixture=@{bindings=@{'/actions/defaultopenxr'=@{sources=$sources}}}
+    $fixture | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $bindingPath
+    $before= (Get-FileHash -LiteralPath $bindingPath -Algorithm SHA256).Hash
+    Remove-Item -LiteralPath (Join-Path $settings 'launcher.json')
+    $output=@(& $setup @setupParams 3>&1 | Out-String)
+    Assert (Test-Path -LiteralPath (Join-Path $settings 'launcher.json')) "Guided setup did not finish for $($case.name) SystemButton."
+    Assert ((Get-FileHash -LiteralPath $bindingPath -Algorithm SHA256).Hash -eq $before) "Unexpected binding edit for $($case.name) SystemButton."
+    Assert (($output -join ' ') -match 'SystemButton|ThumbrestTouchLeft') "Missing diagnostic for $($case.name) SteamVR binding."
+}
+
 $saved=Get-Content -LiteralPath (Join-Path $settings 'launcher.json') -Raw | ConvertFrom-Json
 Assert ($saved.uevrInjectorPath -eq $fakeInjector) 'Configured injector path incorrect.'
 Assert ($saved.steamAppId -eq 2005010 -and $saved.runtime -eq 'OpenXR') 'Wrong game or runtime settings.'
@@ -111,5 +136,5 @@ Assert ([string]::Join(' ',@($wouldLaunch)).Contains('steam://rungameid/2005010'
 $saved.steamAppId=1
 $saved | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $settings 'launcher.json')
 Expect-Rejection { & $launcher -SettingsRoot $settings -DryRun } 'Launcher accepted wrong Steam game.'
-Write-Output 'Guided setup checks passed: curated ZIP, dry runs, fresh-profile installation, unknown-file refusal, optional modules, saved launcher and game guard.'
+Write-Output 'Guided setup checks passed: curated ZIP, dry runs, fresh-profile installation, optional SteamVR binding fallbacks, unknown-file refusal, optional modules, saved launcher and game guard.'
 Write-Output "Isolated test evidence retained at $sandbox"

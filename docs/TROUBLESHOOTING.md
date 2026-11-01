@@ -6,6 +6,11 @@
   to overwrite unrecognised configurations.
 - Options/Create lost: run `scripts/Comprobar-perfil.ps1`. SteamVR can regenerate the binding.
   With the game closed, base installation can reapply it if configuration checks pass.
+- SteamVR `SystemButton` warning during setup: the generated Oculus Touch binding
+  has no unique, recognized PS VR2 SystemButton assignment, or another action
+  already uses the required Create output. Setup leaves this binding unchanged
+  and continues; map Options/Create manually for your controllers. Only PS VR2
+  Sense bindings have been validated; Index and other mappings are unsupported.
 - Wrong firearm scale/muzzle: edit installed `bolter3d.settings`. `muzzle_enabled=0`
   keeps the model with native firing origins; `scripts/Bolter3D.ps1 -Mode off` disables it.
 - Chainsword/Codex alignment: calibrate `chainsword3d.settings`, or disable with

@@ -22,6 +22,7 @@ does not automate injection or bypass the UEVR interface.
 - **Missing UEVR `config.txt` or game INI**: the installer creates the declared Boltgun VR inputs on a clean installation, saving the absent-file state for restoration.
 - **Unknown hash / customized file**: setup refuses to overwrite it. See [installation and recovery](INSTALL.md); make a backup and review the differences first.
 - **No SteamVR controller binding found**: inject UEVR once with the controllers active to generate the binding, quit Boltgun and run the installer again to patch PS VR2 Options/Create mappings. If your bindings are intentionally customized, inspect the change before proceeding.
+- **SystemButton missing, duplicated or assigned differently**: setup skips the optional SteamVR binding patch and preserves the generated file. The base profile and launcher can still be installed. Options/Create are not configured by this patch; configure your controller binding manually if needed. Index, Vive and other controller mappings have not been validated.
 - **3D components**: still require headset validation and a supported Boltgun binary. You can install just the base profile on the first run and add the modules later. See [status](STATUS.md) and [troubleshooting](TROUBLESHOOTING.md).
 - **UEVR moved after setup**: choose **Install or update the VR profile** in `Boltgun VR.cmd` to select its new location.
 - **Nothing launches**: confirm the game is installed under Steam app ID **2005010**, Steam can open `steam://rungameid/2005010`, and your own injector still exists.

@@ -26,13 +26,15 @@ function Patch-BoltgunSteamVrBinding {
     $binding = Get-Content -LiteralPath $bindingFile.FullName -Raw | ConvertFrom-Json
     $actionSet = $binding.bindings.'/actions/defaultopenxr'
     if (-not $actionSet -or -not $actionSet.sources) {
-        throw "Binding de SteamVR inesperado: $($bindingFile.FullName)"
+        Write-Warning "Binding SteamVR sin acciones OpenXR compatibles: $($bindingFile.FullName). Se omite el ajuste opcional de Options/Create; el archivo se conserva."
+        return
     }
 
     $sources = @($actionSet.sources)
     $systemButton = @($sources | Where-Object { $_.inputs.click.output -eq '/actions/defaultopenxr/in/systembutton' })
     if ($systemButton.Count -ne 1) {
-        throw "No se encontro un unico SystemButton en $($bindingFile.FullName)"
+        Write-Warning "Binding SteamVR con $($systemButton.Count) asignaciones SystemButton: $($bindingFile.FullName). Se omite el ajuste opcional de Options/Create; el archivo se conserva. Otros mandos no tienen mapeos validados."
+        return
     }
 
     $changed = $false
@@ -40,7 +42,8 @@ function Patch-BoltgunSteamVrBinding {
         $systemButton[0].path = '/user/hand/left/input/application_menu'
         $changed = $true
     } elseif ($systemButton[0].path -ne '/user/hand/left/input/application_menu') {
-        throw "SystemButton usa una ruta no reconocida: $($systemButton[0].path)"
+        Write-Warning "SystemButton usa una ruta no reconocida: $($systemButton[0].path). Se omite el ajuste opcional de Options/Create; el binding se conserva."
+        return
     }
 
     $createOutput = '/actions/defaultopenxr/in/thumbresttouchleft'
@@ -49,7 +52,8 @@ function Patch-BoltgunSteamVrBinding {
     if ($createBinding.Count -eq 0) {
         $collision = @($sources | Where-Object { $_.inputs.click.output -eq $createOutput -or $_.inputs.touch.output -eq $createOutput })
         if ($collision.Count -gt 0) {
-            throw 'ThumbrestTouchLeft ya esta ocupado en el binding activo; no se modifica para evitar recenter accidentales.'
+            Write-Warning 'ThumbrestTouchLeft ya esta ocupado en el binding activo. Se omite el ajuste opcional de Options/Create para evitar recenter accidentales; el archivo se conserva.'
+            return
         }
         $newSource = [pscustomobject]@{
             inputs = [pscustomobject]@{

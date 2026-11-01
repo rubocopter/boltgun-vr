@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Keep guided installation working when SteamVR generates an Oculus Touch
+  binding without a unique PS VR2 SystemButton mapping, with an unfamiliar
+  mapping path, or with a conflicting Create output. Warn and preserve the
+  existing binding byte for byte; users of other controllers must configure
+  Options/Create manually. Add isolated regression coverage for issue #1.
+
 ## v1.0.1 — 16 October 2026
 
 - Recover the 3D chainsword after component reuse, pawn replacement and delayed
