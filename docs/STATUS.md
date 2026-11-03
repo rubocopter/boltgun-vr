@@ -4,7 +4,9 @@
 
 The maintainer confirmed the runtime corrections in VR on 16 October 2026 (v1.0.1), after testing the installed revision with PS VR2 Sense. Released revision 20 had `verifiedInGame: true`; the **development manifest now has `verifiedInGame: false` for revision 21**. The chainsword manifest now has `runtimeVerified: false` for unreleased package 6 and records package 5 as the last VR-verified version. Version 1.0.2 changes the installer to preserve incompatible SteamVR bindings; this fallback is covered by isolated tests but has not been reconfirmed in VR.
 
-**Unreleased revision 21** changes firearm aiming behavior only when the new free-aim setting is explicitly enabled. Its manifest must retain `verifiedInGame: false` until the maintainer verifies that exact DLL/source revision in a headset; `previousVerifiedRevision` records the last confirmed revision 20. Experimental Volkite/Gravgun ray hooks require an additional process-start environment variable. Focus-aware XR provenance, chainsword sweep geometry, melee hit eligibility and menu pointer policies are standalone offline modules. Only the optional chainsword pose *diagnostic* reaches live UEVR callbacks; it cannot confirm target impacts. See [experimental interactions](EXPERIMENTAL-INTERACTIONS.md).
+**Unreleased revision 21** changes firearm aiming behavior only when the new free-aim setting is explicitly enabled. Its manifest must retain `verifiedInGame: false` until the maintainer verifies that exact DLL/source revision in a headset; `previousVerifiedRevision` records the last confirmed revision 20. Experimental Volkite/Gravgun ray hooks require an additional process-start environment variable. Focus-aware XR provenance, chainsword sweep geometry, melee hit eligibility and menu pointer policies are standalone offline modules. Of the physical-interaction experiments, only the optional chainsword pose *diagnostic* reaches live UEVR callbacks; it cannot confirm target impacts. See [experimental interactions](EXPERIMENTAL-INTERACTIONS.md).
+
+A new unreleased UEVR Lua menu aim guard disables controller aiming when a recognized menu is active and restores it on gameplay; the default profile also disables decoupled pitch adjustment for the static UI. These changes have only simulated tests, and they do not provide a game menu pointer or physical chainsword damage.
 
 | Component | Current evidence | Scope and remaining limits |
 | --- | --- | --- |
@@ -26,7 +28,7 @@ Earlier revisions 18 and 19 were intermediate corrections. Revision 18 still sto
 
 ## Offline validation
 
-The maintained suite contains **174 Python/Lua cases**, **three chainsword converter cases**, native C++ harnesses, and isolated PowerShell setup/restore checks. MSVC x64 builds use `/W4 /WX`; source and rebuilt DLL hashes are checked before packaging. These checks establish program contracts and complement the maintainer's VR session. Passing offline tests does not establish revision 21 headset behavior.
+The maintained suite contains **189 Python/Lua cases**, **three chainsword converter cases**, native C++ harnesses, and isolated PowerShell setup/restore checks. MSVC x64 builds use `/W4 /WX`; source and rebuilt DLL hashes are checked before packaging. These checks establish program contracts and complement the maintainer's VR session. Passing offline tests does not establish revision 21 headset behavior.
 
 ## Known boundaries
 

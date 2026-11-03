@@ -18,6 +18,8 @@ Live melee still requires a trusted controller-pose producer tied to the current
 
 ## 3. Menu pointer groundwork
 
+The deployed `profile/scripts/boltgun_menu_stable.lua` guards UEVR right-controller aiming while a recognized frontend, native pause/widget, or UEVR menu is active, then restores the prior aim allowance on gameplay. The base UEVR config now disables `VR_DecoupledPitchUIAdjust`, matching the static-panel setup candidate. Seven offline Lua mock scenarios cover scene transitions, restoration, native menus, unknown scenes, and bounded failures. Neither behavior has been validated with a headset, and UEVR's current menu settings may still need physical calibration.
+
 `src/lua/boltgun_menu_ray.lua` computes a tracked controller's forward ray intersection against an explicitly supplied oriented UI quad and returns normalized panel coordinates. `src/lua/boltgun_menu_policy.lua` models a separately gated right-trigger-to-confirm button edge in authenticated frontend focus, and drains held input across transitions. Both are offline-only. The runtime still needs a verified frontend/panel transform, controller source ownership and a safe way to send UI pointer events. No menu click, hover, or gameplay trigger remapping is installed by these modules.
 
 ## Validation boundaries

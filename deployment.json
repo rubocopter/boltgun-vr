@@ -2,9 +2,10 @@
   {
     "source": "profile\\config.txt",
     "target": "${ProfileRoot}\\config.txt",
-    "sha256": "93D6CECE9A05A1645919ADDB55D98F0BFD9FE715BA2BB15C657ECC59F0F67F6A",
+    "sha256": "5AD8F073FDD12683D0FCF2A56CB0453C6C87CCE843AF53C9E1C123AB337D8F7D",
     "originalSha256": "8DB08AAD22F8F3E27086A33B76C08F268D846DD551F1414407CD2CB7C1550F77",
-    "acceptedBaseSha256": "1C69FA667ECAAD0D7BA40E964B12BFACB697BA34DA99CDEB6AAC5CA9414F6006"
+    "acceptedBaseSha256": "1C69FA667ECAAD0D7BA40E964B12BFACB697BA34DA99CDEB6AAC5CA9414F6006",
+    "upgradeFrom": ["93D6CECE9A05A1645919ADDB55D98F0BFD9FE715BA2BB15C657ECC59F0F67F6A"]
   },
   {
     "source": "profile\\_interaction_profiles_oculus_touch_controller.json",
@@ -21,6 +22,13 @@
     "upgradeFrom": [
       "0BA255C6662661D84503637F19511C9407BEDE4EF0960672D52F485DBFC24A4C"
     ]
+  },
+  {
+    "source": "profile\\scripts\\boltgun_menu_stable.lua",
+    "target": "${ProfileRoot}\\scripts\\boltgun_menu_stable.lua",
+    "sha256": "B9F99063F597C4E6758B0A717682A713327DEC5BF713CB5872BAA69DFE50C533",
+    "originalSha256": null,
+    "note": "UEVR game menu aim guard; no in-game pointer bridge"
   },
   {
     "source": "game-config\\Input.ini",
