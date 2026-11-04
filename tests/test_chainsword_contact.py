@@ -205,6 +205,15 @@ class ChainswordIntegrationTests(unittest.TestCase):
         self.assertEqual(self.value('ctx.queries'), 0)
         self.assertTrue(self.value('type(stereo)=="function"'))
 
+    def test_uevr_restores_module_search_path_before_engine_callbacks(self):
+        # ScriptState::run_script adds the profile path only around safe_script_file.
+        # Delayed require must not depend on that temporary path still being present.
+        self.lua.execute("package.path='';package.cpath=''")
+        self.start()
+        for _ in range(3):
+            self.frame()
+        self.assertEqual(self.value('ctx.damage'), 1)
+
     def test_stereo_only_marks_then_post_engine_tick_captures_owned_pose(self):
         self.start()
         self.tick(.02)

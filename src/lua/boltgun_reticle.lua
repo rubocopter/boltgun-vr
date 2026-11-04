@@ -71,7 +71,8 @@ function M.new(uevr)
                 state.part.object:get_class():get_full_name()==CLASS,'Reticle owner changed')
             state.part.object:SetHiddenInGame(true,false);state.part.object:SetVisibility(false,false)
             state.part.object:K2_DestroyComponent(state.owner.object)
-            assert(not valid(state.part.object),'Reticle destruction pending')
+            -- UE unregisters/destroys the component before garbage collection
+            -- removes its UObject. UObjectHook.exists may stay true until then.
         end
         fs.write(JOURNAL,'');assert(fs.read(JOURNAL)=='','Reticle journal removal failed');state=nil
     end

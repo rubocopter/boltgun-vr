@@ -40,6 +40,9 @@ local contact_visible, contact_engine_window = false, false
 local contact_stereo_observed = false
 local contact_callbacks = type(callbacks.on_post_calculate_stereo_view_offset)=='function' and
     type(callbacks.on_post_engine_tick)=='function'
+-- UEVR adds this script directory to package.path only during script loading.
+-- Resolve pure module dependencies now; instantiate the engine adapter on tick.
+local contact_loaded, contact_module = pcall(require, 'boltgun_chainsword_contact')
 local function report(text)
     if text == last_report then return end
     last_report = text
@@ -549,9 +552,10 @@ callbacks.on_pre_engine_tick(function(engine,delta)
             contact_attempted=true
             local loaded,result=pcall(function()
                 assert(contact_callbacks,'Post-attachment stereo callbacks unavailable')
-                return require('boltgun_chainsword_contact').new(uevr)
+                assert(contact_loaded, contact_module)
+                return contact_module.new(uevr)
             end)
-            if loaded then contact=result
+            if loaded then contact=result;report('Physical contact loaded; hold left Trigger for blade contact')
             else report('Physical contact unavailable: '..tostring(result)) end
         end
         if contact then contact:step(owner,owned,contact_enabled(),delta,settings.scale) end

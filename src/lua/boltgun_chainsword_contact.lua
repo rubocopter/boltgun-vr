@@ -17,14 +17,19 @@ function M.new(uevr)
     local tick,clock=0,0
     local cooldown={}
     local s={stopped=false}
+    local samples,queries,hits,damage=0,0,0,0
+    local phase,diagnostic_at,diagnostic_windows='initializing',6,0
     function s:reset_pose() previous=nil;captured=nil end
     local function ready(pawn,component,enabled)
+        phase='gameplay-or-vr'
         if not enabled or not vr.is_runtime_ready() or not vr.is_openxr() or not vr.is_hmd_active() or
             not vr.is_using_controllers() or not vr.is_aim_allowed() or uevr.params.functions.is_drawing_ui() then return nil end
+        phase='left-trigger'
         trigger=trigger or vr.get_action_handle('/actions/default/in/Trigger')
         if trigger==nil or trigger==0 then return nil end
         local source=vr.get_left_joystick_source()
         if source==nil or vr.is_action_active(trigger,source)~=true then return nil end -- OpenXR source 0 is valid.
+        phase='controller-pose'
         local index=vr.get_left_controller_index()
         if not finite(index) or index<0 or index>63 or index%1~=0 then return nil end
         -- Read the actual UEVR device matrix, never caller-supplied tracked flags.
@@ -38,6 +43,7 @@ function M.new(uevr)
                 if math.abs(n-1)>.05 then return nil end
             elseif math.abs(v.x)>20 or math.abs(v.y)>20 or math.abs(v.z)>20 then return nil end
         end
+        phase='owned-context'
         if not engine then engine=Engine.new(uevr) end
         return engine:context(pawn,component)
     end
@@ -64,6 +70,7 @@ function M.new(uevr)
                 self:reset_pose();return
             end
             captured={pose=p,key=c.key,scale=scale,tick=tick}
+            samples=samples+1
         end)
     end
     function s:step(pawn,component,enabled,dt,scale)
@@ -73,12 +80,15 @@ function M.new(uevr)
             clock=clock+dt
             local c=ready(pawn,component,enabled)
             local sample=captured;captured=nil
-            if not c or not sample or sample.tick~=tick-1 or sample.key~=c.key or sample.scale~=scale then
+            if not c then previous=nil;return end
+            phase='fresh-display-sample'
+            if not sample or sample.tick~=tick-1 or sample.key~=c.key or sample.scale~=scale then
                 previous=nil;return
             end
             -- Rebuilding the display component must not bypass the weapon's cooldown.
             if scope~=c.damage_key then scope=c.damage_key;cooldown={};previous=nil end
             local current=sample.pose
+            phase='second-display-sample'
             if not previous or previous.key~=c.key or previous.scale~=scale then
                 previous={pose=current,key=c.key,scale=scale};return
             end
@@ -87,11 +97,13 @@ function M.new(uevr)
             local segments=Sweep.generate(previous.pose,current,base,tip,3*scale,dt)
             previous=nil
             if not segments or #segments>256 then return end
-            local contacts={};local queries=0
+            local contacts={};local frame_queries=0
             local function cast(a,b,r)
-                queries=queries+1;assert(queries<=512,'Blade query budget exhausted')
+                frame_queries=frame_queries+1;queries=queries+1
+                assert(frame_queries<=512,'Blade query budget exhausted')
                 return engine:cast(c,a,b,r)
             end
+            phase='occlusion'
             -- Collect before mutating: any blocking world geometry cancels this frame.
             for _,segment in ipairs(segments) do
                 for _,hit in ipairs(cast(segment.from,segment.to,segment.radius)) do
@@ -106,14 +118,22 @@ function M.new(uevr)
                 for _,block in ipairs(cast(origin,hit.point,1)) do if block.wall then return end end
             end
             previous={pose=current,key=c.key,scale=scale}
+            phase='no-contact-or-cooldown'
             for id,at in pairs(cooldown) do if clock-at>10 then cooldown[id]=nil end end
             for id,hit in pairs(contacts) do
+                hits=hits+1
                 if not cooldown[id] or clock-cooldown[id]>=.5 then
                     cooldown[id]=clock -- Reserve before native call, including rejected/dead targets.
-                    engine:apply(c,hit)
+                    if engine:apply(c,hit) then damage=damage+1;phase='damage-applied' end
                 end
             end
         end)
+        if not self.stopped and clock>=diagnostic_at and diagnostic_windows<8 then
+            diagnostic_at=clock+6;diagnostic_windows=diagnostic_windows+1
+            uevr.params.functions.log_info(string.format(
+                '[Boltgun Chainsword contact] samples=%d sweeps=%d contacts=%d damage=%d state=%s',
+                samples,queries,hits,damage,phase))
+        end
     end
     function s:stop() self.stopped=true;self:reset_pose() end
     return s

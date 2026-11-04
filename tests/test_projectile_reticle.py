@@ -373,6 +373,19 @@ class ReticleLifecycleTests(unittest.TestCase):
         self.assertEqual(self.value('ctx.destroyed'), 0)
         self.assertNotEqual(self.value('ctx.journal'), '')
 
+    def test_destroyed_component_can_remain_in_uobject_array_until_gc(self):
+        self.frame()
+        self.run_lua('''part.K2_DestroyComponent=function(self,owner)
+            touch('K2_DestroyComponent');assert(owner==pawn)
+            assert(not self.bVisible and self.bHiddenInGame)
+            self.unregistered=true;ctx.destroyed=ctx.destroyed+1
+        end
+        reticle:stop();reticle=mod.new(uevr)''')
+        self.frame(False)
+        self.assertFalse(self.value('reticle.stopped'), self.value('ctx.log'))
+        self.assertTrue(self.value('part.valid and part.unregistered'))
+        self.assertEqual(self.value('ctx.journal'), '')
+
 
 # Only the Unreal/UEVR/fs boundary is faked. Reflection order deliberately differs
 # from the engine's usual order, and the breaker accepts only the actual trace hit.
