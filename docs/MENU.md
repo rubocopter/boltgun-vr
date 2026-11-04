@@ -6,10 +6,11 @@ unlocked Game and UI input for recognized game menus. **A controller ray bridge
 is not implemented.** Native cursor visibility does not make a VR controller
 move or click that cursor.
 
-This revision has offline Lua tests only. Installation of a candidate does not
-validate behavior in VR. `runtimeVerified` and `verifiedInGame` must remain false until the
-maintainer confirms this revision with a headset. Existing release validation
-does not validate these menu changes.
+The maintainer reported stable menus in the 4 November 2026 revision 22
+session. This confirms that session's panel stability; native cursor interaction
+and a controller ray/click bridge have no separate VR confirmation. The changed
+firearm/chainsword runtimes keep `runtimeVerified` and `verifiedInGame` false
+until the maintainer confirms those specific candidate revisions in VR.
 
 ## Player guide
 

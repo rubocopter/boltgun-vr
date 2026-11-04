@@ -1,10 +1,10 @@
 # Tracked chainsword
 
-The optional Kaiser-E model follows the left controller. Released package 5 retains the original game's L2 attacks. **Development package 7 wires physical contact into the runtime; it is experimental and has not been verified in VR.** Deployment checks use temporary profiles; replacing an installed candidate requires maintainer authorization. See [the arsenal](ARSENAL.md) and [validation status](STATUS.md).
+The optional Kaiser-E model follows the left controller. Released package 5 retains the original game's L2 attacks. **Development package 8 wires physical contact into the runtime; it is experimental and has not been verified in VR.** Deployment checks use temporary profiles; replacing an installed candidate requires maintainer authorization. See [the arsenal](ARSENAL.md) and [validation status](STATUS.md).
 
 ## Player behavior
 
-With package 7 in a separately prepared temporary profile and `chainsword3d.mode=preview`, hold the **physical left Trigger** (`/actions/default/in/Trigger`, normally L2) and put the visible cutting edge against an enemy. There is **no additional physical-contact toggle** beyond the 3D preview and held left Trigger. Contact does **not require the original attack combo, a swing gesture, or a minimum swing speed**. Keeping the blade stationary against a target can cut again after a 500 ms per-target cooldown. The physical Trigger is still required.
+With package 8 in a prepared candidate profile and `chainsword3d.mode=preview`, hold the **physical left Trigger** (`/actions/default/in/Trigger`, normally L2) and put the visible cutting edge against an enemy. There is **no additional physical-contact toggle** beyond the 3D preview and held left Trigger. Contact does **not require the original attack combo, a swing gesture, or a minimum swing speed**. Keeping the blade stationary against a target can cut again after a 500 ms per-target cooldown. The physical Trigger is still required.
 
 The original L2 action remains bound. Physical contact adds a separate damage opportunity without requiring a native combo to be active. An existing `ChainswordCuttingTarget` blocks contact damage while the original cutting ability owns that target. The integration does not remap or suppress the original attack, and interaction between original attacks and contacts still needs headset testing. No impact haptics or spark repositioning are added.
 
@@ -21,6 +21,8 @@ The original Codex `Opening`, `Reading` and `PageTurn` phases retain their anima
 The existing native bridge can animate the model's 24 chain pieces while left Trigger is held, updating at most about 25 times per second and restoring the original mesh on release. This visual animation is separate from the Lua collision queries. The mesh remains collisionless.
 
 ## Developer contact pipeline
+
+Package 8 resolves the pure contact/sweep/engine modules during initial script loading, while UEVR temporarily includes the profile scripts directory in `package.path`. Only adapter construction and Unreal access are deferred to engine tick. Package 7 attempted a delayed `require` after UEVR had restored the game's search path; the 4 November log shows that the physical adapter never loaded. The visual sword and original attacks therefore continued without the contact feature. The corrected loader logs successful contact initialization. Bounded six-second contact diagnostics report display samples, sweep calls, contacts, applied damage and the current gate.
 
 The active source is split between `src/lua/boltgun_chainsword.lua` (visual ownership and callbacks), `boltgun_chainsword_contact.lua` (sample lifecycle, sweeps and cooldowns), and `boltgun_chainsword_engine.lua` (reflected collision and original damage). `boltgun_blade_sweep.lua` supplies geometry only. The older standalone melee/tracking policies do not authorize this runtime's damage.
 

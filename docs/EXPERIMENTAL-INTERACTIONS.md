@@ -1,5 +1,7 @@
 # Unreleased experimental VR interactions
 
+**Current candidate: revision 23 / package 8.** The 4 November session confirmed the previous candidate's reticle/menu behavior but exposed a deferred Lua dependency load failure and native emissions bypassing the Niagara spawn hooks. The new candidate resolves contact modules at script load, handles deferred reticle garbage collection and corrects active owned renderer muzzle/casing emitters after the tracked pose update. These fixes require VR confirmation.
+
 The current player release is **v1.0.2**, retaining the maintainer-confirmed revision 20 firearm and package 5 chainsword runtime. The following revision 22 firearm/package 7 chainsword integration is unreleased and has not received in-headset validation. No live deployment has been performed for this integration; deployment checks use temporary profiles. Follow the [validation status](STATUS.md), [reticle guide](RETICLE.md) and [native muzzle details](NATIVE-MUZZLE.md).
 
 ## 1. Controller-directed firearm aim and native rays
@@ -32,6 +34,6 @@ The unreleased `profile/scripts/boltgun_menu_stable.lua` leases `VR_AimMethod=0`
 
 ## Validation boundaries
 
-Offline Python/Lua tests and native harnesses exercise geometry, lifecycle and policy guards, but cannot establish OpenXR provenance, UEVR render-thread behavior, native SphereTrace calling conventions, in-game targeting or input ownership. Preserve **`verifiedInGame: false`** for firearm revision 22 and **`runtimeVerified: false`** for chainsword package 7 until the maintainer confirms those exact revisions in VR. Deployment checks must use **temporary profiles**. Do not modify the live profile, start SteamVR or inject UEVR as part of repository maintenance.
+Offline Python/Lua tests and native harnesses exercise geometry, lifecycle and policy guards, but cannot establish OpenXR provenance, UEVR render-thread behavior, native SphereTrace calling conventions, in-game targeting or input ownership. Preserve **`verifiedInGame: false`** for firearm revision 23 and **`runtimeVerified: false`** for chainsword package 8 until the maintainer confirms those exact revisions in VR. Deployment checks must use **temporary profiles**. Do not modify the live profile, start SteamVR or inject UEVR as part of repository maintenance.
 
 Background research: [RolandWinston/Boltgun-VR](https://github.com/RolandWinston/Boltgun-VR); [source and license notices](SOURCE-AND-NOTICES.md).

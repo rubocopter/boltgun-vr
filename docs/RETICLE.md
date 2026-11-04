@@ -1,6 +1,6 @@
-# World reticle (unreleased revision 22)
+# World reticle (revision 22 core; candidate 23)
 
-Revision 22 adds a world-space aiming marker for the tracked 3D firearms. It is **unreleased and not verified in VR**. Released v1.0.2 retains revision 20/package 5 and does not include this reticle. Deployment checks use temporary profiles. Installing a candidate does not establish VR validation.
+Revision 22 introduced the world-space aiming marker for tracked 3D firearms; the maintainer reported it working in the 4 November 2026 session. Candidate 23 corrects deferred component cleanup and adds native renderer-emission alignment. Those changed paths still need VR confirmation and retain false runtime verification flags. Released v1.0.2 retains revision 20/package 5 and does not include this reticle. Deployment checks use temporary profiles. Installing a candidate does not establish VR validation.
 
 ## For players
 
@@ -31,13 +31,13 @@ All trace, placement and HUD operations run on post-engine tick. `LineTraceSingl
 
 HUD suppression checks the owned `Gameplay_HUD_C`, its `Gameplay_HUD_UI_C` widget, `W_PlayerHUD_Crosshair_C` and the exact `UMG.Image` at `WidgetTree.Crosshair`. The module saves and journals the original image opacity before setting it to zero. It restores that opacity only if the object identity still matches and the image still has the module's zero opacity, preserving intervening external changes.
 
-The `bolter3d.reticle.owned` ownership journal records engine, pawn, component and optional HUD identities. Script reset only stops the old instance; it performs no UObject cleanup on the reset/UI thread. The next instance recovers the journal on engine tick, restores the matching HUD image and destroys the owned marker component before resuming. A changed engine discards the stale journal. Invalid identities or failed restoration disable processing rather than authorize unrelated object changes. Restoration therefore depends on a subsequent engine tick and valid matching objects; it is not immediate work on the reset callback.
+The `bolter3d.reticle.owned` ownership journal records engine, pawn, component and optional HUD identities. Script reset only stops the old instance; it performs no UObject cleanup on the reset/UI thread. The next instance recovers the journal on engine tick, restores the matching HUD image and destroys the owned marker component before resuming. Revision 23 accepts that a successfully destroyed component may remain visible to `UObjectHook.exists` until garbage collection; the hidden UObject is not a destruction failure. A changed engine discards the stale journal. Invalid identities or failed restoration disable processing rather than authorize unrelated object changes. Restoration therefore depends on a subsequent engine tick and valid matching objects; it is not immediate work on the reset callback.
 
 ### Muzzle FX and the reticle
 
 The reticle shows nominal aim. Approved local Niagara muzzle FX observed through the supported creation hooks instead reuse the **exact most recent successful projectile spawn translation and rotation**, including that shot's accepted spread. The cached pose must belong to the current weapon and lease generation, be at most **two engine frames old**, and be no more than **100 ms old**. Both age limits apply; each effect keeps its authored scale.
 
-Without a fresh successful shot, legacy origin-only firing may use the mesh muzzle fallback. With free aim enabled, the effect is left untouched. The global post-tick scan that could move old effects to a later shot's pose has been removed. Effects outside the exact asset/ancestry guards, or bypassing the observed creation calls, have no correction guarantee. See [native muzzle details](NATIVE-MUZZLE.md).
+For creation hooks without a fresh successful shot, legacy origin-only firing may use the mesh muzzle fallback; free aim leaves that hook result untouched. Revision 23 separately updates active muzzle/casing emitters owned by the local renderer after the stereo pose update, using the current nominal firing transform rather than a cached shot. Detached flight/impact effects, unknown assets and dormant systems are excluded. This covers native renderer paths that bypass the reflected creation functions. See [native muzzle details](NATIVE-MUZZLE.md).
 
 ## Validation
 

@@ -32,17 +32,17 @@ Latest release: **v1.0.2** · [Changelog](CHANGELOG.md)
 > **Version 1.0.2 — installer compatibility update (1 November 2026).** If SteamVR generates an incompatible Oculus Touch SystemButton mapping, setup preserves that binding and continues with the rest of the installation. The Sense profile v7 / 3D arsenal revision 20 / chainsword package 5 runtime is unchanged from v1.0.1, which the maintainer validated in VR on 16 October 2026. The new installer fallback has offline test coverage but no new headset confirmation. DLC weapons and other controller mappings are not independently certified. [Download the player package](https://github.com/rubocopter/boltgun-vr/releases/latest).
 
 > [!NOTE]
-> **Unreleased integration: firearm revision 22 and chainsword package 7.** A world reticle samples the production native firing policy and uses a Lua world trace; controller-directed free aim remains opt-in and **off by default**. Volkite/Gravgun markers require the separately enabled experimental beam hooks and a fresh aimed pose. Package 7 adds experimental held-left-trigger blade contact through real engine collision and the original chainsword damage routine. Menu stabilization and cursor/capture handling also have runtime integration. These changes are **not verified in VR**, and no live deployment has been performed for this integration; deployment checks use temporary profiles. The last maintainer-confirmed runtime remains revision 20/package 5. See [experimental interactions](docs/EXPERIMENTAL-INTERACTIONS.md) and [reticle behavior](docs/RETICLE.md).
+> **Unreleased candidate: firearm revision 23 and chainsword package 8.** The maintainer reported a working reticle, apparently aligned shots and stable menus in the revision 22 session on 4 November 2026. Its emissions remained offset and the contact adapter failed to load. This candidate fixes module loading, adds active local renderer-emission alignment and handles deferred reticle destruction. The new corrections remain **unverified in VR**. Free aim stays opt-in and off by default; separately gated beams remain experimental. Deployment checks use temporary profiles; installing a candidate does not validate it. See [status](docs/STATUS.md), [experimental interactions](docs/EXPERIMENTAL-INTERACTIONS.md) and [reticle behavior](docs/RETICLE.md).
 
 ## What changes in VR
 
 - **Motion controls.** Head-oriented movement, turning, pause/recenter mappings and PS VR2 Sense button assignments.
 - **Weapon wheel.** Hold R3, tilt the right stick towards a weapon group and release. Return to the centre to cancel.
 - **Optional tracked firearms.** Up to ten weapon-specific 3D replacements assembled from meshes already in the installed game; the Multi-Melta and Missile Launcher require the DLC. The mod can fall back to the original sprite when a mesh fails to load.
-- **Optional chainsword.** A separate tracked model on the left controller. Released attacks, damage and sounds use the original game's mechanics; unreleased package 7 adds experimental physical contact while the left Trigger is held.
+- **Optional chainsword.** A separate tracked model on the left controller. Released attacks, damage and sounds use the original game's mechanics; unreleased package 8 adds experimental physical contact while the left Trigger is held.
 - **Presentation tweaks.** Reduced Codex reading scale, comfort options and a normally hidden UEVR menu.
 
-Firearms have experimental visual recoil and firing haptics on intercepted projectile spawns. The **released** runtime preserves native aim and spread. Unreleased revision 22 combines optional controller-directed aim with a world reticle showing the nominal firing ray, not random spread or a guaranteed impact. Observed, approved local muzzle effects can use the exact most recent successful projectile pose within two engine frames and 100 ms; the global scan that moved older effects has been removed. Unobserved effects have no correction guarantee, and unsupported beam/hitscan paths retain native behavior. Physical reloads remain unimplemented. See [reticle and effect limits](docs/RETICLE.md).
+Firearms have experimental visual recoil and firing haptics on intercepted projectile spawns. The **released** runtime preserves native aim and spread. Revision 23 retains the nominal world reticle, supports creation-hook flash alignment and additionally moves exact-allowlisted active muzzle/casing emitters attached to the local weapon renderer after the tracked pose update. Detached projectile/impact effects and unsupported beam paths retain native behavior. The marker does not predict random spread or a guaranteed hit. Physical reloads remain unimplemented. See [reticle and effect limits](docs/RETICLE.md).
 
 ## Install
 
@@ -66,7 +66,7 @@ For prerequisites, exact file locations, backups and restoring your previous pro
 
 The v1.0.1 runtime, retained in v1.0.2, keeps the 3D mode through supported save-load transitions and prevents stale component references from permanently disabling the firearm or chainsword modules. Two-hand aiming is explicitly opt-in. Read [validation scope and limitations](docs/STATUS.md) for the tested boundary.
 
-Revision 22 reticle/FX, package 7 contact and the menu changes are unreleased integration work with offline evidence only. Keep `verifiedInGame` and `runtimeVerified` false until the maintainer confirms the exact revision in VR.
+Revision 22 received partial session confirmation for the reticle and menu. Revision 23 emission corrections and package 8 contact loading remain unreleased candidates requiring headset confirmation. Keep `verifiedInGame` and `runtimeVerified` false for these changed runtimes.
 
 ## Documentation
 

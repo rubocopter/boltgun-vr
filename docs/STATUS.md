@@ -1,5 +1,7 @@
 # Current status and validation
 
+**Current candidate: firearm revision 23 / chainsword package 8.** On 4 November 2026 the maintainer reported that revision 22's reticle worked, shots appeared aligned and the menu was stable; muzzle/round-emission visuals remained offset and no chainsword contact difference was noticed. This is partial session confirmation, not full-runtime certification. The new candidate fixes a demonstrated delayed Lua module-loading failure, adds live renderer-emission alignment and accepts Unreal's deferred component garbage collection. These new corrections still require VR confirmation. Both runtime verification flags remain false.
+
 **v1.0.2 — 1 November 2026.** Sense profile **v7**, firearm arsenal **revision 20**, chainsword **package 5** (runtime unchanged since v1.0.1). Current unreleased integration targets firearm **revision 22** and chainsword **package 7**; neither has maintainer VR confirmation.
 
 The maintainer confirmed the runtime corrections in VR on 16 October 2026 (v1.0.1), after testing the installed revision with PS VR2 Sense. Released revision 20 had `verifiedInGame: true`; unreleased revision 22 must retain **`verifiedInGame: false`**, with `previousVerifiedRevision` recording revision 20. Chainsword package 7 must retain **`runtimeVerified: false`**, with package 5 recorded as the last VR-verified version. Version 1.0.2 changes the installer to preserve incompatible SteamVR bindings; this fallback is covered by isolated tests but has not been reconfirmed in VR.
@@ -14,7 +16,7 @@ The unreleased menu module leases stationary-panel settings while recognized men
 | --- | --- | --- |
 | Sense controls and weapon wheel | Maintainer VR feedback and offline input tests | Supplied PS VR2 Sense mapping; other controller profiles unvalidated |
 | 3D firearm recovery | Maintainer confirmed firearms stay 3D; repeated save-load regressions | DLC matrix and other game builds are not certified |
-| Firearm effects | Maintainer confirmation of the latest alignment correction; native harnesses | Exact allowed local effects only; unhooked beams/hitscan retain native paths |
+| Firearm effects | Revision 22 session still showed offset emissions; revision 23 has native harness coverage | New renderer path requires VR confirmation; detached/unknown effects retain native behavior |
 | Chainsword | Maintainer confirmation of the latest recovery/tracking correction; lifecycle tests | Other hardware and individual alignment preferences remain outside scope |
 | Two-hand aim | Offline tests; explicitly disabled unless opted in | Experimental comfort/offsets need separate validation |
 
@@ -32,7 +34,7 @@ Earlier revisions 18 and 19 were intermediate corrections. Revision 18 still sto
 
 ## Offline validation
 
-The repository includes Python/Lua cases, chainsword converter tests, native C++ harnesses, and isolated PowerShell setup/restore checks. MSVC x64 builds use `/W4 /WX`; source and rebuilt DLL hashes are checked before packaging. These checks establish program contracts and complement the maintainer's released-runtime VR session. Passing offline tests does not establish revision 22/package 7 headset behavior.
+The repository includes Python/Lua cases, chainsword converter tests, native C++ harnesses, and isolated PowerShell setup/restore checks. MSVC x64 builds use `/W4 /WX`; source and rebuilt DLL hashes are checked before packaging. These checks establish program contracts and complement the maintainer's released-runtime VR session. Passing offline tests does not establish revision 23/package 8 headset behavior.
 
 Deployment checks use temporary profiles. A candidate may replace the installed profile when explicitly authorized by the maintainer; installation does not establish VR validation. Repository maintenance does not start SteamVR or inject UEVR.
 

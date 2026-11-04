@@ -81,7 +81,7 @@
   {
     "source": "build\\plugins\\boltgun_muzzle.dll",
     "target": "${ProfileRoot}\\plugins\\boltgun_muzzle.dll",
-    "sha256": "E4AEEF30956DB8D2D011B15133A8EDCD9A1051C3EC6D9F7361112686A18607DB",
+    "sha256": "B4E6B53B5E3046A2B7CA27B8EC9DAC051D5B90AD3EFF0608CC8506B64DB1F693",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional exact-build ten-firearm muzzle bridge; installed only by Bolter3D.ps1; included for original-profile restoration"
@@ -89,7 +89,7 @@
   {
     "source": "src\\lua\\boltgun_chainsword.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_chainsword.lua",
-    "sha256": "752C985395AAF0340A93DD31CAD55EFB9DED56DCBC165221587184A5F3A19EA2",
+    "sha256": "3AD30C0815D24432F8FBB6707585BEFB19B2009DC794FF74F2CFD4F28CC7BAC1",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional external Chainsword; installed by Chainsword3D.ps1"
@@ -145,7 +145,7 @@
   {
     "source": "src\\lua\\boltgun_reticle.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_reticle.lua",
-    "sha256": "A7ABC512BA8CE543229FACEC17AAF673FB2CE485DF75EC3DDBA55BF3DFA0949A",
+    "sha256": "61DD1E5D376867A45A224848ECBDE820B75640BA59C5F473494995525D2F8F1E",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional runtime dependency; installed with its 3D module and included in profile restoration inventory"
@@ -153,7 +153,7 @@
   {
     "source": "src\\lua\\boltgun_chainsword_contact.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_chainsword_contact.lua",
-    "sha256": "C2973E641BF42239BD7C7ACCD101E91E22422C8CE137372D81BDC637B5548ACB",
+    "sha256": "B51AC7EAE2E1ED9BF5F73CAF2989D1041151D40A7992D0E3F2DD0555227443AE",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional runtime dependency; installed with its 3D module and included in profile restoration inventory"
