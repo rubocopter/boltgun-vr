@@ -6,6 +6,16 @@ namespace reticle_boundary_test {
 static int accesses{},writes{},acks{},setter_lookups{};
 static bool hidden=true,visible=false,throw_setter=false,throw_ack=false;
 static bool setter_missing=false,missing_property=false,parameter=true;
+static bool silent_setter=false,invalid_readback=false;
+static Transform observed{};
+static char diagnostic[512]{};
+static int diagnostic_logs{};
+static void log(const char* format,...) {
+    if(!std::strstr(format,"[Boltgun reticle native]")) return;
+    ++diagnostic_logs;
+    va_list args;va_start(args,format);
+    vsnprintf_s(diagnostic,sizeof(diagnostic),_TRUNCATE,format,args);va_end(args);
+}
 static int setter_size=160,transform_at=16,sweep_at=0;
 static UEVR_UObjectHandle local=id(1),owner=id(1),component_class=id(400);
 static Transform written{};
@@ -44,6 +54,8 @@ static void set_bool(UEVR_UObjectHandle object,const wchar_t* name,bool value) {
 static UEVR_UFunctionHandle function(UEVR_UStructHandle cls,const wchar_t* name) {
     ++accesses;
     if(cls==reinterpret_cast<UEVR_UStructHandle>(id(400))) {
+        if(std::wcscmp(name,L"K2_GetComponentToWorld")==0)
+            return reinterpret_cast<UEVR_UFunctionHandle>(405);
         assert(std::wcscmp(name,L"K2_SetWorldTransform")==0);
         ++setter_lookups;
         return setter_missing?nullptr:reinterpret_cast<UEVR_UFunctionHandle>(404);
@@ -72,6 +84,11 @@ static int properties_size(UEVR_UStructHandle cls) {
 static void process(UEVR_UObjectHandle object,UEVR_UFunctionHandle fn,void* params) {
     ++accesses;
     if(object!=id(401)) { ::process(object,fn,params);return; }
+    if(fn==reinterpret_cast<UEVR_UFunctionHandle>(405)) {
+        Transform result=observed;
+        if(invalid_readback) result.rotation={0,0,0,0};
+        std::memcpy(params,&result,sizeof(result));return;
+    }
     assert(fn==reinterpret_cast<UEVR_UFunctionHandle>(404));
     if(throw_setter) RaiseException(0xE0000040,0,0,nullptr);
     // Reflection selects a deliberately nonzero offset. Sweep, teleport and
@@ -80,11 +97,14 @@ static void process(UEVR_UObjectHandle object,UEVR_UFunctionHandle fn,void* para
     for(int i=0;i<setter_size;++i)
         if(i<transform_at||i>=transform_at+static_cast<int>(sizeof(Transform))) assert(bytes[i]==0);
     std::memcpy(&written,bytes+transform_at,sizeof(written));++writes;
+    if(!silent_setter) observed=written;
 }
 static void reset() {
     accesses=0;writes=0;acks=0;setter_lookups=0;
     hidden=true;visible=false;throw_setter=false;throw_ack=false;
     setter_missing=false;missing_property=false;parameter=true;
+    silent_setter=false;invalid_readback=false;observed={};diagnostic[0]='\0';diagnostic_logs=0;
+    projectile_reticle::diagnostic={};
     setter_size=160;transform_at=16;sweep_at=0;
     local=id(1);owner=id(1);component_class=id(400);written={};
     selected_type=0;unequipped=false;expired_object=nullptr;objects_live=true;
@@ -144,6 +164,7 @@ static void run() {
     auto api=*g_api;auto sdk=*api.sdk;auto hook=*sdk.uobject_hook;
     auto objects=*sdk.uobject;auto funcs=*sdk.functions;auto array=*sdk.uobject_array;
     auto structs=*sdk.ustruct;auto props=*sdk.fproperty;
+    auto functions=*api.functions;functions.log_info=log;api.functions=&functions;
     UEVR_FArrayPropertyFunctions array_props{};
     UEVR_FMallocFunctions allocator{};
     hook.exists=exists;objects.get_outer=outer;objects.get_class=klass;objects.is_a=is_a;
@@ -212,6 +233,27 @@ static void run() {
     reset();transform_at=120;rejected();
     reset();sweep_at=16;rejected();
     reset();sweep_at=160;rejected();
+
+    // ProcessEvent returning is not proof that a scene component moved. A
+    // no-op write must not acknowledge the previous marker placement as a ray.
+    reset();silent_setter=true;request();
+    assert(writes==1&&acks==0&&!visible);
+    assert(std::strstr(diagnostic,"transform-readback"));
+    reset();invalid_readback=true;request();assert(writes==1&&acks==0&&!visible);
+    assert(std::strstr(diagnostic,"transform-readback"));
+    assert(projectile_reticle::diagnostic.acknowledgements==0);
+    reset();request();assert(visible&&acks==1);visible=false;
+    silent_setter=true;mesh_pose.translation.y+=25;request();
+    assert(writes==2&&acks==1&&!visible);
+    assert(std::strstr(diagnostic,"transform-readback"));
+    assert(projectile_reticle::diagnostic.requests==2&&projectile_reticle::diagnostic.acknowledgements==1);
+    reset();g_enabled=false;
+    for(int i=0;i<2000;++i) request();
+    assert(projectile_reticle::diagnostic.requests==2000&&diagnostic_logs<=5);
+    assert(std::strstr(diagnostic,"lease-inactive"));
+    reset();
+    for(int i=0;i<100;++i) { g_enabled=i%2==0;visible=false;request(); }
+    assert(diagnostic_logs==24&&projectile_reticle::diagnostic.requests==100);
 
     // A reflection/ProcessEvent/ack fault is isolated from projectile firing.
     reset();fail_property_query=true;rejected();assert(g_enabled&&!g_faulted);

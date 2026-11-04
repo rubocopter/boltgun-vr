@@ -2,6 +2,7 @@
 namespace renderer_emissions_test {
 static bool active=true;
 static bool throw_enumeration=false;
+static bool late_component=false;
 static int scans{};
 static void* property(UEVR_UObjectHandle obj,const wchar_t* name) {
     static bool yes=true;
@@ -14,7 +15,12 @@ static bool get_bool(UEVR_UObjectHandle obj,const wchar_t* name) {
 static int enumerate(UEVR_UClassHandle cls,UEVR_UObjectHandle* out,unsigned int capacity,bool defaults) {
     assert(cls==g_flash_component_class&&!defaults&&capacity>=1);
     if(throw_enumeration) RaiseException(0xE0000042,0,0,nullptr);
-    ++scans;out[0]=id(6);return 1;
+    ++scans;
+    if(late_component) {
+        if(capacity>511) out[511]=id(6);
+        return 512;
+    }
+    out[0]=id(6);return 1;
 }
 static void run() {
     const auto* previous=g_api;
@@ -58,6 +64,10 @@ static void run() {
     on_stereo(nullptr,1,100,nullptr,nullptr,false);
     assert(flash_moves==before+4&&std::fabs(moved_flash.translation.x-420)<.002f);
     assert(std::fabs(moved_flash.rotation.w-1)<.002f&&std::fabs(moved_flash.rotation.z)<.002f);
+    late_component=true;++g_engine_frame;
+    on_stereo(nullptr,1,100,nullptr,nullptr,false);
+    assert(flash_moves==before+5); // A local emitter beyond the old 256 prefix.
+    late_component=false;
     const int moved=flash_moves;
     for(int bad=0;bad<7;++bad) {
         active=bad!=0;flash_parent=bad==1?id(40):bad==2?nullptr:id(51);

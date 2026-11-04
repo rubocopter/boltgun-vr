@@ -37,7 +37,28 @@ function M.new(uevr)
     local JOURNAL='bolter3d.reticle.owned'
     local CLASS='Class /Script/ProceduralMeshComponent.ProceduralMeshComponent'
     local state,recovered,query,descriptors,gs=nil,false,nil,nil,nil
-    local s={stopped=false}
+    local s={stopped=false,status='not-stepped',ticks=0,acks=0,traces=0,placed=0,
+        material='not-created',rejected=0,last_rejection='none'}
+    local status_tick,last_logged,log_budget=nil,nil,12
+    local function diagnostic(stage,force)
+        s.status=stage
+        if stage~='placed' then s.rejected=s.rejected+1;s.last_rejection=stage end
+        -- One small, overwritten snapshot at most every 120 post-engine ticks.
+        -- Diagnostics must never break ownership recovery or disable gameplay.
+        if not force and status_tick and s.ticks-status_tick<120 then return end
+        status_tick=s.ticks
+        local text=string.format('v1\nstage=%s\nticks=%d\nacks=%d\ntraces=%d\nplaced=%d\nrejected=%d\nlast_rejection=%s\nmaterial=%s\nphase=%s\n',
+            stage,s.ticks,s.acks,s.traces,s.placed,s.rejected,s.last_rejection,s.material,s.phase or 'none')
+        local ok=pcall(function()
+            fs.write('bolter3d.reticle.status',text)
+            assert(fs.read('bolter3d.reticle.status')==text,'Reticle status write unavailable')
+        end)
+        if log_budget>0 and (last_logged~=stage or not ok) then
+            log_budget=log_budget-1;last_logged=stage
+            pcall(uevr.params.functions.log_info,'[Boltgun reticle] Status: '..stage..
+                '; material='..s.material..(ok and '' or '; status-file-unavailable'))
+        end
+    end
     local function valid(o) return o~=nil and hook.exists(o) end
     local function prop(o,k)
         if valid(o) and o:get_class():find_property(k) then return o:get_property(k) end
@@ -111,6 +132,54 @@ function M.new(uevr)
         local v=StructObject.new(desc);for k,n in pairs(values) do v:set_property(k,n) end;return v
     end
     local function vector(p) return make(descriptors.vector,{X=p.x,Y=p.y,Z=p.z}) end
+    local material_tick=0
+    local function material(part)
+        material_tick=s.ticks
+        -- This exact cooked pickup material is independently archived as unlit.
+        -- Bind an owned instance to the generated all-white hand palette; never
+        -- change the shared game material or use the pickup's original texture.
+        local pickup_name='MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun'
+        local pickup=api:find_uobject(pickup_name)
+        local ok,path=pcall(fs.read,'hands3d.texture_path')
+        path=ok and type(path)=='string' and path:gsub('\\','/') or ''
+        if valid(pickup) and pickup:get_full_name()==pickup_name and path:match('^%a:/') and
+            path:sub(-#'/data/hands3d_color.png')=='/data/hands3d_color.png' and not path:find('[\r\n]') then
+            local rendering=api:find_uobject('Class /Script/Engine.KismetRenderingLibrary')
+            local strings=api:find_uobject('Class /Script/Engine.KismetStringLibrary')
+            if valid(rendering) and valid(strings) and rendering:find_function('ImportFileAsTexture2D') and
+                strings:find_function('Conv_StringToName') then
+                local texture=rendering:get_class_default_object():ImportFileAsTexture2D(state.owner.object,path)
+                if valid(texture) then
+                    local names=strings:get_class_default_object()
+                    local bc=names:Conv_StringToName('BC')
+                    local dmi=part:CreateDynamicMaterialInstance(0,pickup,names:Conv_StringToName('BoltgunReticleWhite'))
+                    assert(valid(dmi) and dmi~=pickup,'Reticle dynamic material unavailable')
+                    dmi:SetTextureParameterValue(bc,texture)
+                    assert(dmi:K2_GetTextureParameterValue(bc)==texture and part:GetMaterial(0)==dmi,
+                        'Reticle white texture binding rejected')
+                    s.material='cooked-unlit-white';return
+                end
+            end
+        end
+        -- A resident engine material is optional: never assume an editor debug
+        -- asset was cooked. Verify its surface/unlit/opaque contract before use.
+        local name='Material /Engine/EngineDebugMaterials/VertexColorMaterial.VertexColorMaterial'
+        local candidate=api:find_uobject(name)
+        if valid(candidate) and candidate:get_full_name()==name and
+            prop(candidate,'MaterialDomain')==0 and prop(candidate,'ShadingModel')==0 and
+            prop(candidate,'BlendMode')==0 then
+            part:SetMaterial(0,candidate)
+            assert(part:GetMaterial(0)==candidate,'Reticle unlit material rejected')
+            s.material='verified-unlit-vertex-color'
+        else
+            local actual=part:GetMaterial(0)
+            s.material='default-surface-unverified'
+            if valid(actual) then
+                s.material=s.material..'; name='..actual:get_full_name():sub(1,180)..
+                    '; shading='..tostring(prop(actual,'ShadingModel'))
+            end
+        end
+    end
     local function parameters(fn,inputs)
         assert(fn,'Missing reticle function')
         local fields,seen={},{};local field=fn:get_child_properties()
@@ -173,19 +242,28 @@ function M.new(uevr)
         image:SetRenderOpacity(0);assert(image:GetRenderOpacity()==0,'HUD opacity rejected')
     end
     local function step(pawn,weapon,enabled)
-        if not recovered and not recover() then return end
+        s.phase='recovery'
+        if not recovered and not recover() then return 'recovery-engine-unavailable' end
         if state and (not same(state.owner) or state.owner.object~=pawn or not same(state.part)) then cleanup() end
-        if not enabled or not valid(pawn) or api:get_local_pawn(0)~=pawn or not valid(weapon) or
-            not vr.is_runtime_ready() or not vr.is_hmd_active() or not vr.is_using_controllers() or
-            not vr.is_aim_allowed() or uevr.params.functions.is_drawing_ui() then hide();return end
+        local function reject(reason) hide();return reason end
+        s.phase='gates'
+        if not enabled then return reject('integration-disabled') end
+        if not valid(pawn) or api:get_local_pawn(0)~=pawn or not valid(weapon) then return reject('local-owner-unavailable') end
+        if not vr.is_runtime_ready() then return reject('runtime-not-ready') end
+        if not vr.is_hmd_active() then return reject('hmd-inactive') end
+        if not vr.is_using_controllers() then return reject('controllers-inactive') end
+        if not vr.is_aim_allowed() then return reject('aim-disallowed') end
+        if uevr.params.functions.is_drawing_ui() then return reject('uevr-menu') end
         local handler=prop(pawn,'WeaponHandlerComponent')
         local pc=api:get_player_controller(0)
         if not valid(handler) or handler:get_outer()~=pawn or prop(handler,'EquippedWeapon')~=weapon or
-            weapon:GetOwner()~=pawn or prop(pawn,'bPlayerFinishedLevelLoad')~=true or pawn:IsDead()~=false or not valid(pc) then hide();return end
+            weapon:GetOwner()~=pawn or prop(pawn,'bPlayerFinishedLevelLoad')~=true or pawn:IsDead()~=false or not valid(pc) then return reject('weapon-owner-gate') end
+        s.phase='query-reflection'
         if not query then query=prepare_query() end
         local menu=prop(prop(pc,'MyHUD'),'CurrentMenu')
-        if gs:IsGamePaused(pc)~=false or valid(menu) and menu:IsInViewport() and menu:IsVisible() then hide();return end
+        if gs:IsGamePaused(pc)~=false or valid(menu) and menu:IsInViewport() and menu:IsVisible() then return reject('paused-or-menu') end
         if not state then
+            s.phase='geometry'
             local engine=api:get_engine();assert(valid(engine),'Missing reticle engine')
             local class=api:find_uobject(CLASS);assert(valid(class),'Missing reticle component class')
             local part=api:add_component_by_class(pawn,class,false)
@@ -197,17 +275,25 @@ function M.new(uevr)
             local dispatch=assert(uevr.params.functions.dispatch_custom_event,'Reticle bridge unavailable')
             dispatch('boltgun.reticle.v1',table.concat({'mesh',tostring(pawn:get_address()),tostring(weapon:get_address()),tostring(part:get_address())},'|'))
             assert(part:GetNumSections()==1,'Reticle geometry request rejected')
+            s.phase='material';material(part)
         end
+        if s.material:match('^default%-surface') and s.ticks-material_tick>=120 then
+            s.phase='material';material(state.part.object)
+        end
+        s.phase='native-ray'
         hide(true) -- Reset acknowledgement before every synchronous request; marker remains hidden.
         local part=state.part.object
         uevr.params.functions.dispatch_custom_event('boltgun.reticle.v1',table.concat(
             {'ray',tostring(pawn:get_address()),tostring(weapon:get_address()),tostring(part:get_address())},'|'))
-        if prop(part,'bVisible')~=true then hide();return end
+        if prop(part,'bVisible')~=true then return reject('native-ack-missing') end
+        s.acks=s.acks+1
         part:SetVisibility(false,false)
-        local ray=M.ray(part:K2_GetComponentToWorld());if not ray then hide();return end
-        local camera=prop(pc,'PlayerCameraManager');if not valid(camera) then hide();return end
+        local ray=M.ray(part:K2_GetComponentToWorld());if not ray then return reject('native-ray-invalid') end
+        local camera=prop(pc,'PlayerCameraManager');if not valid(camera) then return reject('camera-unavailable') end
         local eye=camera:GetCameraLocation()
-        local placement=M.marker(ray,query(pawn,weapon,ray),{x=eye.X,y=eye.Y,z=eye.Z});if not placement then hide();return end
+        s.phase='trace';s.traces=s.traces+1
+        local placement=M.marker(ray,query(pawn,weapon,ray),{x=eye.X,y=eye.Y,z=eye.Z});if not placement then return reject('marker-invalid') end
+        s.phase='placement'
         part:K2_SetWorldLocation(vector(placement.position),false,{},true)
         part:K2_SetWorldRotation(make(descriptors.rotator,{Pitch=placement.rotation.pitch,Yaw=placement.rotation.yaw,Roll=0}),false,{},true)
         part:SetWorldScale3D(vector({x=placement.scale,y=placement.scale,z=placement.scale}))
@@ -218,20 +304,27 @@ function M.new(uevr)
         if not actual or not scale or not finite(scale.X) or not finite(scale.Y) or not finite(scale.Z) or
             math.abs(scale.X-placement.scale)>.01 or math.abs(scale.Y-placement.scale)>.01 or
             math.abs(scale.Z-placement.scale)>.01 or math.abs(actual.origin.x-p.x)>.05 or
-            math.abs(actual.origin.y-p.y)>.05 or math.abs(actual.origin.z-p.z)>.05 then hide();return end
+            math.abs(actual.origin.y-p.y)>.05 or math.abs(actual.origin.z-p.z)>.05 then return reject('placement-readback') end
         local dx,dy,dz=eye.X-p.x,eye.Y-p.y,eye.Z-p.z
         local facing=(actual.direction.x*dx+actual.direction.y*dy+actual.direction.z*dz)/math.sqrt(dx*dx+dy*dy+dz*dz)
-        if facing<.999 then hide();return end
+        if facing<.999 then return reject('facing-readback') end
+        s.phase='visibility'
         part:SetVisibility(true,false);part:SetHiddenInGame(false,false)
+        if prop(part,'bVisible')~=true or prop(part,'bHiddenInGame')~=false then return reject('visibility-readback') end
+        s.phase='hud'
         suppress_hud(pc)
+        s.placed=s.placed+1
+        return 'placed'
     end
     function s:step(pawn,weapon,enabled)
         if self.stopped then return end
+        self.ticks=self.ticks+1
         local ok,err=pcall(step,pawn,weapon,enabled)
         if not ok then
             self.stopped=true;pcall(hide);pcall(cleanup)
+            diagnostic('api-error',true)
             uevr.params.functions.log_info('[Boltgun reticle] Disabled: '..tostring(err))
-        end
+        else diagnostic(err or 'unknown') end
     end
     function s:stop() self.stopped=true end -- Reset callback never accesses UObjects; next instance recovers.
     return s

@@ -9,6 +9,7 @@
 #include "../../../dependencies/uevr/API.h"
 #include "muzzle_math.hpp"
 #include "weapon_profiles.hpp"
+#include "../white_palette.hpp"
 #pragma comment(lib,"bcrypt.lib")
 using namespace boltgun;
 using BarrelFn=Transform*(*)(UEVR_UObjectHandle,Transform*,float,float,void*,bool);
@@ -36,6 +37,7 @@ static int g_flash_new_transform_offset{-1};
 static std::atomic<unsigned long> g_emission_scanned{},g_emission_owned{},g_emission_moved{},g_emission_dormant{};
 static ULONGLONG g_emission_frame{};
 static unsigned long long g_emission_generation{};
+static std::atomic<unsigned long> g_emission_overflow{};
 static std::atomic<DWORD> g_engine_thread{};
 static std::atomic<bool> g_enabled{};
 static std::atomic<bool> g_faulted{};
@@ -705,6 +707,8 @@ static bool flash_attached_post(UEVR_UFunctionHandle fn,UEVR_UObjectHandle obj,v
     return flash_post(fn,obj,frame,result,true);
 }
 
+#include "native_emissions.hpp"
+
 static void align_renderer_emissions() {
     if(GetCurrentThreadId()!=g_engine_thread.load()||!g_enabled.load()||!g_lease.ready||
        g_flash_faulted.load()||!g_flash_world_fn||!g_flash_set_fn||g_flash_new_transform_offset<0||
@@ -716,9 +720,14 @@ static void align_renderer_emissions() {
         Transform muzzle{};
         if(!projectile_reticle::sample(g_lease.pawn,g_lease.weapon,muzzle)) return;
         g_emission_frame=g_engine_frame;g_emission_generation=g_lease_generation;
-        std::array<UEVR_UObjectHandle,256> components{};
+        // The API returns TOTAL matching objects, even if its output capacity
+        // truncates them. Long sessions can leave the local effects beyond 256.
+        // Keep the larger bounded scratch allocation off the stereo thread stack.
+        static thread_local std::array<UEVR_UObjectHandle,4096> components{};
+        components.fill(nullptr);
         const int count=g_api->sdk->uobject_hook->get_objects_by_class(
             g_flash_component_class,components.data(),static_cast<unsigned>(components.size()),false);
+        if(count>static_cast<int>(components.size())) g_emission_overflow.fetch_add(1,std::memory_order_relaxed);
         for(int i=0;i<count&&i<static_cast<int>(components.size());++i) {
             const auto component=components[i];
             g_emission_scanned.fetch_add(1,std::memory_order_relaxed);
@@ -822,9 +831,11 @@ static void on_tick(UEVR_UGameEngineHandle,float delta) {
     g_api->functions->log_info("[Boltgun muzzle 3D] Scoped beam: hooked=%d traces=%lu redirected=%lu visuals=%lu",
         int(g_beam_hooked.load()),g_beam_traces.exchange(0),
         g_beam_redirects.exchange(0),g_beam_fx_moves.exchange(0));
-    g_api->functions->log_info("[Boltgun muzzle 3D] Renderer emissions: scanned=%lu owned=%lu moved=%lu dormant=%lu",
+    g_api->functions->log_info("[Boltgun muzzle 3D] Renderer emissions: scanned=%lu owned=%lu moved=%lu dormant=%lu overflow=%lu",
         g_emission_scanned.exchange(0),g_emission_owned.exchange(0),
-        g_emission_moved.exchange(0),g_emission_dormant.exchange(0));
+        g_emission_moved.exchange(0),g_emission_dormant.exchange(0),g_emission_overflow.exchange(0));
+    g_api->functions->log_info("[Boltgun muzzle 3D] Native emission: hooked=%d calls=%lu redirected=%lu",
+        int(g_native_emission_hooked.load()),g_native_emission_calls.exchange(0),g_native_emission_redirects.exchange(0));
     g_api->functions->log_info("[Boltgun muzzle 3D] Shot feedback: spawned=%lu null=%lu queued=%lu noVisual=%lu capped=%lu discarded=%lu consumed=%lu",
         g_feedback[SpawnSucceeded].exchange(0),g_feedback[SpawnFailed].exchange(0),
         g_feedback[ShotQueued].exchange(0),g_feedback[ShotNoVisual].exchange(0),
@@ -1056,8 +1067,22 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
         reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))+0x10616a0,
         reinterpret_cast<void*>(spawn_detour),reinterpret_cast<void**>(&g_spawn_original));
     if(id<0) api->functions->log_warn("[Boltgun muzzle 3D] Hook unavailable; retaining native firing");
-    else api->functions->log_info("[Boltgun muzzle 3D] Revision 23: native renderer emissions and nominal reticle; optional frame-gated free aim");
+    else api->functions->log_info("[Boltgun muzzle 3D] Revision 24: pre-activation native emission origins and diagnostic world reticle");
     auto* module=reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr));
+    if(api->functions->get_persistent_dir) {
+        wchar_t directory[32768]{};
+        api->functions->get_persistent_dir(directory,32768);
+        if(directory[0]) {
+            try { boltgun_presentation::prepare_white_palette(std::filesystem::path(directory)); }
+            catch(...) { api->functions->log_warn("[Boltgun reticle] White palette preparation unavailable"); }
+        }
+    }
+    if(id>=0&&native_emission_signature(module)) {
+        const int emission_hook=api->functions->register_inline_hook(module+0xd778a0,
+            reinterpret_cast<void*>(native_emission_detour),reinterpret_cast<void**>(&g_native_emission_original));
+        g_native_emission_hooked.store(emission_hook>=0);
+        api->functions->log_info("[Boltgun muzzle 3D] Native emission origin hook: %s",emission_hook>=0?"ready":"unavailable");
+    }
     if(id>=0&&experimental_beam_hooks_requested()&&supported_beam_module(module)) {
         // Retain every installed trampoline even if a later registration fails.
         // The opt-in beam scope remains inert unless all five hooks succeed.

@@ -216,6 +216,93 @@ class ReticleLifecycleTests(unittest.TestCase):
         self.assertEqual(self.value('ctx.destroyed'), 1)
         self.assertEqual(self.value('ctx.journal'), '')
 
+    def test_status_identifies_silent_rejection_and_survives_without_log_spam(self):
+        self.run_lua('ctx.ack=false')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'native-ack-missing')
+        self.assertIn('stage=native-ack-missing', self.value('ctx.status_file'))
+        self.run_lua('for i=1,600 do reticle:step(pawn,weapon,true) end')
+        self.assertLessEqual(self.value('ctx.status_writes'), 6)
+        self.assertLessEqual(self.value('#ctx.logs'), 3)
+        self.assertEqual(self.value('ctx.traces'), 0)
+        self.run_lua('ctx.ack=true')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'placed')
+        self.assertTrue(self.value('part.bVisible'))
+
+    def test_status_distinguishes_gates_sample_placement_and_facing(self):
+        for change, stage in (
+                ('enabled=false', 'integration-disabled'),
+                ('ctx.runtime=false', 'runtime-not-ready'),
+                ('handler.outer=foreign', 'weapon-owner-gate'),
+                ('ctx.paused=true', 'paused-or-menu'),
+                ('ctx.sample.Rotation.W=0', 'native-ray-invalid'),
+                ('camera.valid=false', 'camera-unavailable'),
+                ('ctx.initial=true', 'marker-invalid'),
+                ('ctx.noop_location=true', 'placement-readback'),
+                ('ctx.noop_rotation=true', 'facing-readback')):
+            with self.subTest(stage=stage):
+                self.setUp()
+                self.frame()
+                self.run_lua('enabled=true;' + change)
+                self.run_lua('reticle:step(pawn,weapon,enabled)')
+                self.assertEqual(self.value('reticle.status'), stage)
+                self.assert_hidden()
+
+    def test_status_reports_default_material_and_verified_unlit_override(self):
+        self.frame()
+        self.assertIn('material=default-surface-unverified', self.value('ctx.status_file'))
+        self.setUp()
+        self.run_lua('ctx.unlit_available=true')
+        self.frame()
+        self.assertTrue(self.value('part.material==unlit'))
+        self.assertIn('material=verified-unlit-vertex-color', self.value('ctx.status_file'))
+        for change in ('unlit.ShadingModel=1', 'unlit.MaterialDomain=1', 'unlit.BlendMode=1'):
+            self.setUp()
+            self.run_lua('ctx.unlit_available=true;' + change)
+            self.frame()
+            self.assertIsNone(self.value('part.material'))
+            self.assertIn('material=default-surface-unverified', self.value('ctx.status_file'))
+
+    def test_diagnostic_file_failure_does_not_disable_marker_or_break_ownership(self):
+        self.run_lua('ctx.status_fail=true')
+        self.frame()
+        self.assertFalse(self.value('reticle.stopped'))
+        self.assertTrue(self.value('part.bVisible'))
+        self.assertNotEqual(self.value('ctx.journal'), '')
+
+    def test_cooked_unlit_pickup_material_uses_white_palette_and_owned_instance(self):
+        self.run_lua("ctx.pickup_available=true;ctx.palette_path='E:/Temporary Profile/data/hands3d_color.png'")
+        self.frame()
+        self.assertTrue(self.value('part.material and part.material~=pickup and part.material.texture==texture'))
+        self.assertEqual(self.value('ctx.imports'), 1)
+        self.assertIn('material=cooked-unlit-white', self.value('ctx.status_file'))
+        self.frame()
+        self.assertEqual(self.value('ctx.imports'), 1)
+
+    def test_white_fallback_retries_after_hands_palette_becomes_available(self):
+        self.run_lua('ctx.pickup_available=true')
+        self.frame()
+        self.assertEqual(self.value('reticle.material'), 'default-surface-unverified')
+        self.run_lua("ctx.palette_path='E:/Temporary Profile/data/hands3d_color.png';"
+                     'for i=1,120 do reticle:step(pawn,weapon,true) end')
+        self.assertEqual(self.value('reticle.material'), 'cooked-unlit-white')
+        self.assertTrue(self.value('part.bVisible and not reticle.stopped'))
+
+    def test_white_fallback_rejects_untrusted_paths_and_failed_texture_binding(self):
+        for path in ('relative.png', 'E:/other.png', 'E:/data/hands3d_color.png\nignored'):
+            self.setUp()
+            self.lua.globals().ctx.palette_path = path
+            self.run_lua('ctx.pickup_available=true')
+            self.frame()
+            self.assertEqual(self.value('ctx.imports'), 0)
+            self.assertFalse(self.value('reticle.stopped'))
+        self.setUp()
+        self.run_lua("ctx.pickup_available=true;ctx.palette_path='E:/data/hands3d_color.png';ctx.reject_texture=true")
+        self.frame()
+        self.assertTrue(self.value('reticle.stopped'))
+        self.assert_hidden()
+
     def test_successive_frames_retain_exact_hud_snapshot_until_disable(self):
         self.frame()
         self.run_lua('journal_after_first=ctx.journal;writes_after_first=ctx.journal_writes')
@@ -391,6 +478,7 @@ class ReticleLifecycleTests(unittest.TestCase):
 # from the engine's usual order, and the breaker accepts only the actual trace hit.
 FIXTURE = r'''
 ctx={touches=0,created=0,destroyed=0,traces=0,breaks=0,placements=0,journal='',journal_writes=0,
+ status_file='',status_writes=0,logs={},imports=0,palette_path='',
  opacity_writes={},runtime=true,hmd=true,controllers=true,aim=true,ack=true,mesh_ack=true,
  hit=true,blocking=true,time=.01,eye={X=10,Y=20,Z=30},
  sample={Translation={X=10,Y=20,Z=30},Rotation={X=0,Y=0,Z=math.sqrt(.5),W=math.sqrt(.5)}}}
@@ -438,6 +526,21 @@ function menu:IsInViewport()touch('IsInViewport');return true end
 function menu:IsVisible()touch('IsVisible');return true end
 partclass=obj('Class /Script/ProceduralMeshComponent.ProceduralMeshComponent','partclass')
 partclass.find_property=generic.find_property
+unlit=obj('Material /Engine/EngineDebugMaterials/VertexColorMaterial.VertexColorMaterial','unlit')
+unlit.ShadingModel=0;unlit.MaterialDomain=0;unlit.BlendMode=0
+pickup=obj('MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun','pickup')
+texture=obj('Texture2D Test.WhitePalette','texture')
+strings=obj('Class /Script/Engine.KismetStringLibrary','strings')
+function strings:find_function(name)return name=='Conv_StringToName' and {} end
+function strings:get_class_default_object()return self end
+function strings:Conv_StringToName(name)return name end
+rendering=obj('Class /Script/Engine.KismetRenderingLibrary','rendering')
+function rendering:find_function(name)return name=='ImportFileAsTexture2D' and {} end
+function rendering:get_class_default_object()return self end
+function rendering:ImportFileAsTexture2D(owner,path)
+ touch('ImportFileAsTexture2D');assert(owner==pawn and path==ctx.palette_path)
+ ctx.imports=ctx.imports+1;return texture
+end
 function newpart()
  local o=obj('ProceduralMeshComponent Test.Part','part'..ctx.created,pawn);o.class=partclass
  o.bVisible=false;o.bHiddenInGame=true;o.sections=0
@@ -450,6 +553,17 @@ function newpart()
  function o:SetOwnerNoSee(v)touch('SetOwnerNoSee');ctx.owner_no_see=v end
  function o:SetOnlyOwnerSee(v)touch('SetOnlyOwnerSee');ctx.only_owner=v end
  function o:GetNumSections()touch('GetNumSections');return self.sections end
+ function o:GetMaterial(index)touch('GetMaterial');assert(index==0);return self.material end
+ function o:SetMaterial(index,material)touch('SetMaterial');assert(index==0);self.material=material end
+ function o:CreateDynamicMaterialInstance(index,source,name)
+  touch('CreateDynamicMaterialInstance');assert(index==0 and source==pickup and name=='BoltgunReticleWhite')
+  local dmi=obj('MaterialInstanceDynamic Test.ReticleWhite','dmi',self)
+  function dmi:SetTextureParameterValue(key,value)
+   touch('SetTextureParameterValue');assert(key=='BC');if not ctx.reject_texture then self.texture=value end
+  end
+  function dmi:K2_GetTextureParameterValue(key)touch('K2_GetTextureParameterValue');assert(key=='BC');return self.texture end
+  self.material=dmi;return dmi
+ end
  function o:K2_GetComponentToWorld()touch('K2_GetComponentToWorld');return self.transform end
  function o:K2_SetWorldLocation(v,sweep,hit,teleport)
   touch('K2_SetWorldLocation');assert(not sweep and type(hit)=='table' and teleport)
@@ -531,19 +645,31 @@ StructObject={new=function(desc)
  touch('StructObject.new');assert(desc.valid)
  return {set_property=function(self,k,v)self[k]=v end}
 end}
-fs={read=function(path)assert(path=='bolter3d.reticle.owned');return ctx.journal end,
- write=function(path,text)assert(path=='bolter3d.reticle.owned');ctx.journal_writes=ctx.journal_writes+1;ctx.journal=text end}
+fs={read=function(path)
+ if path=='hands3d.texture_path' then return ctx.palette_path end
+ if path=='bolter3d.reticle.status' then return ctx.status_file end
+ assert(path=='bolter3d.reticle.owned');return ctx.journal end,
+ write=function(path,text)
+ if path=='bolter3d.reticle.status' then
+  assert(not ctx.status_fail,'diagnostic disk failure')
+  ctx.status_writes=ctx.status_writes+1;ctx.status_file=text;return
+ end
+ assert(path=='bolter3d.reticle.owned');ctx.journal_writes=ctx.journal_writes+1;ctx.journal=text end}
 uevr={api={get_engine=function()touch('get_engine');return engine end,
  get_local_pawn=function(_,index)touch('get_local_pawn');assert(index==0);return ctx.foreign_local and foreign or pawn end,
  get_player_controller=function(_,index)touch('get_player_controller');assert(index==0);return controller end,
- find_uobject=function(_,name)touch('find_uobject');return objects[name] end,
+ find_uobject=function(_,name)
+  touch('find_uobject');if name==unlit.name and not ctx.unlit_available then return nil end
+  if name==pickup.name and not ctx.pickup_available then return nil end
+  return objects[name] end,
  add_component_by_class=function(_,owner,class,deferred)
   touch('add_component_by_class');assert(owner==pawn and class==partclass and deferred==false)
   ctx.created=ctx.created+1;part=newpart();return part
  end},types={UObjectHook={exists=function(o)touch('exists');return o and o.valid==true end}},
  params={vr={is_runtime_ready=function()return ctx.runtime end,is_hmd_active=function()return ctx.hmd end,
  is_using_controllers=function()return ctx.controllers end,is_aim_allowed=function()return ctx.aim end},
- functions={is_drawing_ui=function()return ctx.menu==true end,log_info=function(msg)ctx.log=msg end,
+ functions={is_drawing_ui=function()return ctx.menu==true end,
+ log_info=function(msg)ctx.log=msg;ctx.logs[#ctx.logs+1]=msg end,
  dispatch_custom_event=function(event,payload)
   assert(event=='boltgun.reticle.v1')
   local command,p,w,c=payload:match('^([^|]+)|([^|]+)|([^|]+)|([^|]+)$')
