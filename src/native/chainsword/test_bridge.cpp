@@ -33,6 +33,12 @@ static UEVR_Vector3f grip_position{};
 static int calls{},updates{},allocated{},freed{};
 static std::set<void*> allocations;
 static std::vector<chainsword::V3> copied_positions;
+static int expected_vertices=3;
+static bool hand_hidden=true,hand_visible=false;
+static bool get_bool(UEVR_UObjectHandle component,const wchar_t* name) {
+    assert(component==handle<UEVR_UObjectHandle>(&fake_component));
+    return !std::wcscmp(name,L"bHiddenInGame")?hand_hidden:hand_visible;
+}
 static UEVR_UObjectHandle obj(void* p){return handle<UEVR_UObjectHandle>(p);}
 static bool is_live(UEVR_UObjectHandle o){return o!=nullptr;}
 static UEVR_UClassHandle klass(UEVR_UObjectHandle){return handle<UEVR_UClassHandle>(&fake_class);}
@@ -83,7 +89,7 @@ static void process(UEVR_UObjectHandle component,UEVR_UFunctionHandle f,void* po
         std::memcpy(&a,args+(update?update_props[i].offset:props[i].offset),16);
         assert(allocations.count(a.data)==1);
     }
-    Array vertices{};std::memcpy(&vertices,args+8,16);assert(vertices.num==3&&vertices.max==3);
+    Array vertices{};std::memcpy(&vertices,args+8,16);assert(vertices.num==expected_vertices&&vertices.max==expected_vertices);
     const auto p=static_cast<chainsword::V3*>(vertices.data);copied_positions.assign(p,p+vertices.num);
     Array colors{},tangents{};
     std::memcpy(&colors,args+(update?56:72),16);std::memcpy(&tangents,args+(update?72:88),16);
@@ -185,5 +191,21 @@ int main(){
     props[1].offset=108;assert(!fill(obj(&fake_pawn),obj(&fake_component)));props[1].offset=8;
     native=false;assert(!fill(obj(&fake_pawn),obj(&fake_component)));
     assert(calls==1&&allocations.empty());
+    objects.get_bool_property=get_bool;
+    native=true;expected_vertices=576;engine_thread=GetCurrentThreadId();
+    const auto hand_request=std::to_string(reinterpret_cast<uintptr_t>(obj(&fake_pawn)))+"|"+
+        std::to_string(reinterpret_cast<uintptr_t>(obj(&fake_component)))+"|0";
+    const auto sword_positions=mesh.positions;
+    event("boltgun.hands.v1",hand_request.c_str());
+    assert(calls==2&&allocations.empty()&&copied_positions.size()==576);
+    assert(mesh.positions.size()==sword_positions.size()&&mesh.positions[0].x==sword_positions[0].x);
+    for(int bad=0;bad<5;++bad) {
+        hand_visible=bad==0;hand_hidden=bad!=1;correct_owner=bad!=2;hmd=bad!=3;ui=bad==4;
+        event("boltgun.hands.v1",hand_request.c_str());assert(calls==2&&allocations.empty());
+    }
+    hmd=true;ui=false;correct_owner=true;hand_hidden=true;hand_visible=false;
+    engine_thread=0;event("boltgun.hands.v1",hand_request.c_str());assert(calls==2);
+    engine_thread=GetCurrentThreadId();
+    event("boltgun.hands.v1",(hand_request+"x").c_str());assert(calls==2);
     std::puts("Chainsword bridge: const-array ABI, allocator and ownership guards passed");
 }

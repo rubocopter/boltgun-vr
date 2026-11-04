@@ -10,6 +10,7 @@
 #include "../../../dependencies/uevr/API.h"
 #include "mesh_data.hpp"
 #include "motion_probe.hpp"
+#include "../white_palette.hpp"
 #pragma comment(lib,"bcrypt.lib")
 static const UEVR_PluginInitializeParam* api{};
 static std::atomic<DWORD> engine_thread{};
@@ -66,7 +67,7 @@ struct EngineArrays {
         return {pointers[slot],static_cast<int32_t>(values.size()),static_cast<int32_t>(values.size())};
     }
 };
-static bool fill(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component) {
+static bool fill_geometry(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component,const chainsword::Mesh& geometry) {
     if(!owned_component(pawn,component))return false;
     const auto cls=reinterpret_cast<UEVR_UClassHandle>(api->sdk->uobject_array->find_uobject(
         L"Class /Script/ProceduralMeshComponent.ProceduralMeshComponent"));
@@ -95,14 +96,17 @@ static bool fill(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component) {
     }
     auto allocator=api->sdk->malloc->get();if(!allocator)return false;
     EngineArrays storage;storage.allocator=allocator;
-    const Array values[]={storage.copy(mesh.positions,0),storage.copy(mesh.indices,1),
-                          storage.copy(mesh.normals,2),storage.copy(mesh.uvs,3)};
+    const Array values[]={storage.copy(geometry.positions,0),storage.copy(geometry.indices,1),
+                          storage.copy(geometry.normals,2),storage.copy(geometry.uvs,3)};
     for(size_t i=0;i<4;++i)std::memcpy(params.data()+offsets[i],&values[i],16);
     // Collision, vertex colors and tangents stay zero. Unlit BC material does
     // not use a tangent-space normal; native code copies these const arrays.
     api->sdk->uobject->process_event(component,fn,params.data());
     return true;
 }
+static bool fill(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component) { return fill_geometry(pawn,component,mesh); }
+
+#include "tracked_hands.hpp"
 static bool update_section(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component){
     if(!owned_component(pawn,component))return false;
     const auto cls=reinterpret_cast<UEVR_UClassHandle>(api->sdk->uobject_array->find_uobject(
@@ -219,6 +223,7 @@ static void event_inner(const char* data) {
                               "[Boltgun Chainsword 3D] Runtime contract unavailable; sprite retained");
 }
 static void event(const char* name,const char* data) {
+    if(tracked_hands_event(name,data)) return;
     if(!name||std::strcmp(name,"boltgun.chainsword.v1")||disabled||
        GetCurrentThreadId()!=engine_thread.load()||!api->vr->is_hmd_active()||
        !api->vr->is_using_controllers()||api->functions->is_drawing_ui())return;
@@ -261,6 +266,7 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
     // has no get_persistent_dir. Supply a UTF-8 absolute filename only after
     // the actual native mesh and packaged texture are present.
     const auto root=std::filesystem::path(dir);
+    boltgun_presentation::prepare_white_palette(root);
     // Explicit diagnostic opt-in. Never install or change the live profile.
     // This is a read-only sample probe with no gameplay effects.
     {
