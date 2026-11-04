@@ -688,8 +688,32 @@ uevr.params.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
     end
 end)
 
+-- Reticle queries run synchronously after the engine tick; native sampling uses
+-- the projectile lease rather than depending on native callback ordering.
+local reticle
+if uevr.params.sdk.callbacks.on_post_engine_tick ~= nil then
+    local loaded, module = pcall(require, 'boltgun_reticle')
+    if loaded then
+        local created, instance = pcall(module.new, uevr)
+        if created then reticle = instance end
+    end
+    if reticle then
+        uevr.params.sdk.callbacks.on_post_engine_tick(function()
+            local weapon
+            if not stopped and valid(owner) then
+                weapon = reference(reference(owner, 'WeaponHandlerComponent'), 'EquippedWeapon')
+            end
+            reticle:step(owner, weapon, not stopped and mode == 'preview' and
+                current_component(owned) and muzzle_published and not muzzle_failed)
+        end)
+    else
+        report('World reticle unavailable; retaining original HUD reticle')
+    end
+end
+
 uevr.params.sdk.callbacks.on_script_reset(function()
     stopped = true
+    if reticle then reticle:stop() end
     revoke_muzzle()
     -- No Unreal or controller-state access on a reset/UI thread. The next instance
     -- resolves the verified ownership journal and tears down on its first engine tick.

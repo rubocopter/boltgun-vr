@@ -16,7 +16,7 @@ python -m venv .venv
 ```
 
 The build finds MSVC via `vswhere`; supply `-DevCmd` for a custom toolchain.
-Four native harnesses compile/run with `/W4 /WX`. DLLs go to `build/plugins`, other
+Five native harnesses compile/run with `/W4 /WX`. DLLs go to `build/plugins`, other
 outputs under `build/muzzle` and `build/chainsword`. The build refreshes native manifest
 hashes and preserves recognised previous hashes. Review JSON changes before committing.
 

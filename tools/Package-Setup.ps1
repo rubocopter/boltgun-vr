@@ -21,8 +21,8 @@ $scriptFiles=@('Install.ps1','Restore.ps1','Setup-BoltgunVR.ps1','Menu.ps1',
     'Play-BoltgunVR.ps1','Bolter3D.ps1','Chainsword3D.ps1','Comprobar-perfil.ps1')
 $toolFiles=@('Paths.ps1','Check-Repository.ps1','Snapshots.ps1')
 $guideFiles=@('ARCHITECTURE.md','ARSENAL.md','BUILD.md','CHAINSAW.md',
-    'CONTROLS.md','EASY-SETUP.md','INSTALACION-FACIL.es.md','INSTALL.md',
-    'NATIVE-MUZZLE.md','README.es.md','REINSTALL.md','REPOSITORY.md',
+    'CONTROLS.md','EASY-SETUP.md','EXPERIMENTAL-INTERACTIONS.md','INSTALACION-FACIL.es.md','INSTALL.md',
+    'NATIVE-MUZZLE.md','RETICLE.md','MENU.md','README.es.md','REINSTALL.md','REPOSITORY.md',
     'SOURCE-AND-NOTICES.md','STATUS.md','TROUBLESHOOTING.md')
 
 # Deployment manifests explicitly select runtime payloads. Everything else

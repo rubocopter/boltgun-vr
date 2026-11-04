@@ -35,6 +35,19 @@ if ($previewEntry -and (Test-Path -LiteralPath $previewEntry.target -PathType Le
     Write-Output 'Bolter 3D: hash/modo comprobados; esta revision del disparo requiere validacion en visor.'
 }
 $muzzleEntry = $entries | Where-Object { $_.disabled -and $_.target.EndsWith('\plugins\boltgun_muzzle.dll') }
+if ($previewEntry -and (Test-Path -LiteralPath $previewEntry.target -PathType Leaf)) {
+    $repoRoot=Split-Path -Parent $PSScriptRoot
+    $bolterPackage=Get-Content -LiteralPath (Join-Path $repoRoot 'manifests\bolter3d.package.json') -Raw | ConvertFrom-Json
+    foreach($file in @($bolterPackage.files)) {
+        if(-not $file){continue}
+        $source=Join-Path $repoRoot $file.source
+        $target=Join-Path $ProfileRoot $file.target
+        $sourceHash=if(Test-Path -LiteralPath $source){(Get-FileHash -LiteralPath $source).Hash}else{''}
+        $targetHash=if(Test-Path -LiteralPath $target){(Get-FileHash -LiteralPath $target).Hash}else{''}
+        Check-Result "Arsenal fuente: $($file.target)" ($sourceHash -eq $file.sha256)
+        Check-Result "Arsenal instalado: $($file.target)" ($targetHash -eq $file.sha256)
+    }
+}
 if ($muzzleEntry -and (Test-Path -LiteralPath $muzzleEntry.target -PathType Leaf)) {
     Check-Result 'Fuente opcional: puente de boca de fuego' ((Get-FileHash -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) $muzzleEntry.source) -Algorithm SHA256).Hash -eq $muzzleEntry.sha256)
     Check-Result 'Instalado opcional: puente de boca de fuego' ((Get-FileHash -LiteralPath $muzzleEntry.target -Algorithm SHA256).Hash -eq $muzzleEntry.sha256)

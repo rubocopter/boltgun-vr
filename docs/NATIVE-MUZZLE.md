@@ -18,9 +18,19 @@ The associated allowlist of exact firearm classes, pickup meshes and Niagara sys
 
 ## Niagara muzzle effects
 
-UEVR-owned post hooks observe reflected `SpawnSystemAtLocation` and `SpawnSystemAttached` calls. Revision 20 also relocates exact approved attached effects when their attachment ancestry resolves to the current local weapon renderer, primary plane or renderer camera. Attachment and native effect lifetime are preserved. A bounded post-engine-tick pass (up to 128 components, at most 30 times per second) covers reused systems and reapplies the weapon muzzle after the native renderer updates. Each weapon uses its own mesh-local barrel landmark; no common camera-relative offset is guessed. Unknown assets, unresolved parent state, effects outside the pose guard and unrelated impact/enemy effects keep original behavior.
+UEVR-owned post hooks observe reflected `SpawnSystemAtLocation` and `SpawnSystemAttached` calls. In the current development revision, a successful projectile spawn records its exact world translation and rotation. An approved local muzzle effect created within two engine frames and 100 ms uses that transform, retaining its authored scale. The record is scoped to the current weapon and ownership generation. When no recent shot is available, legacy origin-only firing can use the same mesh-local muzzle calculation; free aim leaves the effect untouched.
+
+Each effect is positioned at creation. The former global post-tick Niagara scan has been removed: it could move an earlier flash to a later shot's position. Native attachment and effect lifetime remain intact. Unknown assets, unresolved parent state, unrelated enemy/impact effects and invalid ownership retain original behavior. Systems that bypass both observed creation functions have no guaranteed correction.
 
 Revision 16 adds six-second bounded diagnostic windows with hook-registration state, weapon identity and fallback reasons (`invalidComponent`, `invalidAsset`, `notAllowed`, `parentUnknown`, `parentPresent`, `poseUnavailable`, `transformRejected`). Counters reset on each new valid weapon/mesh lease. These diagnostics help identify why an effect remains offset; they do not automatically repair it. See [revision 16 diagnostic reference](history/2026-10-10-revision16.md).
+
+## World reticle (unreleased revision 22)
+
+`boltgun_reticle.lua` sends synchronous `boltgun.reticle.v1` requests on Lua's post-engine tick. The native bridge creates one owned, hidden procedural cross and samples the nominal firing transform into it. It accepts only the current local pawn, equipped weapon, exact procedural component class and hidden request state on the engine thread. Each successful sample sets a request-scoped acknowledgement; Lua never reuses an old transform after a rejected request. No additional native tick callback or hook is needed.
+
+Legacy projectile aim uses `GetBarrelTransform` rotation and the same mesh-local muzzle translation as projectile spawning. Opt-in free aim uses the same display-pose freshness and ownership decision as `spawn_detour`; a rejected capture retains legacy orientation. Mesh-forward alone is not a valid legacy prediction. Volkite/Gravgun sampling requires their separately enabled, fresh scoped beam path; otherwise the original HUD remains available.
+
+Lua performs a reflected `LineTraceSingle` with the pawn and weapon ignored, decodes the actual `HitResult`, and places a depth-tested cross just before the destination. With no blocking hit, the marker is placed at the 100 m nominal endpoint. Only a valid placement suppresses the exact original HUD crosshair image. Menus, invalid samples and errors restore its saved opacity. An ownership journal permits cleanup and HUD restoration on the next engine tick after a script reset. The marker predicts the nominal collision ray, not random projectile spread, gravity, a projectile's collision radius or later target movement. See [reticle details](RETICLE.md).
 
 ## Visual recoil and haptics
 
@@ -31,5 +41,7 @@ The v3 Lua ownership journal can restore both components after a script reset an
 ## Validation boundary
 
 The revision 20 bridge, including attached/reused-effect coverage, passed offline MSVC x64 `/W4 /WX` native harnesses and simulated Lua/Python cases. The maintainer confirmed the current firearm effect alignment and gameplay in VR on 16 October 2026 with PS VR2 Sense. This confirmation covers the tested session; full DLC, Machine Spirit and other-hardware coverage is not implied. **Revision 21 is not yet verified in game.** Revision 17 changes Lua weapon selection and recovery, not the native muzzle DLL. See [revision 17 notes](history/2026-10-10-revision17.md), [experimental interactions](EXPERIMENTAL-INTERACTIONS.md), and [status](STATUS.md).
+
+Revision 22 adds the nominal world reticle and changes effect placement as described above. It retains `verifiedInGame: false`; earlier maintainer confirmation does not cover this DLL or its Lua dependencies.
 
 The native module uses UEVR's vendored MIT API header at `dependencies/uevr/API.h`; UEVR and game assets are not bundled with this source repository. Local reverse-engineering archives are intentionally unpublished.

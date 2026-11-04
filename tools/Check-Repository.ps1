@@ -13,6 +13,7 @@ $bolter = Get-Content -LiteralPath (Join-Path $repo 'manifests\bolter3d.package.
 Assert-Hash $bolter.source $bolter.sha256
 Assert-Hash $bolter.settingsSource $bolter.settingsSha256
 Assert-Hash $bolter.pluginSource $bolter.pluginSha256
+foreach ($file in @($bolter.files)) { if($file) { Assert-Hash $file.source $file.sha256 } }
 $chain = Get-Content -LiteralPath (Join-Path $repo 'manifests\chainsword3d.package.json') -Raw | ConvertFrom-Json
 Assert-Hash $chain.settingsSource $chain.settingsSha256
 foreach ($file in $chain.files) { Assert-Hash $file.source $file.sha256 }

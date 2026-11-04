@@ -5,7 +5,9 @@
     "sha256": "5AD8F073FDD12683D0FCF2A56CB0453C6C87CCE843AF53C9E1C123AB337D8F7D",
     "originalSha256": "8DB08AAD22F8F3E27086A33B76C08F268D846DD551F1414407CD2CB7C1550F77",
     "acceptedBaseSha256": "1C69FA667ECAAD0D7BA40E964B12BFACB697BA34DA99CDEB6AAC5CA9414F6006",
-    "upgradeFrom": ["93D6CECE9A05A1645919ADDB55D98F0BFD9FE715BA2BB15C657ECC59F0F67F6A"]
+    "upgradeFrom": [
+      "93D6CECE9A05A1645919ADDB55D98F0BFD9FE715BA2BB15C657ECC59F0F67F6A"
+    ]
   },
   {
     "source": "profile\\_interaction_profiles_oculus_touch_controller.json",
@@ -26,9 +28,12 @@
   {
     "source": "profile\\scripts\\boltgun_menu_stable.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_menu_stable.lua",
-    "sha256": "B9F99063F597C4E6758B0A717682A713327DEC5BF713CB5872BAA69DFE50C533",
+    "sha256": "7B4E9BCB1A9A389E1F13DA9F3690911388EFF4107EC69ECA56C80303F9323075",
     "originalSha256": null,
-    "note": "UEVR game menu aim guard; no in-game pointer bridge"
+    "note": "Recognized-menu aim/settings lease and native cursor; headset validation pending",
+    "upgradeFrom": [
+      "B9F99063F597C4E6758B0A717682A713327DEC5BF713CB5872BAA69DFE50C533"
+    ]
   },
   {
     "source": "game-config\\Input.ini",
@@ -52,7 +57,7 @@
   {
     "source": "src\\lua\\boltgun_bolter3d.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_bolter3d.lua",
-    "sha256": "13057C685C37A47476943D98EEB258A7CCFB0BAA01A2AEBB1265E82B261BC78E",
+    "sha256": "7E2F4BBA0D12C100EF9D1A9D3AD63700B92737787124D8C04A7BE4875A4691F9",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional 10-firearm 3D replacement; installed/selected only by Bolter3D.ps1"
@@ -76,7 +81,7 @@
   {
     "source": "build\\plugins\\boltgun_muzzle.dll",
     "target": "${ProfileRoot}\\plugins\\boltgun_muzzle.dll",
-    "sha256": "4AF11D77AE320DE1AE6082AF1E90182D8DA548099B37A05F156D0E8151861EE4",
+    "sha256": "E4AEEF30956DB8D2D011B15133A8EDCD9A1051C3EC6D9F7361112686A18607DB",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional exact-build ten-firearm muzzle bridge; installed only by Bolter3D.ps1; included for original-profile restoration"
@@ -84,7 +89,7 @@
   {
     "source": "src\\lua\\boltgun_chainsword.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_chainsword.lua",
-    "sha256": "234C6FE2FF100A4869D3B1ED58223FC365C79CB1495E0D2B7479A5813669C7E2",
+    "sha256": "752C985395AAF0340A93DD31CAD55EFB9DED56DCBC165221587184A5F3A19EA2",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional external Chainsword; installed by Chainsword3D.ps1"
@@ -136,5 +141,37 @@
     "originalSha256": null,
     "disabled": true,
     "note": "Optional editable Chainsword runtime setting"
+  },
+  {
+    "source": "src\\lua\\boltgun_reticle.lua",
+    "target": "${ProfileRoot}\\scripts\\boltgun_reticle.lua",
+    "sha256": "A7ABC512BA8CE543229FACEC17AAF673FB2CE485DF75EC3DDBA55BF3DFA0949A",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional runtime dependency; installed with its 3D module and included in profile restoration inventory"
+  },
+  {
+    "source": "src\\lua\\boltgun_chainsword_contact.lua",
+    "target": "${ProfileRoot}\\scripts\\boltgun_chainsword_contact.lua",
+    "sha256": "C2973E641BF42239BD7C7ACCD101E91E22422C8CE137372D81BDC637B5548ACB",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional runtime dependency; installed with its 3D module and included in profile restoration inventory"
+  },
+  {
+    "source": "src\\lua\\boltgun_chainsword_engine.lua",
+    "target": "${ProfileRoot}\\scripts\\boltgun_chainsword_engine.lua",
+    "sha256": "E8165CD7481FC022878AB0F25E8BA9ABD1259B01BFCDEBB595ADA9746D1E11FC",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional runtime dependency; installed with its 3D module and included in profile restoration inventory"
+  },
+  {
+    "source": "src\\lua\\boltgun_blade_sweep.lua",
+    "target": "${ProfileRoot}\\scripts\\boltgun_blade_sweep.lua",
+    "sha256": "EB3D3E1CEFEBFEB511526507D173CDFBC132FD35008203EB3CAA1159E62C5A40",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional runtime dependency; installed with its 3D module and included in profile restoration inventory"
   }
 ]

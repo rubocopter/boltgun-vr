@@ -43,6 +43,13 @@ Assert ((Hash (Join-Path $profile 'config.txt')) -eq (Hash (Join-Path $copy 'pro
 & (Join-Path $copy 'scripts\Bolter3D.ps1') -Mode preview -ProfileRoot $profile -DryRun
 Assert (-not (Test-Path -LiteralPath (Join-Path $profile 'scripts\boltgun_bolter3d.lua'))) 'DryRun wrote a module.'
 & (Join-Path $copy 'scripts\Bolter3D.ps1') -Mode preview -ProfileRoot $profile
+Assert ((Hash (Join-Path $profile 'scripts\boltgun_reticle.lua')) -eq (Hash (Join-Path $copy 'src\lua\boltgun_reticle.lua'))) 'Reticle dependency was not installed.'
+$reticlePath=Join-Path $profile 'scripts\boltgun_reticle.lua'
+$reticleBytes=[IO.File]::ReadAllBytes($reticlePath)
+[IO.File]::WriteAllText($reticlePath,'unknown reticle customization')
+Expect-Rejection { & (Join-Path $copy 'scripts\Bolter3D.ps1') -Mode preview -ProfileRoot $profile }
+Assert ([IO.File]::ReadAllText($reticlePath) -eq 'unknown reticle customization') 'Unknown reticle customization was overwritten.'
+[IO.File]::WriteAllBytes($reticlePath,$reticleBytes)
 & (Join-Path $copy 'scripts\Chainsword3D.ps1') -Mode install -ProfileRoot $profile
 & (Join-Path $copy 'scripts\Comprobar-perfil.ps1') -ProfileRoot $profile -GameConfigRoot $game -SteamBindingRoot $steam
 foreach ($name in @('bolter3d.settings','chainsword3d.settings')) {
@@ -70,6 +77,7 @@ Assert (-not (Test-Path -LiteralPath (Join-Path $profile 'config.txt'))) 'Previo
 Assert ((Hash (Join-Path $game 'Engine.ini')) -eq (Hash (Join-Path $copy 'game-config\Engine.ini'))) 'Pre-existing INI not preserved.'
 Assert (-not (Test-Path -LiteralPath (Join-Path $game 'Input.ini'))) 'Previously absent INI not removed.'
 Assert (-not (Test-Path -LiteralPath $scriptPath)) 'Optional module survived baseline restoration.'
+Assert (-not (Test-Path -LiteralPath $reticlePath)) 'Reticle dependency survived baseline restoration.'
 # A patch installer must recognize an existing v1.0.0 Sense script. Exercise the
 # upgrade allowlist with temporary legacy bytes, without touching a live profile.
 $manifestPath = Join-Path $copy 'deployment.json'

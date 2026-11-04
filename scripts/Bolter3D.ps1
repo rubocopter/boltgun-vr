@@ -30,6 +30,22 @@ $installedHash=if(Test-Path -LiteralPath $scriptPath -PathType Leaf){(Get-FileHa
 $knownPreviousHashes=@($package.upgradeFrom | Where-Object {$_})
 $isKnownPrevious=$installedHash -ne '' -and $knownPreviousHashes -contains $installedHash
 $currentMode=if(Test-Path -LiteralPath $modePath -PathType Leaf){[IO.File]::ReadAllText($modePath).Trim()}else{'off'}
+$extraPending=@()
+$profilePrefix=$profileRoot.TrimEnd('\')+'\'
+foreach($item in @($package.files)) {
+    if(-not $item){continue}
+    $extraSource=[IO.Path]::GetFullPath((Join-Path $taskRoot $item.source))
+    $extraTarget=[IO.Path]::GetFullPath((Join-Path $profileRoot $item.target))
+    if(-not $extraTarget.StartsWith($profilePrefix,[StringComparison]::OrdinalIgnoreCase)){throw 'Destino adicional fuera del perfil.'}
+    $extraHash=(Get-FileHash -LiteralPath $extraSource -Algorithm SHA256).Hash
+    if($extraHash -ne $item.sha256){throw "Fuente adicional modificada: $extraSource"}
+    $installedExtra=if(Test-Path -LiteralPath $extraTarget -PathType Leaf){(Get-FileHash -LiteralPath $extraTarget).Hash}else{''}
+    if($Mode -eq 'status'){Write-Output "$($item.target): $(if($installedExtra -eq $extraHash){'OK'}else{'sin instalar o distinto'})"}
+    if($Mode -eq 'preview' -and $installedExtra -ne $extraHash){
+        if($installedExtra -ne '' -and @($item.upgradeFrom) -notcontains $installedExtra){throw "Archivo adicional distinto conservado: $extraTarget"}
+        $extraPending+=@{source=$extraSource;target=$extraTarget;hash=$extraHash}
+    }
+}
 
 if($Mode -eq 'status'){
     Write-Output "Arsenal 3D (10 armas): modo $currentMode"
@@ -48,7 +64,7 @@ if($Mode -eq 'preview' -and $installedHash -ne '' -and $installedHash -ne $sourc
     throw 'Ya existe un script experimental distinto. Se conserva sin sobrescribirlo.'
 }
 $needsScript=$Mode -eq 'preview' -and $installedHash -ne $sourceHash
-if(($needsScript -or $needsPlugin) -and (Get-Process -Name 'Boltgun-Win64-Shipping' -ErrorAction SilentlyContinue)){
+if(($needsScript -or $needsPlugin -or $extraPending.Count) -and (Get-Process -Name 'Boltgun-Win64-Shipping' -ErrorAction SilentlyContinue)){
     throw 'Cierra Boltgun para instalar por primera vez el prototipo. No se reinicia ni se inyecta desde este helper.'
 }
 if($DryRun){
@@ -62,6 +78,7 @@ if($DryRun){
 # this helper never removes files or recursively moves directories.
 $backupDir=Join-Path $taskRoot ('backups\bolter3d\'+(Get-Date -Format 'yyyyMMdd-HHmmss-ffff'))
 $existing=@($modePath,$settingsPath)
+$existing+=@($extraPending | ForEach-Object {$_.target})
 if($needsScript){$existing+=@($scriptPath)}
 if($needsPlugin){$existing+=@($pluginPath)}
 $existing=@($existing | Where-Object {Test-Path -LiteralPath $_ -PathType Leaf})
@@ -83,6 +100,11 @@ if($needsPlugin){
 if($needsSettings){
     Copy-Item -LiteralPath $settingsSource -Destination $settingsPath
     if((Get-FileHash -LiteralPath $settingsPath -Algorithm SHA256).Hash -ne $settingsSourceHash){throw 'No coinciden los ajustes instalados.'}
+}
+foreach($file in $extraPending){
+    New-Item -ItemType Directory -Path (Split-Path -Parent $file.target) -Force | Out-Null
+    Copy-Item -LiteralPath $file.source -Destination $file.target
+    if((Get-FileHash -LiteralPath $file.target).Hash -ne $file.hash){throw 'No coincide el archivo adicional instalado.'}
 }
 $tempPath=$modePath+'.boltgun.tmp'
 if(Test-Path -LiteralPath $tempPath){throw 'Existe un archivo temporal previo del selector; se conserva.'}

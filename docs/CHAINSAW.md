@@ -1,6 +1,6 @@
 # Tracked chainsword
 
-The optional Kaiser-E model follows the left controller. Released package 5 retains the original game's L2 attacks. **Development package 7 wires physical contact into the runtime; it is experimental and has not been verified in VR.** Repository maintenance leaves the live profile untouched. See [the arsenal](ARSENAL.md) and [validation status](STATUS.md).
+The optional Kaiser-E model follows the left controller. Released package 5 retains the original game's L2 attacks. **Development package 7 wires physical contact into the runtime; it is experimental and has not been verified in VR.** Deployment checks use temporary profiles; replacing an installed candidate requires maintainer authorization. See [the arsenal](ARSENAL.md) and [validation status](STATUS.md).
 
 ## Player behavior
 
