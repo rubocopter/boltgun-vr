@@ -51,12 +51,13 @@ try {
     Assert ($names -contains 'docs/INSTALACION-FACIL.es.md') 'Spanish player instructions missing.'
     Assert ($names -contains 'docs/ARSENAL.md') 'Maintained arsenal guide missing.'
     Assert ($names -contains 'docs/NATIVE-MUZZLE.md') 'Maintained muzzle guide missing.'
-    foreach ($guide in @('RETICLE.md','MENU.md','EXPERIMENTAL-INTERACTIONS.md')) {
+    foreach ($guide in @('RETICLE.md','MENU.md','CANDIDATE-24.md','COMFORT.md','HANDS.md','EXPERIMENTAL-INTERACTIONS.md')) {
         Assert ($names -contains "docs/$guide") "Interaction guide missing: $guide"
     }
-    foreach ($module in @('boltgun_reticle','boltgun_chainsword_contact','boltgun_chainsword_engine','boltgun_blade_sweep')) {
+    foreach ($module in @('boltgun_reticle','boltgun_chainsword_contact','boltgun_chainsword_engine','boltgun_blade_sweep','boltgun_comfort','boltgun_hands')) {
         Assert ($names -contains "src/lua/$module.lua") "Runtime dependency missing: $module"
     }
+    Assert ($names -contains 'profile/scripts/boltgun_presentation.lua') 'Comfort bootstrap missing.'
     Assert ($names -contains 'docs/history/2026-10-10-revision16.md') 'Current diagnostic notes missing.'
     Assert ($names -contains 'docs/history/2026-10-10-revision17.md') 'Current lifecycle notes missing.'
     Assert ($names -contains 'assets/banner/boltgun-vr.png') 'Landing banner missing.'

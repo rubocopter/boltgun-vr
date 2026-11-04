@@ -1,4 +1,4 @@
-# World reticle (revision 22 core; candidate 23)
+# World reticle (revision 22 core; candidate 24)
 
 Revision 22 introduced the world-space aiming marker for tracked 3D firearms; the maintainer reported it working in the 4 November 2026 session. Candidate 23 corrects deferred component cleanup and adds native renderer-emission alignment. Those changed paths still need VR confirmation and retain false runtime verification flags. Released v1.0.2 retains revision 20/package 5 and does not include this reticle. Deployment checks use temporary profiles. Installing a candidate does not establish VR validation.
 

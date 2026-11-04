@@ -1,8 +1,8 @@
 {
-  "version": 8,
+  "version": 9,
   "runtimeVerified": false,
   "previousVerifiedVersion": 5,
-  "verificationScope": "Package 8: resolves contact dependencies while UEVR temporarily exposes the profile script directory; construction and collision remain on engine callbacks. Package 7 did not load the contact adapter in the 4 November VR session. Bounded pose/contact/damage diagnostics added. New physical contact behavior still requires maintainer VR confirmation; package 5 remains the last fully confirmed chainsword runtime.",
+  "verificationScope": "Package 9: original procedural fixed-grip gauntlets with shared white palette and exact death-arm sprite suppression, plus the package 8 physical-contact adapter. The last session loaded contact but diagnostics stayed gated at the left Trigger. New hand alignment, death presentation and contact damage still require headset confirmation; package 5 remains the last fully confirmed runtime.",
   "files": [
     {
       "source": "src\\lua\\boltgun_chainsword.lua",
@@ -21,13 +21,14 @@
     {
       "source": "build\\plugins\\boltgun_chainsword.dll",
       "target": "plugins\\boltgun_chainsword.dll",
-      "sha256": "FEF06E3C4AFDFFBB32C8001C9B9017BBE8224A05BB59C19CCC336A3AB2767CD7",
+      "sha256": "FF119908E177E57EF64DF07364DD4F36C06DDF9E145E6FF6457E8046C90A9D33",
       "upgradeFrom": [
         "680BD5A67DBD4F78E55D35A00FFECCBED051BEFCB12776F2BF498622366A52BF",
         "299AA89DA0BFA3594BC07935A7FBCACA553F515C78884A42813505D1B818F409",
         "A907A3762A2CEE60FA6B03792F68558052E3AE14A4D0E1B708D2B0D2ACAFC46A",
         "9CEA66F61F16B67DE5BAA89C652B9D501FA5D1B2965436499C57F53A2528F8A9",
-        "5EA8CF04692245EA1E1BD6CE8AD92DAB12D1EA261CCB7C9BF8E74E2E91CECEE9"
+        "5EA8CF04692245EA1E1BD6CE8AD92DAB12D1EA261CCB7C9BF8E74E2E91CECEE9",
+        "FEF06E3C4AFDFFBB32C8001C9B9017BBE8224A05BB59C19CCC336A3AB2767CD7"
       ]
     },
     {
@@ -65,6 +66,11 @@
       "source": "src\\lua\\boltgun_blade_sweep.lua",
       "target": "scripts\\boltgun_blade_sweep.lua",
       "sha256": "EB3D3E1CEFEBFEB511526507D173CDFBC132FD35008203EB3CAA1159E62C5A40"
+    },
+    {
+      "source": "src\\lua\\boltgun_hands.lua",
+      "target": "scripts\\boltgun_hands.lua",
+      "sha256": "806075FC9449CFFAF64A82AFE91AA9561299DD63BE094CCAF955595167810FE8"
     }
   ],
   "settingsSource": "profile\\defaults\\chainsword3d.default.settings",
