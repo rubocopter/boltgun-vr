@@ -34,6 +34,12 @@ local name_cache = {}
 local warmup_ticks = 0
 local BOOK_JOURNAL = 'chainsword3d.book'
 local book_state, book_recovered = nil, false
+local callbacks = uevr.params.sdk.callbacks
+local contact, contact_attempted
+local contact_visible, contact_engine_window = false, false
+local contact_stereo_observed = false
+local contact_callbacks = type(callbacks.on_post_calculate_stereo_view_offset)=='function' and
+    type(callbacks.on_post_engine_tick)=='function'
 local function report(text)
     if text == last_report then return end
     last_report = text
@@ -194,6 +200,8 @@ local function current_component()
 end
 
 local function cleanup()
+    contact_visible=false
+    if contact then contact:reset_pose() end
     -- Live wrappers can now refer to renamed/reused objects after travel.
     -- Never mutate them through the previous ownership snapshot.
     local owner_replaced = valid(owner) and owner_name ~= nil and
@@ -373,6 +381,8 @@ local function refresh_settings()
 end
 
 local function apply_settings()
+    -- Calibration jumps are not physical blade movement.
+    if contact then contact:reset_pose() end
     owned:SetRelativeScale3D({X=settings.scale,Y=settings.scale,Z=settings.scale})
     local state = hook.get_or_add_motion_controller_state(owned)
     assert(state ~= nil, 'Left controller attachment unavailable')
@@ -445,6 +455,13 @@ local function update_visual()
     local other_visible = not is_sword and reference(plane,'bHiddenInGame') == false and reference(plane,'bVisible') == true
     owned:SetVisibility(not other_visible,false)
     owned:SetHiddenInGame(other_visible,false)
+    contact_visible=not other_visible
+end
+
+local function contact_enabled()
+    return not stopped and mode=='preview' and contact_visible and applied==settings_text and
+        current_component() and valid(owner) and owned:get_outer()==owner and
+        owner:get_full_name()==owner_name and tostring(owner:get_address())==owner_address and check_sprite()
 end
 
 local function create(pawn)
@@ -522,17 +539,59 @@ local function step(delta)
     if not sprite_ready then report('Waiting for new pawn weapon renderer');return end
     create(pawn)
 end
-uevr.params.sdk.callbacks.on_pre_engine_tick(function(engine,delta)
+callbacks.on_pre_engine_tick(function(engine,delta)
     if stopped then return end
-    local ok,error=pcall(step,delta)
+    contact_stereo_observed=false
+    contact_engine_window=true
+    local ok,error=pcall(function()
+        step(delta)
+        if owned~=nil and not contact_attempted then
+            contact_attempted=true
+            local loaded,result=pcall(function()
+                assert(contact_callbacks,'Post-attachment stereo callbacks unavailable')
+                return require('boltgun_chainsword_contact').new(uevr)
+            end)
+            if loaded then contact=result
+            else report('Physical contact unavailable: '..tostring(result)) end
+        end
+        if contact then contact:step(owner,owned,contact_enabled(),delta,settings.scale) end
+    end)
     if not ok then
+        contact_engine_window=false
+        if contact then contact:reset_pose() end
         if error==waiting_for_pawn then return end
         local clean,detail=true,nil
         if owned~=nil then clean,detail=pcall(cleanup) end
         stopped=true
+        if contact then contact:stop() end
         report('Disabled after API error: '..tostring(error)..(clean and '' or ' | Cleanup pending: '..tostring(detail)))
     end
 end)
-uevr.params.sdk.callbacks.on_script_reset(function()
+if contact_callbacks then
+    callbacks.on_post_engine_tick(function()
+        contact_engine_window=false
+        local observed=contact_stereo_observed
+        contact_stereo_observed=false
+        if stopped or not contact then return end
+        if not observed then contact:reset_pose();return end
+        -- The engine callback provides thread identity. Read the actual displayed
+        -- attachment here, after the scalar stereo marker, never on the stereo thread.
+        local ok,err=pcall(function()
+            contact:capture(owner,owned,contact_enabled(),settings.scale,1)
+        end)
+        if not ok then
+            contact:stop()
+            report('Physical contact disabled during capture: '..tostring(err))
+        end
+    end)
+    callbacks.on_post_calculate_stereo_view_offset(function(device,view_index)
+        -- This callback may run on another thread. Scalars only: no Unreal/VR calls.
+        if not stopped and contact_engine_window and view_index==1 then contact_stereo_observed=true end
+    end)
+end
+callbacks.on_script_reset(function()
     stopped=true -- Next instance recovers verified journal on the engine tick.
+    contact_engine_window=false
+    contact_stereo_observed=false
+    if contact then contact:stop() end
 end)

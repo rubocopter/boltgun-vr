@@ -1,118 +1,61 @@
-> Maintained paths: see [repository layout](REPOSITORY.md) and [build guide](BUILD.md).
-> Historical commands/evidence below describe development snapshots; local research archives are not shipped.
+# Tracked chainsword
 
-# Chainsword externa de Kaiser-E
+The optional Kaiser-E model follows the left controller. Released package 5 retains the original game's L2 attacks. **Development package 7 wires physical contact into the runtime; it is experimental and has not been verified in VR.** Repository maintenance leaves the live profile untouched. See [the arsenal](ARSENAL.md) and [validation status](STATUS.md).
 
-## Codex del jugador â€” revisiÃ³n 2
+## Player behavior
 
-Se identificaron las animaciones originales `BP_PlayerAnimation_Idle_Opening`,
-`Reading` y `PageTurn`, con materiales/texturas en las tres carpetas de
-`/Game/Art/Animations/Player/Codex/`. Solo durante esas fases se reduce la escala
-del sprite secundario al 65%, conservando su animaciÃ³n y seguimiento. Reduce
-el tamaÃ±o aparente; no modifica la distancia fÃ­sica al visor ni crea un libro 3D.
+With package 7 in a separately prepared temporary profile and `chainsword3d.mode=preview`, hold the **physical left Trigger** (`/actions/default/in/Trigger`, normally L2) and put the visible cutting edge against an enemy. There is **no additional physical-contact toggle** beyond the 3D preview and held left Trigger. Contact does **not require the original attack combo, a swing gesture, or a minimum swing speed**. Keeping the blade stationary against a target can cut again after a 500 ms per-target cooldown. The physical Trigger is still required.
 
-La escala se restaura al terminar la animaciÃ³n, salir de VR, abrir UEVR,
-desactivar el mÃ³dulo o recuperar un reset. Si el juego ya ha escrito una escala
-nueva, se conserva. `chainsword3d.book` registra la identidad exacta de la sesiÃ³n
-y los valores originales antes de modificar el plano. La comparaciÃ³n contempla
-la precisiÃ³n float32 para evitar encoger repetidamente el sprite.
+The original L2 action remains bound. Physical contact adds a separate damage opportunity without requiring a native combo to be active. An existing `ChainswordCuttingTarget` blocks contact damage while the original cutting ability owns that target. The integration does not remap or suppress the original attack, and interaction between original attacks and contacts still needs headset testing. No impact haptics or spark repositioning are added.
 
-Opciones de `data/chainsword3d.settings`: `book_scale=0.65`, `book_enabled=1`.
-`book_enabled=0` o `book_scale=1` conserva el tamaÃ±o original. Las claves ausentes
-usan estos valores, sin cambiar la calibraciÃ³n de la espada. 21 pruebas del
-mÃ³dulo pasan offline; falta comprobar aspecto y legibilidad en el visor.
+The sword cannot cut while its model is hidden, including when the secondary plane shows the Codex or another visible effect. Missing VR readiness, released Trigger, menus, pause, death, loading, ownership changes and stale poses discard contact history. Resuming requires two new matching display samples. Turning the preview off restores the original sprite and removes the owned component.
 
-La primera versiÃ³n usa la descarga autorizada por el usuario de
-[Wh-40k-chainsword](https://sketchfab.com/3d-models/wh-40k-chainsword-2976e3debf33494a831253b160f7d2c9),
-de Kaiser-E, CC BY 4.0. La atribuciÃ³n se incluye en `assets/chainsword/CREDITS.txt` y se
-copia junto al modelo al perfil instalado.
+## Display, settings and recovery
 
-Ambos formatos descargados contienen la misma malla: 8.014 vÃ©rtices con
-separaciÃ³n por UV/normales y 7.814 triÃ¡ngulos. No hay rig, animaciones ni
-una cadena separada. Se conservan sus caras de doble sentido con 15.628
-triÃ¡ngulos de renderizado, porque el material cocinado tiene opciones estÃ¡ticas.
-La geometrÃ­a se normaliza a 95 cm, con origen estimado
-en la empuÃ±adura y ejes para sostenerla verticalmente con el mando izquierdo.
-El tamaÃ±o y agarre son iniciales, pendientes de calibrar en PSVR2.
+Lua creates one collisionless procedural component owned by the local pawn and attaches it to the left controller. It hides the matching chainsword sprite only after geometry, material and texture setup succeed. Other secondary effects retain their sprite; the right-hand firearm plane is untouched. Load failures preserve the original sprite. Ownership journals allow cleanup and recovery on engine ticks after Lua reloads without mutating renamed or reused foreign objects.
 
-El clip del usuario `clip_1.791.532.998.772.mp4` confirma la apariciÃ³n y el
-seguimiento de la mano de esta primera versiÃ³n. El registro de UEVR del
-9 de octubre, 10:01:35, confirma la carga de geometrÃ­a, material y textura.
-El usuario seÃ±ala que el lado de la cadena queda invertido: se ha aplicado
-`yaw=180` tanto en el perfil instalado como en los ajustes predeterminados.
-El giro mantiene el eje longitudinal y el origen de agarre; su sentido final
-todavÃ­a necesita confirmaciÃ³n en el visor. No cambia geometrÃ­a ni DLL.
+`data/chainsword3d.settings` supports `scale`, `x/y/z` and `pitch/yaw/roll`. Scale is bounded to 0.3-1.5; offsets use UObjectHook's GLM axes and rotations use degrees. Settings refresh about every 250 ms. Any applied calibration change discards captured and previous poses so moving the grip through settings cannot become a damage sweep.
 
-## Carga y comportamiento
+The original Codex `Opening`, `Reading` and `PageTurn` phases retain their animated sprite at `book_scale=0.65` by default. `book_enabled=0` or `book_scale=1` preserves its original size. This changes apparent size, not distance from the headset. The original scale is journaled and restored unless the game has authored a new value. Float32 tolerance prevents repeated shrinking.
 
-El juego incluye `/Script/ProceduralMeshComponent`. Un plugin independiente
-de UEVR entrega una sola secciÃ³n mediante `CreateMeshSection` despuÃ©s de
-comprobar ejecutable exacto, hilo del motor, pawn y propietario del componente,
-funciÃ³n nativa, parÃ¡metros de referencia constantes y tamaÃ±os UE4 reflejados.
-Los buffers temporales se asignan y liberan con el FMalloc del propio motor.
-No se interceptan funciones ni se cambian paquetes del juego. La geometrÃ­a
-se carga una sola vez desde el perfil, con lÃ­mites, Ã­ndices y valores finitos
-comprobados antes de usarla.
+The existing native bridge can animate the model's 24 chain pieces while left Trigger is held, updating at most about 25 times per second and restoring the original mesh on release. This visual animation is separate from the Lua collision queries. The mesh remains collisionless.
 
-Lua crea un componente propio sin colisiones, vinculado a la mano izquierda.
-SÃ³lo continÃºa si `GetNumSections()` confirma la secciÃ³n y si una textura 2K
-se importa y queda asignada al parÃ¡metro `BC` de un material dinÃ¡mico propio.
-Se reutiliza el material unlit de los pickups de Boltgun; no hay metalizado
-PBR ni mapa normal aplicado en esta primera versiÃ³n. Los originales de
-Sketchfab permanecen intactos en Descargas.
+## Developer contact pipeline
 
-Se reconoce el sprite de Chainsword por su material o su textura BC en
-`/Game/Art/Animations/Weapons/Chainsword/`. Se oculta Ãºnicamente ese sprite;
-si el plano secundario muestra otro efecto, se restaura y se esconde
-temporalmente la espada 3D. No se toca el plano del arma derecha. Los fallos
-de carga dejan la sierra original y detienen nuevos intentos en esa instancia.
-Un registro de propiedad permite retirar/restaurar durante una recarga del
-script, siempre en el tick del motor y sobre identidades verificadas.
+The active source is split between `src/lua/boltgun_chainsword.lua` (visual ownership and callbacks), `boltgun_chainsword_contact.lua` (sample lifecycle, sweeps and cooldowns), and `boltgun_chainsword_engine.lua` (reflected collision and original damage). `boltgun_blade_sweep.lua` supplies geometry only. The older standalone melee/tracking policies do not authorize this runtime's damage.
 
-Se mantienen L2, las reglas de ataque, los sonidos y los efectos del juego.
-No se aÃ±aden ataques por gestos ni se recolocan las chispas. El movimiento
-visible sigue el mando. La malla externa carece de rig, pero el puente nativo
-identifica 24 piezas geomÃ©tricas independientes de la cadena, incluidas
-las de la punta, y aplica una oscilaciÃ³n progresiva de hasta 0,38 cm
-al mantener el gatillo izquierdo de UEVR (`/actions/default/in/Trigger`, L2).
-El movimiento de dientes se actualiza como mÃ¡ximo unas 25 veces por segundo
-mediante `UpdateMeshSection`, conservando la hoja, empuÃ±adura, normales,
-textura y ausencia de colisiones. Al soltar L2 se restaura la malla exacta.
-No se modifica la activaciÃ³n de la habilidad del juego.
+1. `pre_engine_tick` updates the visual lifecycle, opens a fresh observation interval and consumes the preceding tick's captured sample. All collision queries and damage execute here.
+2. `on_post_calculate_stereo_view_offset` records only a scalar marker for first-eye index 1 during that interval. It makes **no UObject or VR calls**. The interval does not prove that stereo ran on the engine thread. Other eyes and observations outside the interval cannot authorize capture.
+3. `post_engine_tick` closes the interval. If a matching first-eye marker was seen, it rechecks readiness and reads the actual owned component's world transform after attachment. Otherwise it clears pose history. Capture therefore runs on the known engine callback, with one tick of delay before contact processing.
 
-La actualizaciÃ³n usa el mismo control de hilo, pawn, propietario, tipo y
-parÃ¡metros reflejados del puente original. Un identificador izquierdo cero es
-vÃ¡lido en OpenXR. Si el modelo no contiene las piezas esperadas, falta la
-acciÃ³n o `UpdateMeshSection` no cumple el contrato, la espada permanece
-estÃ¡tica y se registra el motivo. La animaciÃ³n, sus tiempos y la sincronÃ­a
-visual con la habilidad **aÃºn deben probarse en PSVR2/UEVR**; los tests
-offline solo verifican transformaciÃ³n, reversibilidad y llamadas de puente.
+Both stereo and post-engine callbacks must be available; otherwise contact stays unavailable while the visual module remains usable. Script reset stops contact and clears scalar state without Unreal access. Initialization is deferred to engine tick; reflection/API failures stop the contact instance and log `[Boltgun Chainsword contact] Disabled:` rather than retrying damage every frame.
 
-## InstalaciÃ³n y ajustes
+Readiness requires a ready OpenXR runtime, active HMD/controllers, aim allowed, no UEVR UI, held left Trigger from the left input source, a bounded controller index and a finite device matrix. OpenXR source/index zero is valid. It also requires the fully loaded, living local Sternguard pawn in a gameplay map, no native pause/visible HUD menu, a visible component owned by that pawn and an owned equipped `BP_Chainsword_C` without an active native cutting target. Component identity is checked against the visual owner's saved name, address and class. Pawn, weapon, engine and blade identities must match captured samples.
 
-Con el juego cerrado: `scripts/Chainsword3D.ps1 -Mode install`. DespuÃ©s abrir Boltgun
-e inyectar UEVR normalmente; no requiere lanzador durante cada partida.
-`-Mode status` comprueba hashes, y `-Mode off` permite desactivar. No borrar
-el script a mano mientras su modelo estÃ© en uso.
+Capture accepts normalized finite world rotation, a component within 250 Unreal centimetres of the pawn, and world scale matching the configured uniform scale. Samples must be from the immediately preceding contact tick. Two consecutive matching component/scale samples are required. Invalid or greater-than-100 ms deltas, missing samples and sweep discontinuities clear history. The sweep rejects endpoint travel above 50 cm, speed above 1500 cm/s or rotation above 100 degrees per sample pair.
 
-En `data/chainsword3d.settings`, `scale` controla el tamaÃ±o; `x/y/z` son
-desplazamientos en ejes GLM de UObjectHook y `pitch/yaw/roll` son grados.
-Se leen cada 250 ms. La instalaciÃ³n preserva ajustes existentes.
+The cutting edge is the model-local segment `(5, 0, 27)` to `(5, 0, 76)` cm, with a 3 cm sphere radius, all multiplied by configured scale. These maintained 95 cm model landmarks exclude the grip and motor housing; their real contact alignment still needs headset calibration. Sweeps are bounded to 256 generated segments and **512 actual SphereTrace calls per engine step**, including enemy enumeration and pawn-to-contact occlusion checks. Each query enumerates at most 16 actors. Budget exhaustion rejects damage and disables that contact instance.
 
-## VerificaciÃ³n
+`SphereTraceSingle` uses trace channel 0, simple collision, no debug drawing and ignores the pawn and chainsword weapon. Only real blocking `BGNonPlayableCharacterBase` hits become candidates. Blocking world geometry anywhere in the collected sweep, or between pawn and contact, rejects the entire frame before damage. Contacts are deduplicated by target identity. A per-target 500 ms cooldown survives Trigger release, pause, visibility changes and display-component recreation for the same engine/pawn/weapon scope. A new scope clears it.
 
-`test_prepare.py` comprueba agarre, longitud y validaciÃ³n del conversor.
-`Build.ps1` compila el plugin y ejecuta tests del parser real y del puente
-real con reflexiÃ³n/allocator simulados. `tests/test_chainsword_preview.py`
-cubre carga diferida, mano izquierda, fallback, efectos secundarios,
-retirada, recuperaciÃ³n y ausencia de accesos Unreal desde reset/carga Lua.
+Before mutation the adapter rechecks ownership and the real `HitResult`, target identity, enemy class and living state. It saves the original `ChainswordCuttingTarget`, every byte of `ChainswordHit`, and `CuttingDamage`; temporarily supplies the actual engine hit and target plus the weapon's `StrikeDamage`; then calls the original **`DealCuttingDamage()`**. It never writes enemy health or death state. All saved fields are restored and checked, including after a damage exception; every restoration is attempted even if another setter fails. An expired/recycled weapon is never restored through a stale identity. Reflection mismatch, rejected mutation or failed restoration disables further contact attempts.
 
-**La apariciÃ³n inicial estÃ¡ confirmada por el usuario. La correcciÃ³n de
-orientaciÃ³n no se ha probado en visor.** Las pruebas locales no demuestran
-ausencia de crashes nativos,
-ergonomÃ­a, comportamiento con cambios de nivel o alineaciÃ³n de las chispas.
-En `log.txt`, buscar `[Boltgun Chainsword 3D]` para la primera prueba.
+## Offline verification and headset boundary
 
-Referencias tÃ©cnicas:
-[CreateMeshSection UE4.27](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Plugins/ProceduralMeshComponent/UProceduralMeshComponent/CreateMeshSection?application_version=4.27),
-[ImportFileAsTexture2D](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/Kismet/UKismetRenderingLibrary/ImportFileAsTexture2D?application_version=4.27).
+Run from the repository root:
+
+```powershell
+python -m unittest discover -s tests -p 'test_chainsword_contact.py' -q
+python -m unittest discover -s tests -p 'test_*.py' -q
+python -m unittest discover -s src/native/chainsword -p 'test_*.py' -q
+```
+
+The contact tests run the actual Lua owner, sweep and engine adapter against a simulated Unreal/UEVR boundary. They cover stationary repeat contact, real-hit forwarding, exact weapon-state restoration and errors, walls/occlusion, visibility, ownership, lifecycle gates, cooldown preservation, calibration changes, invalid/stale poses, trace budgets, reset and callback ordering. Stereo is tested with UObject access forbidden. The existing preview tests separately cover visual loading, fallback, Codex scaling, journals and foreign-object recovery; converter/native tests cover the model and bridge contracts.
+
+Offline tests cannot establish collision ABI compatibility, game collision-channel coverage, original ability side effects, damage balance, attachment timing or contact alignment in a headset. UEVR's Lua device-matrix getter exposes no authenticated per-device tracking-valid or foreground/focus bit: finite matrices, HMD activity and aim allowance do not prove tracking freshness or focus. The scalar stereo marker is not authenticated XR provenance. If first-eye stereo occurs outside the engine interval, this implementation deliberately drops capture. Verify actual callback timing in VR before changing that restriction.
+
+Keep **`runtimeVerified: false` and `verifiedInGame: false`** for this revision until maintainer confirmation. The historical package 5 validation does not certify package 7 physical contact. Deployment checks must use a temporary profile; do not start SteamVR or inject UEVR during repository maintenance. Package 7 includes the main Lua script, contact/engine helpers and blade-sweep dependency; validate their exact-byte hashes during packaging.
+
+## Model and attribution
+
+The external [Wh-40k-chainsword](https://sketchfab.com/3d-models/wh-40k-chainsword-2976e3debf33494a831253b160f7d2c9) is by Kaiser-E, CC BY 4.0. [The bundled credits](../assets/chainsword/CREDITS.txt) preserve attribution. Prepared geometry has 8,014 vertices and 7,814 triangles, rendered double-sided as 15,628 triangles, normalized to 95 cm with an estimated grip origin. It has no rig or separate animated chain. Original game meshes and materials are resolved from the player's installation and are not redistributed. See [source and notices](SOURCE-AND-NOTICES.md).
