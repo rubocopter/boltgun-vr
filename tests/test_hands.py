@@ -38,7 +38,9 @@ class HandsTests(unittest.TestCase):
         gs_class.get_class_default_object=function()engine_only();return gs end
         proc_class=class('Class /Script/ProceduralMeshComponent.ProceduralMeshComponent')
         material.get_full_name=function()engine_only();return 'MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun' end
-        texture=object('Texture2D test.palette',1304,class('Texture2D'))
+        texture=object('Texture2D test.palette',1304,class('Class /Script/Engine.Texture2D'))
+        texture.Blueprint_GetSizeX=function()engine_only();return ctx.texture_width or 256 end
+        texture.Blueprint_GetSizeY=function()engine_only();return ctx.texture_height or 256 end
         rendering_class=class('Class /Script/Engine.KismetRenderingLibrary')
         rendering=object('Default__KismetRenderingLibrary',1305,rendering_class)
         rendering.ImportFileAsTexture2D=function(self,owner,path)
@@ -62,8 +64,11 @@ class HandsTests(unittest.TestCase):
           c.CreateDynamicMaterialInstance=function(self,slot,source,name)
             engine_only();assert(slot==0 and source==material)
             local dmi=object('DMI hand',1400+ctx.created,class('DMI'),c)
-            dmi.SetTextureParameterValue=function(self,k,value)engine_only();self.texture=value end
-            dmi.K2_GetTextureParameterValue=function(self,k)engine_only();return self.texture end
+            dmi.SetTextureParameterValue=function(self,k,value)
+              engine_only();assert(k.name=='BC')
+              if not ctx.fail_binding and ctx.fail_binding_hand~=ctx.created then self.texture=value end
+            end
+            dmi.K2_GetTextureParameterValue=function(self,k)engine_only();assert(k.name=='BC');return self.texture end
             c.material=dmi;return dmi
           end
           return c
@@ -74,7 +79,7 @@ class HandsTests(unittest.TestCase):
           assert(owner=='1001' and component and hand)
           table.insert(ctx.events,{name=name,data=data})
           if not ctx.no_plugin then ctx.components[ctx.created].sections=1 end
-          files['hands3d.texture_path']='E:/Temporary Profile/data/hands3d_color.png'
+          files['hands3d.texture_path']=ctx.texture_path or 'E:/Temporary Profile/data/hands3d/hands_color.png'
         end
         secondary.get_short_name=function()engine_only();return 'Secondary Render Plane' end
         secondary.get_property=primary.get_property
@@ -281,6 +286,94 @@ class HandsTests(unittest.TestCase):
         self.start()
         self.assertEqual(self.value('ctx.created'), self.value('ctx.destroyed'))
         self.assertFalse(self.value('primary.hidden or secondary.hidden'))
+
+    def test_imports_dedicated_color_atlas_once_and_binds_both_hands(self):
+        self.run_lua(r"ctx.texture_path='E:\\Temporary Profile\\data\\hands3d\\hands_color.png'")
+        self.start()
+        self.assertEqual(self.value('ctx.imports'), 1)
+        self.assertEqual(self.value('ctx.import_path'), 'E:/Temporary Profile/data/hands3d/hands_color.png')
+        self.assertTrue(self.value('ctx.components[1].material.texture==texture and ctx.components[2].material.texture==texture'))
+
+    def test_white_placeholder_and_failed_binding_never_show_hands(self):
+        for setup in ('ctx.texture_width=1;ctx.texture_height=1', 'ctx.fail_binding=true'):
+            with self.subTest(setup=setup):
+                self.setUp()
+                self.run_lua(setup)
+                self.start()
+                self.assertEqual(self.value('ctx.created'), self.value('ctx.destroyed'))
+                self.assertFalse(self.value('primary.hidden or secondary.hidden'))
+
+    def test_second_hand_binding_failure_rolls_back_first_hand(self):
+        self.run_lua('ctx.fail_binding_hand=2')
+        self.start()
+        self.assertEqual(self.value('ctx.created'), 2)
+        self.assertEqual(self.value('ctx.destroyed'), 2)
+        self.assertFalse(self.value('ctx.components[1].visible or ctx.components[2].visible'))
+        self.assertFalse(self.value('primary.hidden or secondary.hidden'))
+
+    def test_invalid_texture_type_and_unavailable_dimensions_fail_closed(self):
+        for setup in ("texture.get_class=function()engine_only();return class('Class /Script/Engine.TextureCube') end",
+                      "ctx.missing_function='Blueprint_GetSizeX'", 'ctx.texture_width=0'):
+            with self.subTest(setup=setup):
+                self.setUp()
+                self.run_lua(setup)
+                self.start()
+                self.assertEqual(self.value('ctx.created'), self.value('ctx.destroyed'))
+                self.assertFalse(self.value('primary.hidden or secondary.hidden'))
+
+    def test_texture_hint_rejects_legacy_and_traversal_paths(self):
+        for path in ('E:/Profile/data/hands3d_color.png',
+                     'E:/Profile/../data/hands3d/hands_color.png',
+                     'data/hands3d/hands_color.png',
+                     'E:/Profile/data/hands3d/hands_color.png\n'):
+            with self.subTest(path=path):
+                self.setUp()
+                self.lua.globals().ctx.texture_path = path
+                self.start()
+                self.assertEqual(self.value('ctx.imports or 0'), 0)
+                self.assertEqual(self.value('ctx.created'), self.value('ctx.destroyed'))
+
+    def test_grip_origin_follows_weapon_calibration_without_mesh_origin_compensation(self):
+        self.run_lua(r"""
+        files['bolter3d.settings']='scale=.5\nx=3\ny=-4\nz=5\nyaw=90\ngrip_x=-48\ngrip_z=24'
+        files['chainsword3d.settings']='x=-2\ny=6\nz=1\nyaw=180'
+        """)
+        self.start()
+        for hand, offset, q in ((1, (-2, 6, 1), (0, 0, -1, 0)),
+                                 (2, (3, -4, 5), (2**-.5, 0, -2**-.5, 0))):
+            for axis, want in zip('xyz', offset):
+                self.assertAlmostEqual(self.value(f'ctx.components[{hand}].offset.{axis}'), want)
+            for axis, want in zip('wxyz', q):
+                self.assertAlmostEqual(self.value(f'ctx.components[{hand}].rotation.{axis}'), want)
+        self.assertEqual(self.value('ctx.components[2].scale'), 1)
+
+    def test_weapon_frame_refreshes_after_settings_change(self):
+        self.start()
+        self.run_lua(r"files['bolter3d.settings']='x=7\nyaw=180';files['chainsword3d.settings']='z=-3\npitch=90'")
+        self.tick()
+        self.assertEqual(self.value('ctx.components[2].offset.x'), 7)
+        self.assertEqual(self.value('ctx.components[1].offset.z'), -3)
+        self.assertAlmostEqual(self.value('ctx.components[2].rotation.y'), -1)
+        self.assertAlmostEqual(self.value('ctx.components[1].rotation.x'), 2**-.5)
+        self.assertEqual(self.value('ctx.created'), 2)
+
+    def test_local_trim_composes_after_weapon_frame_without_moving_grip(self):
+        self.run_lua(r"files['bolter3d.settings']='x=3\ny=-4\nz=5\nyaw=90';files['hands3d.settings']='right_pitch=90'")
+        self.start()
+        # Qtrim * Qweapon; rotate the base translation by Qtrim so
+        # inverse(Qhand)*Lhand remains inverse(Qweapon)*Lweapon at the grip.
+        for axis, want in zip('wxyz', (.5, .5, -.5, -.5)):
+            self.assertAlmostEqual(self.value(f'ctx.components[2].rotation.{axis}'), want)
+        for axis, want in zip('xyz', (3, -5, -4)):
+            self.assertAlmostEqual(self.value(f'ctx.components[2].offset.{axis}'), want)
+
+    def test_invalid_weapon_values_use_matching_module_defaults(self):
+        self.run_lua(r"files['bolter3d.settings']='x=nan\ny=61\nyaw=181\npitch=inf';files['chainsword3d.settings']='x=31\nroll=-181'")
+        self.start()
+        for hand in (1, 2):
+            for axis in 'xyz':
+                self.assertEqual(self.value(f'ctx.components[{hand}].offset.{axis}'), 0)
+            self.assertAlmostEqual(self.value(f'ctx.components[{hand}].rotation.w'), 1)
 
 
 if __name__ == '__main__':

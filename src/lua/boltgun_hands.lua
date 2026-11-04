@@ -1,4 +1,4 @@
--- Original procedural gauntlets; no skeletal mesh or tutorial library required.
+-- Native-submitted gauntlets; +X aim, +Z dorsal, wrist -X, grip at (0,0,0).
 -- UObject reads, writes and controller attachment occur only on engine ticks.
 local api, hook, vr = uevr.api, uevr.types.UObjectHook, uevr.params.vr
 local functions, callbacks = uevr.params.functions, uevr.params.sdk.callbacks
@@ -226,18 +226,73 @@ local function refresh_settings()
     end
     settings_text=text
 end
-local function attach(o, hand)
-    local side=hand==0 and 'left_' or 'right_'
-    local state=hook.get_or_add_motion_controller_state(o);assert(state,'Controller attachment unavailable')
-    local location=UEVR_Vector3f.new()
-    location.x,location.y,location.z=settings[side..'x'],settings[side..'y'],settings[side..'z']
-    local p,y,r=settings[side..'pitch']*math.pi/180,-settings[side..'yaw']*math.pi/180,-settings[side..'roll']*math.pi/180
+local function quaternion(pitch,yaw,roll)
+    local p,y,r=pitch*math.pi/180,-yaw*math.pi/180,-roll*math.pi/180
     local cp,sp,cy,sy,cr,sr=math.cos(p/2),math.sin(p/2),math.cos(y/2),math.sin(y/2),math.cos(r/2),math.sin(r/2)
     local q=UEVR_Quaternionf.new()
     q.w,q.x,q.y,q.z=cy*cp*cr+sy*sp*sr,cy*sp*cr+sy*cp*sr,sy*cp*cr-cy*sp*sr,cy*cp*sr-sy*sp*cr
+    return q
+end
+local function multiply(a,b)
+    local q=UEVR_Quaternionf.new()
+    q.w=a.w*b.w-a.x*b.x-a.y*b.y-a.z*b.z
+    q.x=a.w*b.x+a.x*b.w+a.y*b.z-a.z*b.y
+    q.y=a.w*b.y-a.x*b.z+a.y*b.w+a.z*b.x
+    q.z=a.w*b.z+a.x*b.y-a.y*b.x+a.z*b.w
+    return q
+end
+local function weapon_frame(hand)
+    local text=fs.read(hand==0 and 'chainsword3d.settings' or 'bolter3d.settings')
+    local values={}
+    -- Match each weapon module's line parser, defaults and calibration bounds.
+    for _,key in ipairs({'x','y','z','pitch','yaw','roll'}) do
+        local v=tonumber(('\n'..text):match('\n'..key..'=([^\r\n]+)'))
+        local limit=(key=='x' or key=='y' or key=='z') and (hand==0 and 30 or 60) or 180
+        values[key]=v and v==v and v>=-limit and v<=limit and v or 0
+    end
+    -- bolter3d offsets are (x+s*grip_z,y-s*grip_x,z-s*grip_y).
+    -- Its UE mesh-local grip cancels those scale terms exactly under UEVR's
+    -- GLM->UE (y,z,-x) conversion. All arsenal profiles share this grip frame;
+    -- copying their mesh-origin offsets would put the hand beside the weapon.
+    -- chainsword3d is already authored about its grip, so uses (x,y,z) directly.
+    return values,quaternion(values.pitch,values.yaw,values.roll)
+end
+local function attach(o, hand)
+    local side=hand==0 and 'left_' or 'right_'
+    local state=hook.get_or_add_motion_controller_state(o);assert(state,'Controller attachment unavailable')
+    local base,weapon=weapon_frame(hand)
+    local trim=quaternion(settings[side..'pitch'],settings[side..'yaw'],settings[side..'roll'])
+    -- UEVR renders H * inverse(offset). A local trim therefore pre-multiplies
+    -- the weapon offset. Rotate the base translation into the trimmed frame
+    -- so adding a hand rotation never rotates the weapon's calibrated grip.
+    local v=multiply(multiply(trim,{w=0,x=base.x,y=base.y,z=base.z}),
+        {w=trim.w,x=-trim.x,y=-trim.y,z=-trim.z})
+    local location=UEVR_Vector3f.new()
+    location.x,location.y,location.z=v.x+settings[side..'x'],v.y+settings[side..'y'],v.z+settings[side..'z']
+    local q=multiply(trim,weapon)
     state:set_hand(hand);state:set_permanent(false)
     state:set_location_offset(location);state:set_rotation_offset(q)
     o:SetRelativeScale3D({X=settings.scale,Y=settings.scale,Z=settings.scale})
+end
+local function load_texture(rendering,pawn)
+    -- Atlas contract: native writes this absolute hint after submitting geometry.
+    -- PNG RGB(A) is baked sRGB blue armor / black glove / gold trim, opaque alpha,
+    -- UV0 in [0,1] (left/right share atlas). No vertex-color or tint multiplier:
+    -- installed MI_Pickups_Boltgun metadata is MSM_Unlit, BC, Colors={}.
+    -- Keep reticle's legacy 1x1 white palette separate from the hand atlas.
+    local path=fs.read('hands3d.texture_path'):gsub('\\','/')
+    assert(path:match('^%a:/') and path:sub(-#'/data/hands3d/hands_color.png')=='/data/hands3d/hands_color.png' and
+        not path:find('[%c]') and not ('/'..path..'/'):find('/%.%./') and
+        not ('/'..path..'/'):find('/%./'), 'Native hand atlas path unavailable')
+    local texture=rendering:ImportFileAsTexture2D(pawn,path)
+    assert(valid(texture) and texture:get_class():get_full_name()=='Class /Script/Engine.Texture2D',
+        'Hand atlas import failed')
+    local class=texture:get_class()
+    assert(class:find_function('Blueprint_GetSizeX') and class:find_function('Blueprint_GetSizeY'),
+        'Hand atlas dimensions unavailable')
+    local w,h=texture:Blueprint_GetSizeX(),texture:Blueprint_GetSizeY()
+    assert(w>0 and h>0 and w*h>1,'Hand atlas is empty or the obsolete 1x1 white placeholder')
+    return texture
 end
 local function create(pawn)
     local class=api:find_uobject(CLASS);assert(valid(class),'ProceduralMeshComponent unavailable')
@@ -264,10 +319,7 @@ local function create(pawn)
         functions.dispatch_custom_event('boltgun.hands.v1',r.owner.address..'|'..r.item.address..'|'..hand)
         assert(o:GetNumSections()==1,'Native bridge did not submit hand geometry')
         if not texture then
-            local path=fs.read('hands3d.texture_path'):gsub('\\','/')
-            assert(path:match('^%a:/') and path:sub(-#'/data/hands3d_color.png')=='/data/hands3d_color.png' and
-                not path:find('[\r\n]'),'Native hand palette path unavailable')
-            texture=rendering:ImportFileAsTexture2D(pawn,path);assert(valid(texture),'Hand palette import failed')
+            texture=load_texture(rendering,pawn)
         end
         local dmi=o:CreateDynamicMaterialInstance(0,material,fname('BoltgunHands3D'))
         assert(valid(dmi) and dmi:get_class():find_function('SetTextureParameterValue') and
@@ -276,7 +328,7 @@ local function create(pawn)
         assert(dmi:K2_GetTextureParameterValue(fname('BC'))==texture,'Hand palette binding failed')
         attach(o,hand)
     end
-    report('Original armored gauntlets attached to both controllers; fixed grip pose, VR validation pending')
+    report('Gauntlets attached in weapon grip frames with BC color atlas; VR validation pending')
 end
 local function step()
     if not recovered then recover();if not recovered then return end end
