@@ -6,7 +6,7 @@ $plugins = Join-Path $repo 'build\plugins'
 New-Item -ItemType Directory -Path $output,$plugins -Force | Out-Null
 Push-Location $PSScriptRoot
 try {
-    foreach($name in @('test_muzzle','test_bridge')) {
+    foreach($name in @('test_muzzle','test_bridge','test_projectile_reticle')) {
         $exe = Join-Path $output ($name+'.exe')
         $obj = Join-Path $output ($name+'.obj')
         $command='"'+$DevCmd+'" -arch=x64 -host_arch=x64 >nul && cl /nologo /std:c++17 /EHsc /W4 /WX "'+$name+'.cpp" /Fo:"'+$obj+'" /Fe:"'+$exe+'" /link /IMPLIB:"'+(Join-Path $output ($name+'.lib'))+'"'

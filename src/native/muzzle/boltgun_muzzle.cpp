@@ -71,6 +71,24 @@ static ULONGLONG g_display_at{},g_engine_frame{},g_display_frame{};
 static unsigned long long g_lease_generation{1},g_display_generation{};
 static std::atomic<unsigned long> g_freeaim_shots{},g_freeaim_fallback{};
 static std::atomic<unsigned long> g_stereo_calls{},g_stereo_other_thread{},g_stereo_captures{};
+// Projectile spawn is the authority for muzzle flashes, including free-aim
+// spread. Engine-thread only; no cached transform may outlive its weapon/lease.
+struct ShotFlash {
+    Transform transform{};
+    UEVR_UObjectHandle weapon{};
+    ULONGLONG at{}, frame{};
+    unsigned long long generation{};
+};
+static ShotFlash g_last_shot{};
+static bool recent_shot_flash(UEVR_UObjectHandle weapon,ULONGLONG now,
+                              ULONGLONG frame,unsigned long long generation,
+                              Transform& transform) {
+    const auto& shot=g_last_shot;
+    if(!weapon||shot.weapon!=weapon||shot.generation!=generation||
+       now<shot.at||now-shot.at>100||frame<shot.frame||frame-shot.frame>2) return false;
+    transform=shot.transform;
+    return true;
+}
 // A scoped beam can only redirect a native trace while its owning weapon's
 // original FX/fire routine is executing on the captured engine thread.
 struct BeamScope {
@@ -337,6 +355,7 @@ static UEVR_UObjectHandle spawn_detour(UEVR_UObjectHandle world,UEVR_UClassHandl
     const auto spawned=g_spawn_original(world,cls,data,&updated,weapon);
     if(!spawned) track(SpawnFailed);
     else {
+        g_last_shot={updated,weapon,GetTickCount64(),g_engine_frame,g_lease_generation};
         track(SpawnSucceeded);
         if(!g_lease.visual) track(ShotNoVisual);
         else if(g_recoil_pending>=8) track(ShotCapped);
@@ -454,6 +473,8 @@ static bool flash_set_contract(UEVR_UFunctionHandle fn,int& transform_offset) {
     transform_offset=offset;
     return true;
 }
+
+#include "projectile_reticle.hpp"
 
 static BeamScope begin_beam(UEVR_UObjectHandle weapon) {
     BeamScope scope{};
@@ -642,9 +663,16 @@ static bool flash_post(UEVR_UFunctionHandle fn,UEVR_UObjectHandle,void*,void* re
         }
         Transform original{},mesh{},updated{};
         g_api->sdk->uobject->process_event(component,g_flash_world_fn,&original);
-        if(!read_pose(mesh)) { skip_flash(PoseUnavailable);return true; }
-        if(!flash_transform(mesh,g_lease.muzzle,original,updated)) {
-            skip_flash(TransformRejected);return true;
+        if(recent_shot_flash(g_lease.weapon,now,g_engine_frame,g_lease_generation,updated)) {
+            // Preserve the Niagara component's authored scale, but use precisely
+            // the transform passed to the successful projectile spawn.
+            updated.scale=original.scale;
+        } else {
+            if(g_lease.freeaim) { skip_flash(PoseUnavailable);return true; }
+            if(!read_pose(mesh)) { skip_flash(PoseUnavailable);return true; }
+            if(!flash_transform(mesh,g_lease.muzzle,original,updated)) {
+                skip_flash(TransformRejected);return true;
+            }
         }
         alignas(16) std::array<unsigned char,512> args{};
         std::memcpy(args.data()+g_flash_new_transform_offset,&updated,sizeof(updated));
@@ -709,37 +737,6 @@ static void prepare_flash_hooks(ULONGLONG now) {
             g_flash_attached_hooked=true;
             g_api->functions->log_info("[Boltgun muzzle 3D] Aligning verified local Niagara attachments to each firearm muzzle");
         }
-    }
-}
-
-// Animation effects may already exist or use native spawning that bypasses
-// NiagaraFunctionLibrary. Correct only exact weapon effects whose attachment
-// ancestry proves they belong to the current local renderer, after its tick.
-static void on_post_tick(UEVR_UGameEngineHandle,float delta) {
-    static float elapsed=0;
-    if(GetCurrentThreadId()!=g_engine_thread.load()||!g_enabled.load()||!g_lease.ready||
-       g_flash_faulted.load()||!g_flash_world_fn||!g_flash_set_fn||
-       !g_api->sdk->uobject_hook->get_objects_by_class||
-       !live(reinterpret_cast<UEVR_UObjectHandle>(g_flash_component_class))) return;
-    elapsed+=std::isfinite(delta)&&delta>0?delta:0;
-    if(elapsed<.033f) return;
-    elapsed=0;
-    __try {
-        std::array<UEVR_UObjectHandle,128> effects{};
-        const int count=g_api->sdk->uobject_hook->get_objects_by_class(
-            g_flash_component_class,effects.data(),static_cast<unsigned>(effects.size()),false);
-        for(int i=0;i<count&&i<static_cast<int>(effects.size());++i) {
-            const auto component=effects[i];
-            if(!live(component)) continue;
-            const auto data=g_api->sdk->uobject->get_property_data(component,L"AttachParent");
-            UEVR_UObjectHandle parent{};
-            if(data) std::memcpy(&parent,data,sizeof(parent));
-            if(!parent||!local_flash_parent(parent)) continue;
-            auto result=component;
-            flash_post(g_flash_set_fn,nullptr,nullptr,&result,true);
-        }
-    } __except(EXCEPTION_EXECUTE_HANDLER) {
-        g_flash_faulted.store(true);
     }
 }
 
@@ -899,6 +896,7 @@ static void event_inner(const char* text) {
     g_enabled.store(!g_faulted.load());
 }
 static void on_event(const char* name,const char* text) {
+    if(projectile_reticle_event(name,text)) return;
     if(!name||std::strcmp(name,"boltgun.muzzle.v1")!=0) return;
     if(!text||std::strcmp(text,"off")==0) {
         g_enabled.store(false);g_recoil_cancelled.store(true);
@@ -987,8 +985,6 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
     }
     if(!api->functions->register_inline_hook||!api->callbacks->on_custom_event||
        !api->sdk->callbacks->on_pre_engine_tick||!api->sdk->fstructproperty||!api->sdk->uscriptstruct) return false;
-    if(api->sdk->callbacks->on_post_engine_tick)
-        api->sdk->callbacks->on_post_engine_tick(on_post_tick);
     if(api->sdk->callbacks->on_post_calculate_stereo_view_offset)
         api->sdk->callbacks->on_post_calculate_stereo_view_offset(on_stereo);
     // Callback registration precedes the hook. Once hooked, initialization

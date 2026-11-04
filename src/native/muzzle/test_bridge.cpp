@@ -178,6 +178,7 @@ static Transform* native(UEVR_UObjectHandle,Transform* out,float x,float,void*,b
     if(x!=0) out->rotation={0,0,.08715574f,.9961947f};
     return out;
 }
+#include "test_reticle_bridge.hpp"
 int main() {
     UEVR_UObjectHookFunctions hook{};hook.exists=exists;
     hook.get_motion_controller_state=motion_state;
@@ -235,15 +236,26 @@ int main() {
     objects_live=false;spawn_detour(id(1),reinterpret_cast<UEVR_UClassHandle>(8),nullptr,&shot,id(2));
     assert(spawned.translation.x==500);objects_live=true;
     assert(spawn_calls==8&&g_spawn_redirected.load()==1);
+    Transform cached{};
+    assert(recent_shot_flash(id(2),g_last_shot.at,g_last_shot.frame,g_lease_generation,cached));
+    assert(cached.translation.x==433.90707f&&cached.rotation.z==shot.rotation.z);
+    assert(!recent_shot_flash(id(9),g_last_shot.at,g_last_shot.frame,g_lease_generation,cached));
+    assert(!recent_shot_flash(id(2),g_last_shot.at+101,g_last_shot.frame,g_lease_generation,cached));
+    assert(!recent_shot_flash(id(2),g_last_shot.at,g_last_shot.frame+3,g_lease_generation,cached));
+    assert(!recent_shot_flash(id(2),g_last_shot.at,g_last_shot.frame,g_lease_generation+1,cached));
     g_flash_component_class=reinterpret_cast<UEVR_UClassHandle>(31);
     g_flash_system_class=reinterpret_cast<UEVR_UClassHandle>(32);
     g_flash_world_fn=reinterpret_cast<UEVR_UFunctionHandle>(43);
     g_flash_set_fn=reinterpret_cast<UEVR_UFunctionHandle>(44);
     g_flash_new_transform_offset=0;
     UEVR_UObjectHandle flash_result=id(6);
+    mesh_pose.translation.x+=20; // The gun moved after the projectile was spawned.
     flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
     assert(flash_moves==1&&std::fabs(moved_flash.translation.x-433.90707f)<.002f);
     assert(std::fabs(moved_flash.translation.z-626.5f)<.002f);
+    assert(moved_flash.rotation.z==spawned.rotation.z);
+    mesh_pose.translation.x-=20;
+    g_last_shot={}; // Remaining fallback checks intentionally have no recent shot.
     expired_object=id(6);
     flash_location_post(reinterpret_cast<UEVR_UFunctionHandle>(12),nullptr,nullptr,&flash_result);
     expired_object=id(7);
@@ -588,8 +600,8 @@ int main() {
         assert(flash_moves==before+1);
         flash_parent=id(51);
     }
-    // Existing/reused attached systems can bypass both spawn hooks. A post-tick
-    // scan must correct them again after the native renderer moves its parent.
+    // Each flash is positioned only by its spawn hook. Moving the renderer
+    // or firing again must not relocate previously spawned effects.
     hook.get_objects_by_class=[](UEVR_UClassHandle cls,UEVR_UObjectHandle* out,unsigned int capacity,bool defaults) {
         assert(cls==g_flash_component_class&&!defaults&&capacity==128);
         out[0]=id(6);return 1;
@@ -597,21 +609,21 @@ int main() {
     const int before_poll=flash_moves;
     // Temporarily simulate a live system attached to the verified local plane.
     flash_parent=id(51);
-    on_post_tick(nullptr,.04f);
-    assert(flash_moves==before_poll+1);
+    on_tick(nullptr,.04f);
+    assert(flash_moves==before_poll); // Existing flashes never migrate to another shot.
     mesh_pose.translation.x+=20;
-    on_post_tick(nullptr,.04f);
-    assert(flash_moves==before_poll+2&&std::fabs(moved_flash.translation.x-460)<.002f);
+    on_tick(nullptr,.04f);
+    assert(flash_moves==before_poll);
     mesh_pose.translation.x-=20;
     flash_parent=id(40);
-    on_post_tick(nullptr,.04f);
-    assert(flash_moves==before_poll+2);
+    on_tick(nullptr,.04f);
+    assert(flash_moves==before_poll);
     flash_parent=id(51);menu_open=true;
-    on_post_tick(nullptr,.04f);
-    assert(flash_moves==before_poll+2);menu_open=false;
+    on_tick(nullptr,.04f);
+    assert(flash_moves==before_poll);menu_open=false;
     on_event("boltgun.muzzle.v1","off");
-    on_post_tick(nullptr,.04f);
-    assert(flash_moves==before_poll+2);
+    on_tick(nullptr,.04f);
+    assert(flash_moves==before_poll);
     // Seven-field leases opt into stereo-captured aim. Preserve native spread,
     // original caller bytes and single-spawn behavior, including fallbacks.
     selected_type=0;mock_barrel=true;
@@ -670,6 +682,7 @@ int main() {
     on_event("boltgun.muzzle.v1","off");assert(!begin_beam(id(2)).active);
     g_beam_hooked=false;
     mock_barrel=false;mesh_pose.rotation={0,0,0,1};
+    reticle_boundary_test::run();
     assert(!supported_file(L"missing-file-for-muzzle-test.exe"));
     wchar_t exe[32768]{};GetModuleFileNameW(nullptr,exe,32768);
     assert(!supported_file(exe));assert(!supported_module(reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))));
