@@ -179,6 +179,7 @@ static Transform* native(UEVR_UObjectHandle,Transform* out,float x,float,void*,b
     return out;
 }
 #include "test_reticle_bridge.hpp"
+#include "test_renderer_emissions.hpp"
 int main() {
     UEVR_UObjectHookFunctions hook{};hook.exists=exists;
     hook.get_motion_controller_state=motion_state;
@@ -336,7 +337,7 @@ int main() {
     const int previous_logs=logs;
     g_diagnostics_since=GetTickCount64()-7000;
     on_tick(nullptr,0);
-    assert(logs==previous_logs+8&&g_gate[Called].load()==0);
+    assert(logs==previous_logs+9&&g_gate[Called].load()==0);
     assert(std::strstr(flash_diagnostic,"invalidComponent=1"));
     assert(std::strstr(flash_diagnostic,"invalidAsset=1"));
     assert(std::strstr(flash_diagnostic,"parentUnknown=1"));
@@ -345,7 +346,7 @@ int main() {
     assert(std::strstr(flash_diagnostic,"transformRejected=1"));
     assert(std::strstr(flash_diagnostic,"notAllowed=1"));
     on_tick(nullptr,0);
-    assert(logs==previous_logs+8); // No diagnostic flood on every tick.
+    assert(logs==previous_logs+9); // No diagnostic flood on every tick.
     g_diagnostics_since=GetTickCount64()-7000;
     on_tick(nullptr,0);
     assert(std::strstr(flash_diagnostic,"parentUnknown=0"));
@@ -603,7 +604,7 @@ int main() {
     // Each flash is positioned only by its spawn hook. Moving the renderer
     // or firing again must not relocate previously spawned effects.
     hook.get_objects_by_class=[](UEVR_UClassHandle cls,UEVR_UObjectHandle* out,unsigned int capacity,bool defaults) {
-        assert(cls==g_flash_component_class&&!defaults&&capacity==128);
+        assert(cls==g_flash_component_class&&!defaults&&capacity==256);
         out[0]=id(6);return 1;
     };
     const int before_poll=flash_moves;
@@ -683,6 +684,7 @@ int main() {
     g_beam_hooked=false;
     mock_barrel=false;mesh_pose.rotation={0,0,0,1};
     reticle_boundary_test::run();
+    renderer_emissions_test::run();
     assert(!supported_file(L"missing-file-for-muzzle-test.exe"));
     wchar_t exe[32768]{};GetModuleFileNameW(nullptr,exe,32768);
     assert(!supported_file(exe));assert(!supported_module(reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))));

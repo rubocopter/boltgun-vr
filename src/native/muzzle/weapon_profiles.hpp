@@ -50,4 +50,21 @@ inline bool is_weapon_flash(int index,const wchar_t* name) {
         if(expected&&std::wcscmp(name,expected)==0) return true;
     return false;
 }
+inline bool is_weapon_emission(int index,const wchar_t* name) {
+    if(is_weapon_flash(index,name)) return true;
+    if(index<0||index>=10||!name) return false;
+    // Exact casing systems from the same cooked weapon animation catalogs.
+    // These emit against the old screen plane too; impact/projectile trails
+    // and arbitrary particle systems must never enter this allowlist.
+    static constexpr const wchar_t* casings[10][4]={
+        {L"NS_FX_BulletCasing_Bolter_Standard",L"NS_FX_BulletCasing_Bolter_Kraken",
+         L"NS_FX_BulletCasing_Bolter_Veng",L"NS_FX_BulletCasing_Bolter_Dragon"},
+        {L"NS_FX_BulletCasing_Shotgun"},{},{L"NS_FX_BulletCasing_HeavyBolter"},
+        {L"NS_Casing_VL"},{},{L"NS_FX_BulletCasing_Bolter_Veng"},
+        {L"NS_FX_BulletCasing_Bolter_Veng"},{},{L"NS_Casing_VL"}
+    };
+    for(const auto* expected:casings[index])
+        if(expected&&std::wcscmp(name,expected)==0) return true;
+    return false;
+}
 }

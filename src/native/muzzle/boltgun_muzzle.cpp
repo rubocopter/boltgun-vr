@@ -33,6 +33,9 @@ static ULONGLONG g_flash_retry_since{};
 static UEVR_UClassHandle g_flash_component_class{},g_flash_system_class{};
 static UEVR_UFunctionHandle g_flash_world_fn{},g_flash_set_fn{};
 static int g_flash_new_transform_offset{-1};
+static std::atomic<unsigned long> g_emission_scanned{},g_emission_owned{},g_emission_moved{},g_emission_dormant{};
+static ULONGLONG g_emission_frame{};
+static unsigned long long g_emission_generation{};
 static std::atomic<DWORD> g_engine_thread{};
 static std::atomic<bool> g_enabled{};
 static std::atomic<bool> g_faulted{};
@@ -282,6 +285,7 @@ static bool read_pose(Transform& pose) {
     g_api->sdk->uobject->process_event(g_lease.mesh,g_lease.transform_fn,&pose);
     return true;
 }
+static void align_renderer_emissions();
 // Capture after the stereo pair, once UEVR has positioned its tracked mesh.
 // A later spawn must prove this is still the current weapon and render frame.
 static void on_stereo(UEVR_StereoRenderingDeviceHandle,int index,float,
@@ -292,7 +296,7 @@ static void on_stereo(UEVR_StereoRenderingDeviceHandle,int index,float,
         return;
     }
     if((index+1)%2!=0||
-       !g_enabled.load()||!g_lease.freeaim||!g_lease.ready) return;
+       !g_enabled.load()||!g_lease.ready) return;
     const auto now=GetTickCount64();
     if(!may_override(true,now,g_lease.heartbeat,
         reinterpret_cast<uintptr_t>(g_lease.weapon),
@@ -302,13 +306,18 @@ static void on_stereo(UEVR_StereoRenderingDeviceHandle,int index,float,
     __try {
         Transform pose{};Quat rotation{};
         if(read_pose(pose)&&finite(pose.translation)&&normalized(pose.rotation,rotation)) {
-            g_display_pose=pose;g_display_at=now;
-            g_display_frame=g_engine_frame;g_display_generation=g_lease_generation;
-            g_stereo_captures.fetch_add(1,std::memory_order_relaxed);
+            if(g_lease.freeaim) {
+                g_display_pose=pose;g_display_at=now;
+                g_display_frame=g_engine_frame;g_display_generation=g_lease_generation;
+                g_stereo_captures.fetch_add(1,std::memory_order_relaxed);
+            }
         }
     } __except(EXCEPTION_EXECUTE_HANDLER) {
         g_display_at=0;g_faulted.store(true);g_enabled.store(false);
     }
+    // Native renderer/pool updates bypass NiagaraFunctionLibrary UFunctions.
+    // VFX faults are isolated inside this helper from projectile aim/capture.
+    align_renderer_emissions();
 }
 static UEVR_UObjectHandle spawn_detour(UEVR_UObjectHandle world,UEVR_UClassHandle cls,
                                       void* data,const Transform* original,UEVR_UObjectHandle weapon) {
@@ -696,6 +705,53 @@ static bool flash_attached_post(UEVR_UFunctionHandle fn,UEVR_UObjectHandle obj,v
     return flash_post(fn,obj,frame,result,true);
 }
 
+static void align_renderer_emissions() {
+    if(GetCurrentThreadId()!=g_engine_thread.load()||!g_enabled.load()||!g_lease.ready||
+       g_flash_faulted.load()||!g_flash_world_fn||!g_flash_set_fn||g_flash_new_transform_offset<0||
+       !g_engine_frame||(g_emission_frame==g_engine_frame&&g_emission_generation==g_lease_generation)||
+       !g_api->sdk->uobject_hook->get_objects_by_class||!g_api->sdk->uobject->get_bool_property||
+       !live(reinterpret_cast<UEVR_UObjectHandle>(g_flash_component_class))||
+       !live(reinterpret_cast<UEVR_UObjectHandle>(g_flash_system_class))) return;
+    __try {
+        Transform muzzle{};
+        if(!projectile_reticle::sample(g_lease.pawn,g_lease.weapon,muzzle)) return;
+        g_emission_frame=g_engine_frame;g_emission_generation=g_lease_generation;
+        std::array<UEVR_UObjectHandle,256> components{};
+        const int count=g_api->sdk->uobject_hook->get_objects_by_class(
+            g_flash_component_class,components.data(),static_cast<unsigned>(components.size()),false);
+        for(int i=0;i<count&&i<static_cast<int>(components.size());++i) {
+            const auto component=components[i];
+            g_emission_scanned.fetch_add(1,std::memory_order_relaxed);
+            if(!live(component)||!g_api->sdk->uobject->is_a(component,g_flash_component_class)) continue;
+            const auto parent_data=g_api->sdk->uobject->get_property_data(component,L"AttachParent");
+            UEVR_UObjectHandle parent{};
+            if(parent_data) std::memcpy(&parent,parent_data,sizeof(parent));
+            // Only live emitters attached to this pawn's renderer/plane/mesh.
+            // Detached effects and projectile flight/impact components are excluded.
+            if(!parent||!local_flash_parent(parent)) continue;
+            g_emission_owned.fetch_add(1,std::memory_order_relaxed);
+            const auto data=g_api->sdk->uobject->get_property_data(component,L"Asset");
+            UEVR_UObjectHandle system{};
+            if(data) std::memcpy(&system,data,sizeof(system));
+            if(!live(system)||!g_api->sdk->uobject->is_a(system,g_flash_system_class)) continue;
+            wchar_t name[96]{};
+            g_api->sdk->fname->to_string(g_api->sdk->uobject->get_fname(system),name,96);
+            if(!is_weapon_emission(g_lease.profile,name)) continue;
+            if(!g_api->sdk->uobject->get_property_data(component,L"bIsActive")||
+               !g_api->sdk->uobject->get_bool_property(component,L"bIsActive")) {
+                g_emission_dormant.fetch_add(1,std::memory_order_relaxed);continue;
+            }
+            Transform original{};
+            g_api->sdk->uobject->process_event(component,g_flash_world_fn,&original);
+            auto updated=muzzle;updated.scale=original.scale;
+            alignas(16) std::array<unsigned char,512> args{};
+            std::memcpy(args.data()+g_flash_new_transform_offset,&updated,sizeof(updated));
+            g_api->sdk->uobject->process_event(component,g_flash_set_fn,args.data());
+            g_emission_moved.fetch_add(1,std::memory_order_relaxed);
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) { g_flash_faulted.store(true); }
+}
+
 static void prepare_flash_hooks(ULONGLONG now) {
     if(g_flash_faulted.load()||!g_api->sdk->ufunction||
        !g_api->sdk->ufunction->hook_ptr||
@@ -766,6 +822,9 @@ static void on_tick(UEVR_UGameEngineHandle,float delta) {
     g_api->functions->log_info("[Boltgun muzzle 3D] Scoped beam: hooked=%d traces=%lu redirected=%lu visuals=%lu",
         int(g_beam_hooked.load()),g_beam_traces.exchange(0),
         g_beam_redirects.exchange(0),g_beam_fx_moves.exchange(0));
+    g_api->functions->log_info("[Boltgun muzzle 3D] Renderer emissions: scanned=%lu owned=%lu moved=%lu dormant=%lu",
+        g_emission_scanned.exchange(0),g_emission_owned.exchange(0),
+        g_emission_moved.exchange(0),g_emission_dormant.exchange(0));
     g_api->functions->log_info("[Boltgun muzzle 3D] Shot feedback: spawned=%lu null=%lu queued=%lu noVisual=%lu capped=%lu discarded=%lu consumed=%lu",
         g_feedback[SpawnSucceeded].exchange(0),g_feedback[SpawnFailed].exchange(0),
         g_feedback[ShotQueued].exchange(0),g_feedback[ShotNoVisual].exchange(0),
@@ -883,6 +942,8 @@ static void event_inner(const char* text) {
         g_flash_matched.exchange(0,std::memory_order_relaxed);
         g_flash_moved.exchange(0,std::memory_order_relaxed);
         g_flash_attached_skipped.exchange(0,std::memory_order_relaxed);
+        g_emission_scanned.exchange(0);g_emission_owned.exchange(0);
+        g_emission_moved.exchange(0);g_emission_dormant.exchange(0);
         for(auto& counter : g_flash_skips) counter.exchange(0,std::memory_order_relaxed);
         g_api->functions->log_info("[Boltgun muzzle 3D] Owned firearm %d and Transform contract verified",profile);
     } else {
@@ -995,7 +1056,7 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
         reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))+0x10616a0,
         reinterpret_cast<void*>(spawn_detour),reinterpret_cast<void**>(&g_spawn_original));
     if(id<0) api->functions->log_warn("[Boltgun muzzle 3D] Hook unavailable; retaining native firing");
-    else api->functions->log_info("[Boltgun muzzle 3D] Revision 21: optional frame-gated free aim; legacy origin-only firing remains default");
+    else api->functions->log_info("[Boltgun muzzle 3D] Revision 23: native renderer emissions and nominal reticle; optional frame-gated free aim");
     auto* module=reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr));
     if(id>=0&&experimental_beam_hooks_requested()&&supported_beam_module(module)) {
         // Retain every installed trampoline even if a later registration fails.
