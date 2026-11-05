@@ -2,6 +2,8 @@
 -- Requires the procedural bridge and data/chainsword3d assets. Sprite fallback
 -- stays intact until geometry, material and controller attachment are verified.
 local api, hook, vr = uevr.api, uevr.types.UObjectHook, uevr.params.vr
+uevr.boltgun_weapon_grips = uevr.boltgun_weapon_grips or {}
+local weapon_grips = uevr.boltgun_weapon_grips
 local MODE, SETTINGS, JOURNAL = 'chainsword3d.mode', 'chainsword3d.settings', 'chainsword3d.owned'
 local CLASS = 'Class /Script/ProceduralMeshComponent.ProceduralMeshComponent'
 local PLANE_CLASS = 'Class /Script/Engine.StaticMeshComponent'
@@ -229,6 +231,7 @@ local function cleanup()
     end
     if not owner_replaced and current_component() then
         if valid(owner) and owned:get_outer() == owner then
+            if type(weapon_grips.before_destroy) == 'function' then pcall(weapon_grips.before_destroy, owned) end
             owned:K2_DestroyComponent(owner)
         else
             -- Actor destruction owns its component teardown. Never call a stale owner.
@@ -397,7 +400,9 @@ local function apply_settings()
     rotation.w,rotation.x = cy*cp*cr+sy*sp*sr,cy*sp*cr+sy*cp*sr
     rotation.y,rotation.z = sy*cp*cr-cy*sp*sr,cy*cp*sr-sy*sp*cr
     state:set_hand(0)
-    state:set_permanent(false)
+    -- The preview owns this component and removes it at teardown. Avoid a
+    -- queued UEVR pose restore on a destroyed component after map travel.
+    state:set_permanent(true)
     state:set_location_offset(location)
     state:set_rotation_offset(rotation)
     applied = settings_text
@@ -465,6 +470,12 @@ local function contact_enabled()
     return not stopped and mode=='preview' and contact_visible and applied==settings_text and
         current_component() and valid(owner) and owned:get_outer()==owner and
         owner:get_full_name()==owner_name and tostring(owner:get_address())==owner_address and check_sprite()
+end
+
+-- The submitted sword geometry is authored around its handle origin.
+weapon_grips.left = function(pawn)
+    if pawn == owner and contact_enabled() and reference(owned, 'bVisible') == true and
+        reference(owned, 'bHiddenInGame') == false then return owned, 0, 0, 0, settings.scale end
 end
 
 local function create(pawn)

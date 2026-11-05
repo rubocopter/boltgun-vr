@@ -1,13 +1,16 @@
 -- Native-submitted gauntlets; +X aim, +Z dorsal, wrist -X, grip at (0,0,0).
--- UObject reads, writes and controller attachment occur only on engine ticks.
+-- UObject reads, writes and scene attachment occur only on engine ticks.
 local api, hook, vr = uevr.api, uevr.types.UObjectHook, uevr.params.vr
 local functions, callbacks = uevr.params.functions, uevr.params.sdk.callbacks
 local CLASS = 'Class /Script/ProceduralMeshComponent.ProceduralMeshComponent'
 local PLANE = 'Class /Script/Engine.StaticMeshComponent'
 local MATERIAL = 'MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun'
 local JOURNAL = 'hands3d.owned'
+uevr.boltgun_weapon_grips=uevr.boltgun_weapon_grips or {}
+local grips=uevr.boltgun_weapon_grips
 local records, hands, recovered, stopped, hands_failed = {}, {}, false, false, false
 local session, last_player, settings_text, settings = nil, nil, nil, {}
+local journal_version, no_socket = 'v2', nil
 local warmup, last_message = 0, nil
 local function report(message)
     if message == last_message then return end
@@ -34,7 +37,7 @@ local function journal()
     local lines = {}
     if #records > 0 then
         assert(same(session), 'Engine identity changed')
-        lines = {'v1', session.address, session.name}
+        lines = {journal_version, session.address, session.name}
         for _,r in ipairs(records) do
             local values = {r.kind,r.owner.address,r.owner.name,
                 r.renderer and r.renderer.address or '-',r.renderer and r.renderer.name or '-',
@@ -71,7 +74,12 @@ local function restore(r)
     local o = r.item.object
     if r.kind=='mesh' then
         o:SetHiddenInGame(true,false);o:SetVisibility(false,false)
-        hook.remove_motion_controller_state(o)
+        if journal_version=='v1' then
+            -- UEVR can still have restore writes queued for this component.
+            -- Retire the old MC state and leave the hidden mesh to its actor.
+            hook.remove_motion_controller_state(o)
+            return
+        end
         o:K2_DestroyComponent(r.owner.object)
     elseif prop(o,'bHiddenInGame')==true and prop(o,'bVisible')==false then
         -- Preserve a subsequent native/game visibility change.
@@ -91,7 +99,7 @@ local function recover()
     local text=fs.read(JOURNAL)
     if text=='' then recovered=true;return end
     local lines={};for line in text:gmatch('[^\n]+') do lines[#lines+1]=line end
-    assert(#lines>=4 and lines[1]=='v1', 'Invalid hands journal; refusing duplicate hands')
+    assert(#lines>=4 and (lines[1]=='v1' or lines[1]=='v2'), 'Invalid hands journal; refusing duplicate hands')
     local engine=api:get_engine();if not valid(engine) then return end
     session=identity(engine)
     if session.address~=lines[2] or session.name~=lines[3] then
@@ -109,7 +117,8 @@ local function recover()
             verified(r);records[#records+1]=r
         end
     end
-    remove_records(false);recovered=true
+    journal_version=lines[1]
+    remove_records(false);journal_version='v2';recovered=true
     report('Previous gauntlets and exact death-plane visibility recovered on engine tick')
 end
 
@@ -226,53 +235,66 @@ local function refresh_settings()
     end
     settings_text=text
 end
-local function quaternion(pitch,yaw,roll)
-    local p,y,r=pitch*math.pi/180,-yaw*math.pi/180,-roll*math.pi/180
-    local cp,sp,cy,sy,cr,sr=math.cos(p/2),math.sin(p/2),math.cos(y/2),math.sin(y/2),math.cos(r/2),math.sin(r/2)
-    local q=UEVR_Quaternionf.new()
-    q.w,q.x,q.y,q.z=cy*cp*cr+sy*sp*sr,cy*sp*cr+sy*cp*sr,sy*cp*cr-cy*sp*sr,cy*cp*sr-sy*sp*cr
-    return q
+local function show_mesh(o,show)
+    o:SetVisibility(show,false);o:SetHiddenInGame(not show,false)
 end
-local function multiply(a,b)
-    local q=UEVR_Quaternionf.new()
-    q.w=a.w*b.w-a.x*b.x-a.y*b.y-a.z*b.z
-    q.x=a.w*b.x+a.x*b.w+a.y*b.z-a.z*b.y
-    q.y=a.w*b.y-a.x*b.z+a.y*b.w+a.z*b.x
-    q.z=a.w*b.z+a.x*b.y-a.y*b.x+a.z*b.w
-    return q
-end
-local function weapon_frame(hand)
-    local text=fs.read(hand==0 and 'chainsword3d.settings' or 'bolter3d.settings')
-    local values={}
-    -- Match each weapon module's line parser, defaults and calibration bounds.
-    for _,key in ipairs({'x','y','z','pitch','yaw','roll'}) do
-        local v=tonumber(('\n'..text):match('\n'..key..'=([^\r\n]+)'))
-        local limit=(key=='x' or key=='y' or key=='z') and (hand==0 and 30 or 60) or 180
-        values[key]=v and v==v and v>=-limit and v<=limit and v or 0
+local function before_destroy(visual)
+    if stopped or not valid(visual) then return end
+    for _,r in ipairs(hands) do
+        if r.parent==visual and verified(r) and visual:get_outer()==r.owner.object then
+            local o=r.item.object
+            show_mesh(o,false)
+            if o:GetAttachParent()==visual then o:K2_DetachFromComponent(0,0,0,false) end
+            r.parent=nil
+        end
     end
-    -- bolter3d offsets are (x+s*grip_z,y-s*grip_x,z-s*grip_y).
-    -- Its UE mesh-local grip cancels those scale terms exactly under UEVR's
-    -- GLM->UE (y,z,-x) conversion. All arsenal profiles share this grip frame;
-    -- copying their mesh-origin offsets would put the hand beside the weapon.
-    -- chainsword3d is already authored about its grip, so uses (x,y,z) directly.
-    return values,quaternion(values.pitch,values.yaw,values.roll)
 end
-local function attach(o, hand)
-    local side=hand==0 and 'left_' or 'right_'
-    local state=hook.get_or_add_motion_controller_state(o);assert(state,'Controller attachment unavailable')
-    local base,weapon=weapon_frame(hand)
-    local trim=quaternion(settings[side..'pitch'],settings[side..'yaw'],settings[side..'roll'])
-    -- UEVR renders H * inverse(offset). A local trim therefore pre-multiplies
-    -- the weapon offset. Rotate the base translation into the trimmed frame
-    -- so adding a hand rotation never rotates the weapon's calibrated grip.
-    local v=multiply(multiply(trim,{w=0,x=base.x,y=base.y,z=base.z}),
-        {w=trim.w,x=-trim.x,y=-trim.y,z=-trim.z})
-    local location=UEVR_Vector3f.new()
-    location.x,location.y,location.z=v.x+settings[side..'x'],v.y+settings[side..'y'],v.z+settings[side..'z']
-    local q=multiply(trim,weapon)
-    state:set_hand(hand);state:set_permanent(false)
-    state:set_location_offset(location);state:set_rotation_offset(q)
-    o:SetRelativeScale3D({X=settings.scale,Y=settings.scale,Z=settings.scale})
+grips.before_destroy=before_destroy
+
+local function finite(v) return type(v)=='number' and v>-math.huge and v<math.huge end
+local function attach(r,side,pawn)
+    local get=grips[side]
+    if type(get)~='function' then return false end
+    local ok,visual,x,y,z,scale=pcall(get,pawn)
+    if not ok or not valid(visual) or visual==r.item.object or visual:get_outer()~=pawn or
+        visual:get_class():get_full_name()~=(side=='left' and CLASS or PLANE) or
+        prop(visual,'bVisible')~=true or prop(visual,'bHiddenInGame')~=false or
+        not (finite(x) and finite(y) and finite(z) and finite(scale) and scale>0) then return false end
+    local o=r.item.object
+    if r.parent~=visual or o:GetAttachParent()~=visual then
+        show_mesh(o,false)
+        if not no_socket then no_socket=fname('None') end
+        -- KeepRelative for location, rotation and scale. No socket or welding.
+        if o:K2_AttachToComponent(visual,no_socket,0,0,0,false)~=true or o:GetAttachParent()~=visual then
+            return false
+        end
+        r.parent,r.placement=visual,nil
+    end
+    local p=r.placement
+    if not p or p.x~=x or p.y~=y or p.z~=z or p.scale~=scale or p.settings~=settings then
+        local prefix=side..'_'
+        local trim={Pitch=settings[prefix..'pitch'],Yaw=settings[prefix..'yaw'],Roll=settings[prefix..'roll']}
+        -- Preserve candidate 25 trim axes: the effective UObjectHook quaternion
+        -- maps GLM (x,y,z) to UE (z,-x,-y), then inverse(trim) acts locally.
+        local dx,dy,dz=settings[prefix..'z'],-settings[prefix..'x'],-settings[prefix..'y']
+        local inverse=trim
+        if trim.Pitch~=0 or trim.Yaw~=0 or trim.Roll~=0 then
+            local class=api:find_uobject('Class /Script/Engine.KismetMathLibrary')
+            if not valid(class) or not class:find_function('LessLess_VectorRotator') or
+                not class:find_function('NegateRotator') then return false end
+            local kismet=class:get_class_default_object()
+            if not valid(kismet) then return false end
+            local shift=kismet:LessLess_VectorRotator({X=dx,Y=dy,Z=dz},trim)
+            dx,dy,dz=shift.x,shift.y,shift.z
+            inverse=kismet:NegateRotator(trim) -- FRotator::GetInverse, not negated Euler angles.
+        end
+        o:K2_SetRelativeLocationAndRotation(
+            {X=x+dx/scale,Y=y+dy/scale,Z=z+dz/scale},inverse,false,{},true)
+        local size=settings.scale/scale
+        o:SetRelativeScale3D({X=size,Y=size,Z=size})
+        r.placement={x=x,y=y,z=z,scale=scale,settings=settings}
+    end
+    return true
 end
 local function load_texture(rendering,pawn)
     -- Atlas contract: native writes this absolute hint after submitting geometry.
@@ -298,6 +320,7 @@ local function create(pawn)
     local class=api:find_uobject(CLASS);assert(valid(class),'ProceduralMeshComponent unavailable')
     for _,name in ipairs({'SetHiddenInGame','SetVisibility','SetCollisionEnabled','SetGenerateOverlapEvents',
         'SetMobility','SetCastShadow','SetOwnerNoSee','SetOnlyOwnerSee','CreateDynamicMaterialInstance',
+        'GetAttachParent','K2_AttachToComponent','K2_DetachFromComponent','K2_SetRelativeLocationAndRotation',
         'SetRelativeScale3D','K2_DestroyComponent','GetNumSections'}) do
         assert(class:find_function(name),'Required hand function unavailable: '..name)
     end
@@ -326,9 +349,8 @@ local function create(pawn)
             dmi:get_class():find_function('K2_GetTextureParameterValue'),'Hand material unavailable')
         dmi:SetTextureParameterValue(fname('BC'),texture)
         assert(dmi:K2_GetTextureParameterValue(fname('BC'))==texture,'Hand palette binding failed')
-        attach(o,hand)
     end
-    report('Gauntlets attached in weapon grip frames with BC color atlas; VR validation pending')
+    report('Gauntlets ready for owned weapon grip attachment; VR validation pending')
 end
 local function step()
     if not recovered then recover();if not recovered then return end end
@@ -363,8 +385,7 @@ local function step()
         end
     end
     for n,r in ipairs(hands) do
-        attach(r.item.object,n-1)
-        r.item.object:SetVisibility(show,false);r.item.object:SetHiddenInGame(not show,false)
+        show_mesh(r.item.object,show and attach(r,n==1 and 'left' or 'right',pawn))
     end
 end
 callbacks.on_pre_engine_tick(function()

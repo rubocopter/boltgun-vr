@@ -118,6 +118,7 @@ class ChainswordTests(unittest.TestCase):
         self.start()
         self.assertEqual(self.eval('ctx.created'),1)
         self.assertEqual(self.component().hand,0)
+        self.assertTrue(self.component().permanent, 'Owned preview must not queue UEVR pose restoration')
         self.assertTrue(self.component().visible)
         self.assertTrue(self.eval('secondary.hidden'))
         self.assertFalse(self.eval('primary.hidden'))
@@ -142,6 +143,31 @@ class ChainswordTests(unittest.TestCase):
         self.assertTrue(self.eval('secondary.visible'))
         self.assertFalse(self.component().visible)
         self.assertEqual(self.eval('ctx.destroyed'),0)
+
+    def test_hand_grip_is_sword_origin_and_revokes_when_the_sword_is_hidden(self):
+        self.lua.execute("""
+            files['chainsword3d.settings']='scale=.75'
+            function read_grip()
+                ctx.engine_thread=true
+                local visual,x,y,z,scale=uevr.boltgun_weapon_grips.left(pawn)
+                ctx.engine_thread=false
+                return visual==ctx.components[1],x,y,z,scale
+            end
+        """)
+        self.start()
+        self.assertEqual(self.eval('read_grip()'), (True, 0, 0, 0, .75))
+        self.lua.execute("sprite_mat.get_full_name=function()return 'MaterialInstanceConstant /Game/Dash/MI_Hand' end")
+        self.tick()
+        self.assertEqual(self.eval('read_grip()'), (False, None, None, None, None))
+        self.lua.execute("""
+            uevr.boltgun_weapon_grips.before_destroy=function(part)
+                engine_only();ctx.retired_visible=part==ctx.components[1] and part.valid
+            end
+            files['chainsword3d.mode']='off'
+        """)
+        self.tick(.3)
+        self.assertTrue(self.eval('ctx.retired_visible'))
+        self.assertEqual(self.eval('ctx.destroyed'), 1)
     def test_off_restores_sprite_and_destroys_visual(self):
         self.start();self.lua.execute("files['chainsword3d.mode']='off'");self.tick(.3)
         self.assertFalse(self.eval('secondary.hidden'))

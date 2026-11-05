@@ -2,6 +2,8 @@
 -- Only an engine-tick callback creates/changes/destroys Unreal components.
 -- Disabled unless data/bolter3d.mode contains exactly 'preview'.
 local api, hook, vr = uevr.api, uevr.types.UObjectHook, uevr.params.vr
+uevr.boltgun_weapon_grips = uevr.boltgun_weapon_grips or {}
+local weapon_grips = uevr.boltgun_weapon_grips
 local MODE, SETTINGS, JOURNAL = 'bolter3d.mode', 'bolter3d.settings', 'bolter3d.owned'
 local CLASS = 'Class /Script/Engine.StaticMeshComponent'
 local MESH = 'StaticMesh /Game/Art/Pickups/Weapons/M_Pickups_Boltgun.M_Pickups_Boltgun'
@@ -90,6 +92,7 @@ local load_attempted, failed_meshes = {}, {}
 local failed_profile, failed_probe_timer = nil, 0
 local owned, anchor, owner, applied, last_status = nil, nil, nil, nil, nil
 local base_location, base_rotation = nil, nil
+local applied_grip
 local current_weapon = nil
 local current_weapon_address, current_weapon_name = nil, nil
 local sprite_state = nil
@@ -236,6 +239,9 @@ local function cleanup()
     for _, part in pairs({owned, anchor}) do
         if not owner_replaced and current_component(part) then
             if valid(owner) and part:get_outer() == owner then
+                if part == owned and type(weapon_grips.before_destroy) == 'function' then
+                    pcall(weapon_grips.before_destroy, part)
+                end
                 part:K2_DestroyComponent(owner)
             else
                 -- Actor destruction owns its component teardown. Never call a stale owner.
@@ -263,6 +269,7 @@ local function cleanup()
     owned, anchor, owner, applied, current_weapon = nil, nil, nil, nil, nil
     current_weapon_address, current_weapon_name = nil, nil
     base_location, base_rotation = nil, nil
+    applied_grip = nil
     sprite_state = nil
     owner_name, owner_address = nil, nil
     component_identities = {}
@@ -360,37 +367,51 @@ end
 local function apply_settings(profile)
     local scale = profile.id == 'bolter' and settings.scale or profile.scale
     local grip_x = profile.id == 'bolter' and settings.grip_x or profile.grip_x
+    local grip_y = profile.id == 'bolter' and settings.grip_y or 0
     local grip_z = profile.id == 'bolter' and settings.grip_z or profile.grip_z
     -- UEVR explicitly warns that a MotionControllerState pointer can be invalidated.
     -- Resolve it when needed and never store it in the script state.
     local location = UEVR_Vector3f.new()
-    -- Unreal mesh centimetres: grip (-48,0,24). UObjectHook uses GLM offsets
-    -- and converts (x,y,z) -> UE (y,z,-x). Cancel the scaled grip coordinates
-    -- so the mesh's grip centre lands on the tracked controller position.
+    -- Keep the existing controller calibration. The hand bridge publishes the
+    -- authored UE mesh landmark separately from this GLM offset tuple.
     location.x = settings.x + scale*grip_z
     location.y = settings.y - scale*grip_x
-    location.z = settings.z - scale*(profile.id == 'bolter' and settings.grip_y or 0)
+    location.z = settings.z - scale*grip_y
     local pitch, yaw, roll = settings.pitch*math.pi/180, -settings.yaw*math.pi/180, -settings.roll*math.pi/180
     local cp,sp,cy,sy,cr,sr = math.cos(pitch/2),math.sin(pitch/2),math.cos(yaw/2),
         math.sin(yaw/2),math.cos(roll/2),math.sin(roll/2)
     local rotation = UEVR_Quaternionf.new()
     rotation.w,rotation.x = cy*cp*cr+sy*sp*sr, cy*sp*cr+sy*cp*sr
     rotation.y,rotation.z = sy*cp*cr-cy*sp*sr, cy*cp*sr-sy*sp*cr
-    -- The optional native getter reads this owned collisionless component's
-    -- latest world pose. UEVR must not restore it to the pawn origin after draw.
-    local prefix = profile.id == 'bolter' and 'muzzle_' or profile.id .. '_muzzle_'
     for _, part in pairs({owned, anchor}) do
         part:SetRelativeScale3D({X=scale,Y=scale,Z=scale})
         local state = hook.get_or_add_motion_controller_state(part)
         assert(state ~= nil, 'Controller attachment unavailable')
         state:set_hand(1)
-        state:set_permanent(settings.muzzle_enabled == 1 and settings[prefix .. 'enabled'] == 1 and
-            not muzzle_failed and uevr.params.functions.dispatch_custom_event ~= nil)
+        -- These are disposable owned components. A temporary UEVR pose queues
+        -- restoration that can outlive component destruction during travel.
+        state:set_permanent(true)
         state:set_location_offset(location)
         state:set_rotation_offset(rotation)
     end
     base_location, base_rotation = location, rotation
+    applied_grip = {x=grip_x, y=grip_y, z=grip_z, scale=scale}
     applied = settings_text
+end
+
+-- Engine-tick readers use the rendered mesh even when a separate hidden
+-- component supplies the muzzle pose. Return the calibration already applied.
+weapon_grips.right = function(pawn)
+    if stopped or mode ~= 'preview' or not applied_grip or pawn ~= owner or
+        not valid(owner) or owner:get_full_name() ~= owner_name or
+        tostring(owner:get_address()) ~= owner_address or not current_component(owned) or
+        owned:get_outer() ~= owner or reference(owned, 'bVisible') ~= true or
+        reference(owned, 'bHiddenInGame') ~= false then return end
+    local weapon = reference(reference(owner, 'WeaponHandlerComponent'), 'EquippedWeapon')
+    if not valid(weapon) or tostring(weapon:get_address()) ~= current_weapon_address or
+        weapon:get_full_name() ~= current_weapon_name then return end
+    local grip = applied_grip
+    return owned, grip.x, grip.y, grip.z, grip.scale
 end
 
 local function find_weapon(weapon)

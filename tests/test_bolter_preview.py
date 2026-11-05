@@ -156,6 +156,7 @@ class BolterPreviewTests(unittest.TestCase):
           local name='StaticMeshComponent test.'..ctx.created
           local c=object(name,ctx.addresses,mesh_class,owner)
           registry[name]=c; table.insert(ctx.components,c)
+          c.get_property=primary.get_property
           c.SetHiddenInGame=function(self,value,propagate) engine_only(); self.hidden=value end
           c.SetVisibility=function(self,value,propagate) engine_only(); self.visible=value end
           c.SetCollisionEnabled=function(self,value) engine_only(); self.collision=value end
@@ -361,6 +362,36 @@ class BolterPreviewTests(unittest.TestCase):
         self.assertEqual(len(parts),15)
         self.assertEqual(parts[-1],'0')
         self.assertEqual(self.lua.globals().files['bolter3d.owned'].split('\n')[0],'v3')
+
+    def test_hand_grip_uses_visible_recoil_model_and_latest_applied_calibration(self):
+        self.lua.execute(r"""
+            files['bolter3d.settings']='recoil_enabled=1\ngrip_x=-52\ngrip_y=4\ngrip_z=27\nscale=.6'
+            function read_grip()
+                ctx.engine_thread=true
+                local visual,x,y,z,scale=uevr.boltgun_weapon_grips.right(pawn)
+                ctx.engine_thread=false
+                return visual==ctx.components[1],x,y,z,scale
+            end
+        """)
+        self.tick()
+        self.assertEqual(self.lua.eval('read_grip()'), (True, -52, 4, 27, .6))
+        self.lua.execute(r"files['bolter3d.settings']='recoil_enabled=1\ngrip_x=-62\nscale=.8'")
+        self.assertEqual(self.lua.eval('read_grip()'), (True, -52, 4, 27, .6))
+        self.tick(.3)
+        self.assertEqual(self.lua.eval('read_grip()'), (True, -62, 0, 24, .8))
+        self.lua.execute("""
+            weapon.get_address=function()engine_only();return 1009 end
+            uevr.boltgun_weapon_grips.before_destroy=function(part)
+                engine_only()
+                ctx.retired_visible=part==ctx.components[1] and part.valid
+                error('A hand callback must not interrupt weapon cleanup')
+            end
+            files['bolter3d.mode']='off'
+        """)
+        self.assertEqual(self.lua.eval('read_grip()'), (False, None, None, None, None))
+        self.tick(.3)
+        self.assertTrue(self.lua.globals().ctx.retired_visible)
+        self.assertEqual(self.lua.globals().ctx.destroyed, 2)
 
     def test_freeaim_opt_in_is_explicit_for_both_lease_formats(self):
         for recoil, expected_fields in ((0,7),(1,15)):
@@ -579,7 +610,7 @@ class BolterPreviewTests(unittest.TestCase):
         self.lua.globals().files['bolter3d.settings']='shotgun_muzzle_enabled=0'
         self.tick()
         self.assertTrue(self.component().visible)
-        self.assertFalse(self.component().permanent)
+        self.assertTrue(self.component().permanent, 'Owned preview must not queue UEVR pose restoration')
         self.assertTrue(all(e.data=='off' for e in self.lua.globals().ctx.events.values()))
 
     def test_reset_revokes_muzzle_without_unreal_access(self):
@@ -603,7 +634,7 @@ class BolterPreviewTests(unittest.TestCase):
         self.lua.globals().files['bolter3d.settings']='muzzle_enabled=0'
         self.tick()
         self.assertTrue(self.component().visible)
-        self.assertFalse(self.component().permanent)
+        self.assertTrue(self.component().permanent, 'Owned preview must not queue UEVR pose restoration')
         self.assertTrue(all(e.data=='off' for e in self.lua.globals().ctx.events.values()))
 
     def test_muzzle_event_failure_keeps_visual_and_native_firing_available(self):
@@ -617,7 +648,7 @@ class BolterPreviewTests(unittest.TestCase):
         self.lua.globals().uevr.params.functions.dispatch_custom_event=None
         self.tick()
         self.assertTrue(self.component().visible)
-        self.assertFalse(self.component().permanent)
+        self.assertTrue(self.component().permanent, 'Owned preview must not queue UEVR pose restoration')
 
     def test_muzzle_heartbeat_does_not_dispatch_every_frame(self):
         self.tick()

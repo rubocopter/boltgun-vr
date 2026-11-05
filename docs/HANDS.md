@@ -21,9 +21,10 @@ occlusion and death transitions still require the maintainer's VR check.
 
 The integrated script enables hands by default when the VR runtime, HMD and
 controllers are active, aiming is allowed, and the living local Sternguard has
-finished loading a gameplay map. It hides both hands during death, loading,
-native pause, a visible native menu, the UEVR menu, and loss of runtime/HMD/
-controller readiness. The components have no collision, overlaps or shadows.
+finished loading a gameplay map. Each hand appears when its matching owned 3D
+weapon is visible. Both hands hide during death, loading, native pause, a
+visible native menu, the UEVR menu, and loss of runtime, HMD or controller
+readiness. The components have no collision, overlaps or shadows.
 
 Profile settings live under `data/`:
 
@@ -36,13 +37,15 @@ Profile settings live under `data/`:
 Calibration accepts `scale` from 0.5 to 1.5, plus `left_x`, `left_y`, `left_z`,
 `right_x`, `right_y`, `right_z` in Unreal centimeters from −20 to 20. Each hand
 also accepts `_pitch`, `_yaw` and `_roll` from −180 to 180 degrees. Defaults are
-scale 1 and zero local trims. Each hand inherits its weapon module's calibrated
-rotation and grip translation; initial mesh-local grip fits are +3/+2.5/-2 cm
-for the firearm hand and +2.4/0/0 cm for the sword hand, measured against the
-existing Bolter and chainsword meshes. Other weapon grips remain initial fits
-requiring VR adjustment. Firearm mesh-origin offsets are canceled rather
-than copied into the hand. Hand trims compose in the grip frame, so a rotation
-trim does not rotate the calibrated grip position around the controller. Invalid or out-of-range values use their defaults.
+scale 1 and zero local trims. Each hand attaches at the visible weapon's
+mesh-local grip, and shares its calibrated pose and visual recoil. Model scale
+is compensated so a half-scale weapon keeps the gauntlet at its configured
+size. The initial hand geometry fits are +3/+2.5/−2 cm for the firearm hand and
++2.4/0/0 cm for the sword hand, measured against the existing Bolter and
+chainsword meshes. Other weapons use their individual grip landmarks and
+still require headset validation. Existing trim values keep their controller
+axis convention and rotate about the grip. Invalid or out-of-range values use
+their defaults.
 
 ```ini
 scale=1
@@ -60,10 +63,11 @@ right_yaw=0
 right_roll=0
 ```
 
-The gauntlets do not suppress ordinary weapon sprites or alter weapon damage,
-input, blood overlays or HUD widgets. A failed geometry/material/attachment
-setup removes partial gauntlets and disables further creation until script
-reload; exact death-arm suppression continues independently.
+Ordinary weapon sprites, weapon damage, input, blood overlays and HUD widgets
+remain under their existing owners. Failed geometry or material initialization
+removes partial gauntlets and disables further creation until script reload.
+A rejected attachment keeps that hand hidden until it can attach. Exact
+death-arm suppression continues independently.
 
 ## Original death arms
 
@@ -132,15 +136,29 @@ only this material through the reflected UE4 AssetRegistry layout.
 pawn name/address, component name/address, and, for death planes, renderer
 name/address plus original visibility. Reload recovery runs on an engine tick,
 validates every surviving identity and owner chain, restores exact death planes,
-and removes previous gauntlets before allowing replacements. Earlier process
-records are discarded without resolving their object names. Corrupt records or
-live identity/ownership changes stop the owner and retain the journal for
-inspection, preventing duplicate or foreign-object mutation.
+and removes previous v2 gauntlets before allowing replacements. For a same-process
+v1 journal, recovery hides the verified legacy hands and removes their old
+motion controller states. It leaves their components alive until pawn teardown
+because a UEVR restore may already be queued for them. Earlier process records
+are discarded without resolving their object names. Corrupt records or live
+identity/ownership changes stop the owner and retain the journal for inspection.
 
-All UObject operations and controller attachment changes run in
-`on_pre_engine_tick`. `on_script_reset` changes only a scalar stop flag. No
-stereo callback is registered. A script reset therefore relies on the next
-instance's engine-tick recovery for cleanup.
+UEVR loads profile scripts into a shared Lua state. The firearm and chainsword
+owners expose `uevr.boltgun_weapon_grips.right(pawn)` and `left(pawn)` from that
+state. A getter returns the verified visible owned component, the mesh-local
+`x, y, z` grip landmark and the applied model scale. The firearm getter
+returns the visual recoil target when a separate hidden muzzle reference
+exists. The sword's handle is at its mesh origin. The hands owner uses
+`K2_AttachToComponent` and a relative transform, so stereo pose changes
+propagate through Unreal's scene attachment in the same frame. Weapon teardown
+calls the hand owner's `before_destroy(visual)` on the engine tick to hide and
+detach the child before destroying the verified parent. [Unreal scene attachment](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/SceneComponent?application_version=4.27)
+
+The hands owner registers no motion controller state or stereo callback.
+UEVR's separate temporary controller attachments queue world-transform
+restores, which can outlive a removed component. All hand UObject operations
+run on the engine tick. Script reset sets a scalar stop flag and the next
+instance recovers through the journal. [UEVR attachment implementation](https://github.com/praydog/UEVR/blob/4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d/src/mods/UObjectHook.cpp)
 
 ## Evidence and validation
 
@@ -160,7 +178,9 @@ Run the actual Lua owner against the simulated engine boundary with:
 python -m unittest discover -s tests -p 'test_hands.py' -q
 ```
 
-The focused tests cover paired attachment, visibility gates, all 25 exact
+The focused tests cover exact weapon parenting, model scale compensation,
+local trim, rejected attachment, weapon replacement, legacy MC recovery,
+visibility gates, all 25 exact
 death frames, dynamic BC recognition, unknown-frame rejection, death-pawn
 possession, original/native visibility restoration, reload recovery, foreign
 ownership, malformed journals, settings bounds and partial creation failures.

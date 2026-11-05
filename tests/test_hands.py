@@ -37,6 +37,28 @@ class HandsTests(unittest.TestCase):
         gs.IsGamePaused=function()engine_only();return ctx.paused end
         gs_class.get_class_default_object=function()engine_only();return gs end
         proc_class=class('Class /Script/ProceduralMeshComponent.ProceduralMeshComponent')
+        local function visual(name,address,cls,owner)
+          local part=object(name,address,cls,owner)
+          part.get_property=primary.get_property;part.hidden=false;part.visible=true
+          return part
+        end
+        sword=visual('Sword preview',1310,proc_class,pawn)
+        gun=visual('Firearm preview',1311,mesh_class,pawn)
+        uevr.boltgun_weapon_grips={
+          left=function(owner) engine_only();assert(owner==pawn);return sword,0,0,0,1 end,
+          right=function(owner) engine_only();assert(owner==pawn);return gun,-48,2,24,.5 end}
+        math_class=class('Class /Script/Engine.KismetMathLibrary')
+        math_library=object('Default__KismetMathLibrary',1312,math_class)
+        math_class.get_class_default_object=function()engine_only();return math_library end
+        math_library.NegateRotator=function(self,r)
+          engine_only();assert(r.Yaw==0 and r.Roll==0)
+          return {Pitch=-r.Pitch,Yaw=0,Roll=0}
+        end
+        math_library.LessLess_VectorRotator=function(self,v,r)
+          engine_only();assert(r.Yaw==0 and r.Roll==0)
+          local s,c=math.sin(math.rad(r.Pitch)),math.cos(math.rad(r.Pitch))
+          return {x=c*v.X+s*v.Z,y=v.Y,z=-s*v.X+c*v.Z}
+        end
         material.get_full_name=function()engine_only();return 'MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun' end
         texture=object('Texture2D test.palette',1304,class('Class /Script/Engine.Texture2D'))
         texture.Blueprint_GetSizeX=function()engine_only();return ctx.texture_width or 256 end
@@ -54,6 +76,10 @@ class HandsTests(unittest.TestCase):
           if name=='Class /Script/Engine.GameplayStatics' then return gs_class end
           if name=='Class /Script/ProceduralMeshComponent.ProceduralMeshComponent' then return proc_class end
           if name=='Class /Script/Engine.KismetRenderingLibrary' then return rendering_class end
+          if name=='Class /Script/Engine.KismetMathLibrary' then
+            ctx.math_lookups=(ctx.math_lookups or 0)+1
+            return not ctx.no_trim_math and math_class or nil
+          end
           return find(self,name)
         end
         uevr.api.add_component_by_class=function(self,owner,cls,deferred)
@@ -61,6 +87,22 @@ class HandsTests(unittest.TestCase):
           local c=new_component(owner);c.sections=0
           c.get_class=function()engine_only();return proc_class end
           c.GetNumSections=function(self)engine_only();return self.sections end
+          c.GetAttachParent=function(self)engine_only();return self.parent end
+          c.K2_AttachToComponent=function(self,parent,socket,location,rotation,scale,weld)
+            engine_only()
+            assert(parent.valid and socket.name=='None' and location==0 and rotation==0 and scale==0 and weld==false)
+            assert(self.hidden and not self.visible)
+            if not ctx.fail_attach then self.parent=parent;return true end
+            return false
+          end
+          c.K2_DetachFromComponent=function(self,location,rotation,scale,modify)
+            engine_only();assert(location==0 and rotation==0 and scale==0 and modify==false)
+            assert(self.hidden and not self.visible);self.parent=nil
+          end
+          c.K2_SetRelativeLocationAndRotation=function(self,p,r,sweep,hit,teleport)
+            engine_only();assert(not sweep and teleport and self.parent)
+            self.location=p;self.rotation=r
+          end
           c.CreateDynamicMaterialInstance=function(self,slot,source,name)
             engine_only();assert(slot==0 and source==material)
             local dmi=object('DMI hand',1400+ctx.created,class('DMI'),c)
@@ -125,11 +167,11 @@ class HandsTests(unittest.TestCase):
         self.run_lua('reset()')
         self.assertEqual(self.value('ctx.queries'), queries)
 
-    def test_both_real_components_attach_without_hiding_weapons(self):
+    def test_both_real_components_attach_to_their_visible_weapons_without_mc_states(self):
         self.start()
         self.assertEqual(self.value('ctx.created'), 2)
-        self.assertEqual(self.value('ctx.components[1].hand'), 0)
-        self.assertEqual(self.value('ctx.components[2].hand'), 1)
+        self.assertTrue(self.value('ctx.components[1].parent==sword and ctx.components[2].parent==gun'))
+        self.assertEqual(self.value('ctx.attached'), 0)
         self.assertTrue(self.value('ctx.components[1].visible and ctx.components[2].visible'))
         self.assertFalse(self.value('primary.hidden or secondary.hidden'))
         self.assertEqual(self.value('ctx.components[1].collision'), 0)
@@ -277,9 +319,9 @@ class HandsTests(unittest.TestCase):
         self.run_lua("files['hands3d.settings']='scale=99\\nleft_x=3\\nright_y=-4\\nright_pitch=45\\nleft_yaw=nan'")
         self.start()
         self.assertEqual(self.value('ctx.components[1].scale'), 1)
-        self.assertEqual(self.value('ctx.components[1].offset.x'), 3)
-        self.assertEqual(self.value('ctx.components[2].offset.y'), -4)
-        self.assertAlmostEqual(self.value('ctx.components[1].rotation.w'), 1)
+        self.assertEqual(self.value('ctx.components[1].location.Y'), -3)
+        self.assertEqual(self.value('ctx.components[1].rotation.Yaw'), 0)
+        self.assertEqual(self.value('ctx.components[2].rotation.Pitch'), -45)
 
     def test_texture_failure_removes_partial_pair(self):
         self.run_lua('ctx.fail_texture=true')
@@ -333,47 +375,84 @@ class HandsTests(unittest.TestCase):
                 self.assertEqual(self.value('ctx.imports or 0'), 0)
                 self.assertEqual(self.value('ctx.created'), self.value('ctx.destroyed'))
 
-    def test_grip_origin_follows_weapon_calibration_without_mesh_origin_compensation(self):
+    def test_grip_origin_uses_applied_mesh_landmark_and_compensates_for_weapon_scale(self):
         self.run_lua(r"""
-        files['bolter3d.settings']='scale=.5\nx=3\ny=-4\nz=5\nyaw=90\ngrip_x=-48\ngrip_z=24'
+        files['bolter3d.settings']='scale=.8\nx=3\ny=-4\nz=5\nyaw=90\ngrip_x=-80\ngrip_z=10'
         files['chainsword3d.settings']='x=-2\ny=6\nz=1\nyaw=180'
         """)
         self.start()
-        for hand, offset, q in ((1, (-2, 6, 1), (0, 0, -1, 0)),
-                                 (2, (3, -4, 5), (2**-.5, 0, -2**-.5, 0))):
-            for axis, want in zip('xyz', offset):
-                self.assertAlmostEqual(self.value(f'ctx.components[{hand}].offset.{axis}'), want)
-            for axis, want in zip('wxyz', q):
-                self.assertAlmostEqual(self.value(f'ctx.components[{hand}].rotation.{axis}'), want)
-        self.assertEqual(self.value('ctx.components[2].scale'), 1)
+        for hand, location, scale in ((1, (0, 0, 0), 1), (2, (-48, 2, 24), 2)):
+            for axis, want in zip('XYZ', location):
+                self.assertEqual(self.value(f'ctx.components[{hand}].location.{axis}'), want)
+            self.assertEqual(self.value(f'ctx.components[{hand}].scale'), scale)
 
-    def test_weapon_frame_refreshes_after_settings_change(self):
+    def test_parent_retirement_hides_hand_then_reuses_it_for_replacement(self):
         self.start()
-        self.run_lua(r"files['bolter3d.settings']='x=7\nyaw=180';files['chainsword3d.settings']='z=-3\npitch=90'")
+        self.run_lua('''
+        ctx.engine_thread=true;uevr.boltgun_weapon_grips.before_destroy(gun);ctx.engine_thread=false
+        gun.valid=false
+        ''')
+        self.assertFalse(self.value('ctx.components[2].visible or ctx.components[2].parent'))
+        self.assertTrue(self.value('ctx.components[1].visible'))
         self.tick()
-        self.assertEqual(self.value('ctx.components[2].offset.x'), 7)
-        self.assertEqual(self.value('ctx.components[1].offset.z'), -3)
-        self.assertAlmostEqual(self.value('ctx.components[2].rotation.y'), -1)
-        self.assertAlmostEqual(self.value('ctx.components[1].rotation.x'), 2**-.5)
+        self.assertFalse(self.value('ctx.components[2].visible'))
+        self.run_lua('''
+        gun=object('Replacement',1330,mesh_class,pawn)
+        gun.get_property=primary.get_property;gun.hidden=false;gun.visible=true
+        uevr.boltgun_weapon_grips.right=function()engine_only();return gun,-55,0,20,.4 end
+        ''')
+        self.tick()
+        self.assertTrue(self.value('ctx.components[2].visible and ctx.components[2].parent==gun'))
+        self.assertEqual(self.value('ctx.components[2].location.X'), -55)
+        self.assertEqual(self.value('ctx.components[2].scale'), 2.5)
         self.assertEqual(self.value('ctx.created'), 2)
 
     def test_local_trim_composes_after_weapon_frame_without_moving_grip(self):
-        self.run_lua(r"files['bolter3d.settings']='x=3\ny=-4\nz=5\nyaw=90';files['hands3d.settings']='right_pitch=90'")
+        self.run_lua(r"files['hands3d.settings']='right_pitch=90'")
         self.start()
-        # Qtrim * Qweapon; rotate the base translation by Qtrim so
-        # inverse(Qhand)*Lhand remains inverse(Qweapon)*Lweapon at the grip.
-        for axis, want in zip('wxyz', (.5, .5, -.5, -.5)):
-            self.assertAlmostEqual(self.value(f'ctx.components[2].rotation.{axis}'), want)
-        for axis, want in zip('xyz', (3, -5, -4)):
-            self.assertAlmostEqual(self.value(f'ctx.components[2].offset.{axis}'), want)
+        self.assertEqual(self.value('ctx.components[2].rotation.Pitch'), -90)
+        for axis, want in zip('XYZ', (-48, 2, 24)):
+            self.assertAlmostEqual(self.value(f'ctx.components[2].location.{axis}'), want)
+        self.run_lua(r"files['hands3d.settings']='right_pitch=90\nright_z=4\nscale=1.25'")
+        self.tick()
+        for axis, want in zip('XYZ', (-48, 2, 16)):
+            self.assertAlmostEqual(self.value(f'ctx.components[2].location.{axis}'), want)
+        self.assertEqual(self.value('ctx.components[2].scale'), 2.5)
 
-    def test_invalid_weapon_values_use_matching_module_defaults(self):
-        self.run_lua(r"files['bolter3d.settings']='x=nan\ny=61\nyaw=181\npitch=inf';files['chainsword3d.settings']='x=31\nroll=-181'")
+    def test_missing_or_foreign_weapon_hides_only_its_hand(self):
         self.start()
-        for hand in (1, 2):
-            for axis in 'xyz':
-                self.assertEqual(self.value(f'ctx.components[{hand}].offset.{axis}'), 0)
-            self.assertAlmostEqual(self.value(f'ctx.components[{hand}].rotation.w'), 1)
+        for change in ('gun.hidden=true',
+                       'gun.hidden=false;gun.get_outer=function()engine_only();return renderer end',
+                       'gun.get_outer=function()engine_only();return pawn end;uevr.boltgun_weapon_grips.right=nil'):
+            self.run_lua(change)
+            self.tick()
+            self.assertFalse(self.value('ctx.components[2].visible'))
+            self.assertTrue(self.value('ctx.components[1].visible'))
+
+    def test_zero_rotation_trim_works_without_kismet_math_helpers(self):
+        self.run_lua(r"ctx.no_trim_math=true;files['hands3d.settings']='right_y=3'")
+        self.start()
+        self.assertEqual(self.value('ctx.math_lookups or 0'), 0)
+        self.assertTrue(self.value('ctx.components[1].visible and ctx.components[2].visible'))
+        self.assertEqual(self.value('ctx.components[2].location.Z'), 18)
+
+    def test_attach_rejection_keeps_hand_hidden_until_it_can_attach(self):
+        self.run_lua('ctx.fail_attach=true')
+        self.start()
+        self.assertFalse(self.value('ctx.components[1].visible or ctx.components[2].visible'))
+        self.run_lua('ctx.fail_attach=false')
+        self.tick()
+        self.assertTrue(self.value('ctx.components[1].visible and ctx.components[2].visible'))
+
+    def test_legacy_recovery_unregisters_without_destroying_pending_mc_targets(self):
+        self.start()
+        self.run_lua("reset();files['hands3d.owned']=files['hands3d.owned']:gsub('^v2','v1')")
+        self.reload()
+        self.start()
+        self.assertEqual(self.value('ctx.removed'), 2)
+        self.assertEqual(self.value('ctx.destroyed'), 0)
+        self.assertFalse(self.value('ctx.components[1].visible or ctx.components[2].visible'))
+        self.assertTrue(self.value('ctx.components[3].visible and ctx.components[4].visible'))
 
 
 if __name__ == '__main__':
