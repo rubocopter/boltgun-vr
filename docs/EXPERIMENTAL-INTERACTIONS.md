@@ -1,6 +1,6 @@
 # Experimental VR interactions
 
-The current source candidate is **firearm revision 26 / chainsword package 11**.
+The current source candidate is **firearm revision 27 / chainsword package 12**.
 The published v1.0.2 runtime remains revision 20/package 5. See
 [STATUS.md](STATUS.md) for the evidence boundary and [PENDING.md](PENDING.md) for
 prioritized tests and implementation work.
@@ -13,7 +13,7 @@ engine-thread display pose with matching ownership/frame/generation. Rejected
 captures fall back to native orientation.
 
 The world reticle samples that same production policy synchronously on Lua's
-post-engine tick. Revision 26 renders the original HUD crosshair brush through
+post-engine tick. Revision 27 renders the original HUD crosshair brush through
 an owned transparent WidgetComponent. Original HUD suppression waits for valid
 widget rendering, a native ray acknowledgement and checked world placement.
 It is nominal aim, not a random-spread or projectile-impact prediction.
@@ -64,7 +64,7 @@ inherit weapon calibration. Their fixed grip and appearance need VR checks.
 Tracked hands hide on death; there is no 3D death-arm replacement.
 
 The maintainer approved the [peripheral damage halo](COMFORT.md) in candidate 24.
-Its runtime bytes are unchanged in candidate 26. That feature-level feedback
+Its runtime bytes are unchanged in candidate 27. That feature-level feedback
 does not validate the entire candidate or every transition.
 
 All current manifest verification flags remain false. Offline tests cannot

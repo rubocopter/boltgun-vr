@@ -1,7 +1,7 @@
 # Guided setup: Boltgun VR (Windows)
 
 The published player release is **v1.0.2**. A ZIP built from the current source
-contains **candidate 26 / package 11**, including unverified reticle/hand changes;
+contains **candidate 27 / package 12**, including unverified reticle/hand changes;
 see [status](STATUS.md) and [pending tests](PENDING.md). UEVR is a separate
 dependency: the ZIP contains no UEVR executable, game assets or automatic
 third-party download. You need a legitimately installed **Warhammer 40,000:

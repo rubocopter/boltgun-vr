@@ -2,8 +2,8 @@
 
 Replace the native blood rectangle with a quiet red peripheral effect. This is
 a feature whose appearance the maintainer approved on 5 November 2026 in
-candidate 24. Its runtime files are unchanged through candidate 26. The complete
-revision 26/package 11 retains false verification flags; that approval does not
+candidate 24. Its runtime files are unchanged through candidate 27. The complete
+revision 27/package 12 retains false verification flags; that approval does not
 certify unrelated features or every lifecycle path.
 The runtime module does not install, deploy, launch the game, or start VR.
 

@@ -1,6 +1,6 @@
 # Pending validation and implementation
 
-Updated 5 November 2026. Applies to **firearm revision 26 / chainsword package 11**.
+Updated 5 November 2026. Applies to **firearm revision 27 / chainsword package 12**.
 [STATUS.md](STATUS.md) records what exists and what the maintainer has observed.
 An unchecked item below is not an implementation or verification claim.
 
@@ -13,7 +13,7 @@ excerpts. Keep recordings and full logs in ignored local archives.
 | ID | Priority | Check | Acceptance / evidence needed |
 | --- | --- | --- | --- |
 | V1 | High | Native reticle appearance and persistence | Original game glyph, transparent background, correct tint/scale; no white dot or duplicate centered image. Follow the actual aiming destination at near/far surfaces and in empty space; survive weapon switches, save loads, pause and script reload. |
-| V2 | High | Imported hand appearance and grip | Blue armor, dark glove and gold trim render correctly in both eyes. Fingers/thumb wrap the actual grips without floating or severe clipping. Check Bolter and chainsword first, then every other weapon; record per-weapon offsets. |
+| V2 | High | Imported hand appearance and grip | Blue armor, dark glove and gold trim render correctly in both eyes. Fingers/thumb wrap the actual grips without floating or severe clipping. At equal arm extension compare the two grips with the controller poses. Rotate the sword to check the cuff faces the wrist. Then check the remaining weapons and record their offsets. |
 | V3 | High | Remaining weapon effect deviation | Record projectiles, muzzle flashes, smoke, casing ejection and impact effects separately for each weapon. Compare the emission origin to its projectile muzzle. Capture reflected-hook, renderer and native-emission counters. Partial improvement is not a pass for all effects. |
 | V4 | High | Physical chainsword damage | Hold left Trigger and contact an enemy from outside the native attack aim where possible, so the existing normal cutting target does not mask the adapter. Confirm samples, sweeps, real contacts and applied-damage counters advance, and that damage is additional to original L2 attacks. Test stationary repeat, release, walls and the 500 ms per-target cooldown. |
 | V5 | High | Return to main menu and reload | Load a save, inspect both hands, then return to the main menu and reload the save. Repeat with the 3D previews active. Check death, respawn and pause as separate transitions. Capture the latest crash context if an access violation recurs. |

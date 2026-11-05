@@ -15,7 +15,7 @@
 `research`, `backups`, `diagnostics`, `previews` and `tools/python` remain ignored local
 archives: previous iterations, extracts, recordings, downloaded runtimes and diagnostics.
 Local research and previous prototypes remain outside Git. The public documentation
-contains current player/developer guides, candidate 26 notes, STATUS.md and
+contains current player/developer guides, candidate 27 notes, STATUS.md and
 PENDING.md. Superseded candidate 24/25 and revision 16/17 notes were retired; their
 content remains in Git history, outside the current player package.
 
@@ -26,7 +26,7 @@ The player archive contains a curated subset of these directories, one English
 root menu launcher and the compiled native plugins. The old starter profile and obsolete
 experimental probes were retired. Installation snapshots live in ignored
 `backups/install/`; the separate reinstall snapshot tool covers user calibration.
-Current source is candidate 26/package 11; published v1.0.2 retains the older
+Current source is candidate 27/package 12; published v1.0.2 retains the older
 revision 20/package 5 runtime confirmed with v1.0.1. New reticle/hands await VR
 feedback. See [STATUS.md](STATUS.md) and [PENDING.md](PENDING.md).
 Original project-authored code is under [GPL-3.0-or-later](../LICENSE).

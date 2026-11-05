@@ -1,6 +1,6 @@
 # Architecture
 
-Current source: firearm revision 26 / chainsword package 11. See
+Current source: firearm revision 27 / chainsword package 12. See
 [STATUS.md](STATUS.md) for evidence and [PENDING.md](PENDING.md) for open work.
 
 | Owner | Responsibility |

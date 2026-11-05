@@ -1,13 +1,13 @@
 {
-  "version": 11,
+  "version": 12,
   "runtimeVerified": false,
   "previousVerifiedVersion": 5,
-  "verificationScope": "Package 11 mounts gauntlets on the owned displayed weapon meshes and removes their independent UEVR tracking. Candidate 25 rendered the gloves with incorrect placement and crashed on a right-gauntlet transform during travel. Confirm the revised fit and menu transition in VR. Package 5 is the last fully confirmed runtime.",
+  "verificationScope": "Package 12 seats the measured sword handle at the left controller grip and turns the left gauntlet cuff about the handle axis. The approved right-hand geometry is retained. The revised arm reach and grip need headset validation. Package 5 is the last fully confirmed runtime.",
   "files": [
     {
       "source": "src\\lua\\boltgun_chainsword.lua",
       "target": "scripts\\boltgun_chainsword.lua",
-      "sha256": "1C5C7B01C6297E3B939112D85D78220BB64E2D83B35831B7CA7F19DD9BC36B4D",
+      "sha256": "F7B089F81D5E2F2AEBD0BF80E06B61F599D15F3D3858544A64D0EBD809772811",
       "upgradeFrom": [
         "787BAD078A784AA7198E6F3128D3C17491751BF0B36029A2D6E420B2C1919125",
         "5A4E1BF39CFEB3774EFA2DE1AE1F66182A26C12176FC3472F3AF7C8E9F416B31",
@@ -16,13 +16,14 @@
         "6BE6667532F88BADA54552B942B2BD6AA7ADF85E7C54877F6C5AA3BB4596FFD3",
         "234C6FE2FF100A4869D3B1ED58223FC365C79CB1495E0D2B7479A5813669C7E2",
         "752C985395AAF0340A93DD31CAD55EFB9DED56DCBC165221587184A5F3A19EA2",
-        "3AD30C0815D24432F8FBB6707585BEFB19B2009DC794FF74F2CFD4F28CC7BAC1"
+        "3AD30C0815D24432F8FBB6707585BEFB19B2009DC794FF74F2CFD4F28CC7BAC1",
+        "1C5C7B01C6297E3B939112D85D78220BB64E2D83B35831B7CA7F19DD9BC36B4D"
       ]
     },
     {
       "source": "build\\plugins\\boltgun_chainsword.dll",
       "target": "plugins\\boltgun_chainsword.dll",
-      "sha256": "76095EEF478BEEE79BE749000B2D203B04BDE49221EF9AA48A8F57D775E6A317",
+      "sha256": "298EC14DEFD916E53AFF7802EF4A3473344D7E6049E9C1AC02CEDD9E593FE1CC",
       "upgradeFrom": [
         "680BD5A67DBD4F78E55D35A00FFECCBED051BEFCB12776F2BF498622366A52BF",
         "299AA89DA0BFA3594BC07935A7FBCACA553F515C78884A42813505D1B818F409",
@@ -30,7 +31,8 @@
         "9CEA66F61F16B67DE5BAA89C652B9D501FA5D1B2965436499C57F53A2528F8A9",
         "5EA8CF04692245EA1E1BD6CE8AD92DAB12D1EA261CCB7C9BF8E74E2E91CECEE9",
         "FEF06E3C4AFDFFBB32C8001C9B9017BBE8224A05BB59C19CCC336A3AB2767CD7",
-        "FF119908E177E57EF64DF07364DD4F36C06DDF9E145E6FF6457E8046C90A9D33"
+        "FF119908E177E57EF64DF07364DD4F36C06DDF9E145E6FF6457E8046C90A9D33",
+        "76095EEF478BEEE79BE749000B2D203B04BDE49221EF9AA48A8F57D775E6A317"
       ]
     },
     {

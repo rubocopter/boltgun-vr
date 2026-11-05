@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased candidate 27 / chainsword package 12
+
+- Anchor both weapon rigs at their tracked grips and turn the left gauntlet around the sword handle.
+- Keep near-muzzle reticle hits on the firing ray and withhold the centered HUD glyph during initial overlap.
+
 ## Unreleased candidate 26 / chainsword package 11 — 5 November 2026
 
 - Correct the cooked widget material and render readiness checks so the native

@@ -1,10 +1,10 @@
 # Tracked chainsword
 
-The optional Kaiser-E model follows the left controller. Released package 5 retains the original game's L2 attacks. **Current package 11 includes the wired physical-contact adapter and imported hands; no additional contact damage has been confirmed in VR.** Deployment checks use temporary profiles; replacing an installed candidate requires maintainer authorization. See [the arsenal](ARSENAL.md) and [validation status](STATUS.md).
+The optional Kaiser-E model follows the left controller. Released package 5 retains the original game's L2 attacks. **Current package 12 includes the wired physical-contact adapter and imported hands; no additional contact damage has been confirmed in VR.** Deployment checks use temporary profiles; replacing an installed candidate requires maintainer authorization. See [the arsenal](ARSENAL.md) and [validation status](STATUS.md).
 
 ## Player behavior
 
-With package 11 in a prepared candidate profile and `chainsword3d.mode=preview`, hold the **physical left Trigger** (`/actions/default/in/Trigger`, normally L2) and put the visible cutting edge against an enemy. There is **no additional physical-contact toggle** beyond the 3D preview and held left Trigger. Contact does **not require the original attack combo, a swing gesture, or a minimum swing speed**. Keeping the blade stationary against a target can cut again after a 500 ms per-target cooldown. The physical Trigger is still required.
+With package 12 in a prepared candidate profile and `chainsword3d.mode=preview`, hold the **physical left Trigger** (`/actions/default/in/Trigger`, normally L2) and put the visible cutting edge against an enemy. There is **no additional physical-contact toggle** beyond the 3D preview and held left Trigger. Contact does **not require the original attack combo, a swing gesture, or a minimum swing speed**. Keeping the blade stationary against a target can cut again after a 500 ms per-target cooldown. The physical Trigger is still required.
 
 The original L2 action remains bound. Physical contact adds a separate damage opportunity without requiring a native combo to be active. An existing `ChainswordCuttingTarget` blocks contact damage while the original cutting ability owns that target. The integration does not remap or suppress the original attack, and interaction between original attacks and contacts still needs headset testing. No impact haptics or spark repositioning are added.
 
@@ -58,7 +58,7 @@ The contact tests run the actual Lua owner, sweep and engine adapter against a s
 
 Offline tests cannot establish collision ABI compatibility, game collision-channel coverage, original ability side effects, damage balance, attachment timing or contact alignment in a headset. UEVR's Lua device-matrix getter exposes no authenticated per-device tracking-valid or foreground/focus bit: finite matrices, HMD activity and aim allowance do not prove tracking freshness or focus. The scalar stereo marker is not authenticated XR provenance. If first-eye stereo occurs outside the engine interval, this implementation deliberately drops capture. Verify actual callback timing in VR before changing that restriction.
 
-Keep **`runtimeVerified: false` and `verifiedInGame: false`** for this revision until maintainer confirmation. The historical package 5 validation does not certify package 11 physical contact or hands. Deployment checks must use a temporary profile; do not start SteamVR or inject UEVR during repository maintenance. Package 10 includes the main Lua script, contact/engine helpers, blade-sweep dependency and imported hand payload; validate their exact-byte hashes during packaging.
+Keep **`runtimeVerified: false` and `verifiedInGame: false`** for this revision until maintainer confirmation. The historical package 5 validation does not certify package 12 physical contact or hands. Deployment checks must use a temporary profile; do not start SteamVR or inject UEVR during repository maintenance. Package 10 includes the main Lua script, contact/engine helpers, blade-sweep dependency and imported hand payload; validate their exact-byte hashes during packaging.
 
 ## Model and attribution
 
