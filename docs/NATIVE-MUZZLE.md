@@ -1,6 +1,6 @@
 # Native muzzle bridge and firing feedback
 
-Current candidate: **firearm revision 25**. The plugin supports ten exact
+Current candidate: **firearm revision 26**. The plugin supports ten exact
 firearm classes and their relevant Machine Spirit variants. Its supported game
 executable SHA-256 is:
 
@@ -54,7 +54,7 @@ component is authorized by the renderer correction. Bounded discovery is not a
 license to move old effects using a global cached shot.
 
 The maintainer reported improvement in some weapons in candidate 24, with
-remaining deviations. Revision 25 retains that effect logic; complete muzzle,
+remaining deviations. Revision 26 retains that effect logic; complete muzzle,
 casing and beam visual alignment has not been demonstrated.
 
 ### Diagnostics
@@ -106,7 +106,7 @@ weapon/ownership changes, menus and tracking gates retire optional state.
 
 Revision 20/package 5 received maintainer VR confirmation on 16 October 2026.
 Later sessions supplied partial alignment/menu/damage feedback, not full
-revision 25 validation. Native harnesses and Python/Lua tests cover policy,
+revision 26 validation. Native harnesses and Python/Lua tests cover policy,
 ABI, lifecycle and ownership contracts. They do not prove live effect coverage,
 reticle visibility or every weapon's collision behavior. Keep
 `verifiedInGame: false` for the current candidate.

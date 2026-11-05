@@ -1,7 +1,7 @@
 # Troubleshooting
 
 Start with [STATUS.md](STATUS.md) to distinguish the published release from
-candidate 25/package 10. [PENDING.md](PENDING.md) tracks unresolved behavior.
+candidate 26/package 11. [PENDING.md](PENDING.md) tracks unresolved behavior.
 
 ## Installation and input
 
@@ -27,7 +27,7 @@ candidate 25/package 10. [PENDING.md](PENDING.md) tracks unresolved behavior.
   means the native image should remain available while its world-widget texture
   redraws. Acknowledgement alone does not prove a visible original-game glyph.
   See [reticle lifecycle](RETICLE.md); V1 remains unverified in VR.
-- **White blocks or wrong hand color:** package 10 replaces the old prototype.
+- **White blocks or wrong hand color:** package 11 replaces the old prototype.
   Check the installed hand script/DLL, `data/hands3d/right_grip.bgmesh`,
   `data/hands3d/hands_color.png` and the runtime-generated `hands3d.texture_path`.
   The current script rejects the obsolete 1x1 white texture. Preserve the log

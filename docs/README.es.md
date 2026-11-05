@@ -7,17 +7,18 @@ opcionales para diez armas de fuego y la espada sierra.
 ## Estado actual
 
 El candidato instalado localmente el **5 de noviembre de 2026** es el **arsenal
-revisión 25 / chainsword paquete 10**, con perfil Sense v7. No es una nueva
+revisión 26 / chainsword paquete 11**, con perfil Sense v7. No es una nueva
 versión publicada. Sus indicadores globales de validación en VR siguen en falso.
 
 | Función | Estado real |
 | --- | --- |
-| Retícula del propio juego en el punto de apuntado | Implementada e instalada en la revisión 25; pendiente de probar su dibujo, transparencia y persistencia en VR. Sustituye al punto/cruz blanca del prototipo. |
-| Manos blindadas azules, negras y doradas | Modelo CC0 importado, dedos en postura fija y agarre ajustado inicialmente al bólter y la espada. Pendientes de comprobar materiales, escala y encaje en visor y otras armas. |
-| Halo rojo al recibir daño | Aspecto aprobado por el mantenedor en el candidato 24; esos archivos no cambian en el 25. Quedan transiciones y recuperación por comprobar. |
+| Retícula del propio juego en el punto de apuntado | En la revisión 25 se veía la mira fija del HUD porque fallaba la comprobación del material del widget. La revisión 26 corrige esa comprobación y queda pendiente de probar en VR. |
+| Manos blindadas azules, negras y doradas | El vídeo confirma que se ve el modelo CC0, pero mal colocado. Los guanteletes ahora se montan en el arma visible. Queda comprobar el encaje en visor. |
+| Halo rojo al recibir daño | Aspecto aprobado por el mantenedor en el candidato 24; esos archivos se conservan en el candidato 26. Quedan transiciones y recuperación por comprobar. |
 | Menús estables | Estabilidad comunicada por el mantenedor. El puente para apuntar, pasar por encima y pulsar con un mando no está implementado. |
 | Disparos y efectos | Mejor alineación comunicada y algunos fogonazos corregidos; siguen efectos desviados. No se considera resuelto para todas las armas. |
 | Daño físico de la espada | Adaptador conectado, pero no se ha demostrado daño adicional. Exige mantener el gatillo izquierdo; los últimos diagnósticos inspeccionados no avanzaban de esa condición. Los ataques L2 originales siguen activos. |
+| Volver al menú | El volcado identifica una escritura de pose de UEVR sobre el guantelete derecho durante la transición. La revisión 26 elimina esa ruta de seguimiento de las manos. Falta repetir la prueba. |
 | Muerte | Se ocultan los antiguos sprites de brazos y también las manos 3D. No existe una presentación de manos/brazos 3D al morir. |
 
 No hay recargas físicas, animación de dedos ni brazos articulados completos.

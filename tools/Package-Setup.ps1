@@ -21,7 +21,7 @@ $scriptFiles=@('Install.ps1','Restore.ps1','Setup-BoltgunVR.ps1','Menu.ps1',
     'Play-BoltgunVR.ps1','Bolter3D.ps1','Chainsword3D.ps1','Comprobar-perfil.ps1')
 $toolFiles=@('Paths.ps1','Check-Repository.ps1','Snapshots.ps1')
 $guideFiles=@('ARCHITECTURE.md','ARSENAL.md','BUILD.md','CHAINSAW.md',
-    'CONTROLS.md','CANDIDATE-25.md','PENDING.md','COMFORT.md','HANDS.md','EASY-SETUP.md','EXPERIMENTAL-INTERACTIONS.md','INSTALACION-FACIL.es.md','INSTALL.md',
+    'CONTROLS.md','CANDIDATE-26.md','PENDING.md','COMFORT.md','HANDS.md','EASY-SETUP.md','EXPERIMENTAL-INTERACTIONS.md','INSTALACION-FACIL.es.md','INSTALL.md',
     'NATIVE-MUZZLE.md','RETICLE.md','MENU.md','README.es.md','REINSTALL.md','REPOSITORY.md',
     'SOURCE-AND-NOTICES.md','STATUS.md','TROUBLESHOOTING.md')
 

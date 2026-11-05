@@ -1066,7 +1066,7 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
         reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))+0x10616a0,
         reinterpret_cast<void*>(spawn_detour),reinterpret_cast<void**>(&g_spawn_original));
     if(id<0) api->functions->log_warn("[Boltgun muzzle 3D] Hook unavailable; retaining native firing");
-    else api->functions->log_info("[Boltgun muzzle 3D] Revision 25: native HUD glyph on the production aiming ray");
+    else api->functions->log_info("[Boltgun muzzle 3D] Revision 26: production aiming ray for the native HUD glyph");
     auto* module=reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr));
     if(id>=0&&native_emission_signature(module)) {
         const int emission_hook=api->functions->register_inline_hook(module+0xd778a0,

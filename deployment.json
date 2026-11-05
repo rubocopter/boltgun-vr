@@ -57,7 +57,7 @@
   {
     "source": "src\\lua\\boltgun_bolter3d.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_bolter3d.lua",
-    "sha256": "7E2F4BBA0D12C100EF9D1A9D3AD63700B92737787124D8C04A7BE4875A4691F9",
+    "sha256": "D1E64129B9252641063FBDB5CBCC4F96854A677FB1BF8FC48388D8BF3A3D37B0",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional 10-firearm 3D replacement; installed/selected only by Bolter3D.ps1"
@@ -81,7 +81,7 @@
   {
     "source": "build\\plugins\\boltgun_muzzle.dll",
     "target": "${ProfileRoot}\\plugins\\boltgun_muzzle.dll",
-    "sha256": "5BC20BCE6628A479A3D881796BD1EB9FA5AD05868DB2D0900560AF4C870FBF36",
+    "sha256": "8CD4780C31DBE7C0B8AE742938304B782BD893FA1A07BA1F0E291308BDDF8F8A",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional exact-build ten-firearm muzzle bridge; installed only by Bolter3D.ps1; included for original-profile restoration"
@@ -89,7 +89,7 @@
   {
     "source": "src\\lua\\boltgun_chainsword.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_chainsword.lua",
-    "sha256": "3AD30C0815D24432F8FBB6707585BEFB19B2009DC794FF74F2CFD4F28CC7BAC1",
+    "sha256": "1C5C7B01C6297E3B939112D85D78220BB64E2D83B35831B7CA7F19DD9BC36B4D",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional external Chainsword; installed by Chainsword3D.ps1"
@@ -145,7 +145,7 @@
   {
     "source": "src\\lua\\boltgun_reticle.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_reticle.lua",
-    "sha256": "FB66E6CD7C983732577FEB6C214857E93ADE6BCB49F129652903AF066826B53C",
+    "sha256": "D291702B3DE5C928EF0F1F152281C70FFBB7A3F1D865770470F790236D42BF40",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional runtime dependency; installed with its 3D module and included in profile restoration inventory"
@@ -191,7 +191,7 @@
   {
     "source": "src\\lua\\boltgun_hands.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_hands.lua",
-    "sha256": "35ED945F42DF97903B3BC983FEC1295354E98D84C4630C54C6EF1C92BD65A0AF",
+    "sha256": "7BBA1443B36A51888D7650908FE4FAB1A06EE076C342838210AFDFC17A3DC217",
     "originalSha256": null,
     "note": "Optional imported armored hands in calibrated weapon grip frames and exact native death-arm suppression; installed with Chainsword3D.ps1",
     "disabled": true

@@ -1,6 +1,6 @@
 # Experimental 3D firearm arsenal
 
-The current candidate is **firearm revision 25 / chainsword package 10**.
+The current candidate is **firearm revision 26 / chainsword package 11**.
 It replaces the equipped firearm sprite with a tracked original-game pickup
 mesh, loaded from the player's installation. No game mesh or texture is
 redistributed. Released revision 20/package 5 has historical VR confirmation;
@@ -24,7 +24,7 @@ Machine Spirit variants share the relevant pickup mesh. The chainsword is a sepa
 
 ## Experimental physical chainsword
 
-Chainsword **package 10** wires the actual owned left-hand blade to engine-side contact queries. With the 3D preview active, **hold the physical left Trigger** (`/actions/default/in/Trigger`, normally L2) and touch an enemy with the cutting edge. There is no additional contact toggle. No original attack combo, swing gesture or minimum swing speed is required; stationary contact can repeat after a 500 ms per-target cooldown. The original L2 binding remains active, and its existing cutting target takes priority over physical contact.
+Chainsword **package 11** wires the actual owned left-hand blade to engine-side contact queries. With the 3D preview active, **hold the physical left Trigger** (`/actions/default/in/Trigger`, normally L2) and touch an enemy with the cutting edge. There is no additional contact toggle. No original attack combo, swing gesture or minimum swing speed is required; stationary contact can repeat after a 500 ms per-target cooldown. The original L2 binding remains active, and its existing cutting target takes priority over physical contact.
 
 Stereo records only a scalar first-eye marker. The blade's displayed world pose is captured on `post_engine_tick` after attachment and processed on the next `pre_engine_tick`; stereo performs no UObject/VR calls. Hidden blades, menus, pause, loading, death, released Trigger, invalid/stale samples and changed ownership block contact. Walls and pawn-to-contact occlusion reject damage. Display recreation preserves the same weapon's cooldown; calibration changes require fresh poses. Real collision hits feed the game's original `DealCuttingDamage()` with weapon state restored afterward; enemy health is never written directly.
 
@@ -53,7 +53,7 @@ weapons, with deviations remaining; native interception logged calls but zero
 redirects. See [native muzzle implementation](NATIVE-MUZZLE.md) for those limits.
 
 The world reticle samples nominal production aim and traces real collisions.
-Revision 25 draws the native game glyph through an owned transparent world
+Revision 26 draws the native game glyph through an owned transparent world
 widget; it does not predict random spread or projectile flight. Its appearance
 and persistence await VR testing. Unsupported beam/hitscan paths keep native
 behavior unless separately guarded hooks are explicitly enabled.

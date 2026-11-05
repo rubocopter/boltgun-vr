@@ -1,6 +1,6 @@
 # Pending validation and implementation
 
-Updated 5 November 2026. Applies to **firearm revision 25 / chainsword package 10**.
+Updated 5 November 2026. Applies to **firearm revision 26 / chainsword package 11**.
 [STATUS.md](STATUS.md) records what exists and what the maintainer has observed.
 An unchecked item below is not an implementation or verification claim.
 
@@ -16,7 +16,7 @@ excerpts. Keep recordings and full logs in ignored local archives.
 | V2 | High | Imported hand appearance and grip | Blue armor, dark glove and gold trim render correctly in both eyes. Fingers/thumb wrap the actual grips without floating or severe clipping. Check Bolter and chainsword first, then every other weapon; record per-weapon offsets. |
 | V3 | High | Remaining weapon effect deviation | Record projectiles, muzzle flashes, smoke, casing ejection and impact effects separately for each weapon. Compare the emission origin to its projectile muzzle. Capture reflected-hook, renderer and native-emission counters. Partial improvement is not a pass for all effects. |
 | V4 | High | Physical chainsword damage | Hold left Trigger and contact an enemy from outside the native attack aim where possible, so the existing normal cutting target does not mask the adapter. Confirm samples, sweeps, real contacts and applied-damage counters advance, and that damage is additional to original L2 attacks. Test stationary repeat, release, walls and the 500 ms per-target cooldown. |
-| V5 | Medium | Lifecycle and death transitions | Check hands/reticle through death, respawn, loading, save/load, pause and script reset. Old large death-arm sprites stay absent; current tracked hands intentionally hide on death. No duplicates, stale models or hidden native HUD after recovery. |
+| V5 | High | Return to main menu and reload | Load a save, inspect both hands, then return to the main menu and reload the save. Repeat with the 3D previews active. Check death, respawn and pause as separate transitions. Capture the latest crash context if an access violation recurs. |
 | V6 | Medium | Confirmed damage halo regression | Preserve the approved appearance through repeated hits, low health, death, menus and `comfort.mode=off`/reload. The current halo files match the approved candidate; broader lifecycle coverage remains open. |
 | V7 | Medium | Menu and input regression | Panel stays stationary while moving the right controller; Options/Create and existing native mouse/game navigation work. Controller hover/laser/trigger-click is not an implemented feature to accept yet. |
 | V8 | Medium | Firing modes and optional feedback | Check native-aim defaults and explicitly opted-in free aim, recoil, firing haptics, close-range collision and fallback after stale tracking. Run experimental Volkite/Gravgun hooks only in a separate opt-in session. |

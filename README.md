@@ -32,14 +32,14 @@ Latest release: **v1.0.2** · [Changelog](CHANGELOG.md)
 > **Version 1.0.2 — installer compatibility update (1 November 2026).** If SteamVR generates an incompatible Oculus Touch SystemButton mapping, setup preserves that binding and continues with the rest of the installation. The Sense profile v7 / 3D arsenal revision 20 / chainsword package 5 runtime is unchanged from v1.0.1, which the maintainer validated in VR on 16 October 2026. The new installer fallback has offline test coverage but no new headset confirmation. DLC weapons and other controller mappings are not independently certified. [Download the player package](https://github.com/rubocopter/boltgun-vr/releases/latest).
 
 > [!NOTE]
-> **Unreleased candidate: firearm revision 25 and chainsword package 10.** The maintainer confirmed the peripheral damage effect and stable menus, and reported partial muzzle-effect improvement. This candidate replaces the white marker with the game's native HUD crosshair brush rendered at the production aiming destination. Imported CC0 armored gloves replace the white cuboid prototype and inherit the weapon grip calibration. See [candidate notes](docs/CANDIDATE-25.md), [hands](docs/HANDS.md), [reticle behavior](docs/RETICLE.md) and [damage comfort](docs/COMFORT.md). The changed reticle and hand presentation remain **unverified in VR**. Free aim stays opt-in; separately gated beams remain experimental. Automated deployment checks use temporary profiles; installation alone does not establish VR validation.
+> **Unreleased candidate: firearm revision 26 and chainsword package 11.** Candidate 25 reproduced a detached grip, a centered HUD reticle and a crash while returning to the menu. Candidate 26 corrects the reticle material checks and removes independent tracking from the imported gloves. The menu transition and visual changes await headset verification. [Candidate notes](docs/CANDIDATE-26.md).
 
 ## What changes in VR
 
 - **Motion controls.** Head-oriented movement, turning, pause/recenter mappings and PS VR2 Sense button assignments.
 - **Weapon wheel.** Hold R3, tilt the right stick towards a weapon group and release. Return to the centre to cancel.
 - **Optional tracked firearms.** Up to ten weapon-specific 3D replacements assembled from meshes already in the installed game; the Multi-Melta and Missile Launcher require the DLC. The mod can fall back to the original sprite when a mesh fails to load.
-- **Optional chainsword.** A separate tracked model on the left controller. Released attacks, damage and sounds use the original game's mechanics; candidate package 10 includes an experimental held-left-Trigger contact adapter whose additional damage remains unconfirmed.
+- **Optional chainsword.** A separate tracked model on the left controller. Released attacks, damage and sounds use the original game's mechanics; candidate package 11 includes an experimental held-left-Trigger contact adapter whose additional damage remains unconfirmed.
 - **Current candidate presentation.** Native-game world crosshair, imported armored hands, stable menu panels and a peripheral damage halo. The new reticle/hands await VR feedback; the damage appearance was approved. Reduced Codex scale remains available.
 
 Firearms have experimental visual recoil and haptics on supported projectile
@@ -63,14 +63,14 @@ For prerequisites, exact file locations, backups and restoring your previous pro
 
 ## Current development status
 
-The locally installed candidate is **firearm revision 25 / chainsword package 10**.
+The locally installed candidate is **firearm revision 26 / chainsword package 11**.
 It is distinct from the published v1.0.2 runtime. Both current verification flags
 remain false until the maintainer confirms the exact changed revision in VR.
 
 | Component | Current evidence | Next step |
 | --- | --- | --- |
-| Native-game world reticle | Implemented and installed; offline coverage | Check glyph, transparency, aim position and persistence in VR |
-| Imported armored hands | Blue/charcoal/brass fixed-grip model and calibrated attachment | Check both eyes and fit for every weapon |
+| Native-game world reticle | Candidate 25 remained on the HUD fallback. The new path has offline coverage | Check glyph, transparency, aim position and persistence in VR |
+| Imported armored hands | Candidate 25 rendered the colored model. Candidate 26 attaches it to the weapon | Check both eyes and fit for every weapon |
 | Damage comfort and menu panels | Maintainer approved the halo and reported stable panels | Check lifecycle regressions; controller hover/click is still unimplemented |
 | Projectiles and emission effects | Shots appear better aligned; some muzzle effects improved | Resolve remaining deviations and zero native-emission redirects |
 | Physical chainsword contact | Adapter loads; additional damage has not been demonstrated | Diagnose Trigger/pose gates and prove real contacts/damage |

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased candidate 26 / chainsword package 11 — 5 November 2026
+
+- Correct the cooked widget material and render readiness checks so the native
+  crosshair can follow the production firing ray.
+- Mount the imported hands on the displayed weapon models. Remove separate
+  hand tracking and prevent queued pose restoration on the owned weapon
+  previews during map travel.
+- Document the candidate 25 return-to-menu crash and the headset replay needed
+  to verify the fixes.
+
 ## Unreleased candidate 25 / chainsword package 10 — 5 November 2026
 
 - Consolidate current runtime evidence and the prioritized test/implementation
