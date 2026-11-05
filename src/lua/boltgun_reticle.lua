@@ -17,19 +17,27 @@ function M.ray(t)
     return {origin=origin,direction=direction,finish=add(origin,direction,M.range_cm)}
 end
 function M.marker(ray,hit,eye)
-    if not ray or not vec(eye) then return nil end
-    local point=hit and hit.point or ray.finish
-    if not vec(point) or (hit and (hit.initial or not finite(hit.time) or hit.time<0 or hit.time>1)) then return nil end
+    if not ray then return nil,'marker-ray-invalid' end
+    if not vec(eye) then return nil,'marker-camera-invalid' end
+    local point=ray.finish
+    if hit then
+        if hit.initial then return nil,'marker-initial-overlap' end
+        if not finite(hit.time) or hit.time<0 or hit.time>1 then return nil,'marker-hit-time-invalid' end
+        point=hit.point
+    end
+    if not vec(point) then return nil,'marker-hit-point-invalid' end
     local d={x=point.x-ray.origin.x,y=point.y-ray.origin.y,z=point.z-ray.origin.z}
     local along=d.x*ray.direction.x+d.y*ray.direction.y+d.z*ray.direction.z
     local perpendicular=d.x*d.x+d.y*d.y+d.z*d.z-along*along
-    if along<2 or along>M.range_cm+1 or perpendicular>1 or
-        (hit and math.abs(along-hit.time*M.range_cm)>2) then return nil end
-    local position=add(point,ray.direction,-.4)
+    if along<0 or along>M.range_cm+1 or perpendicular>1 then return nil,'marker-hit-off-ray' end
+    if hit and math.abs(along-hit.time*M.range_cm)>2 then return nil,'marker-hit-time-mismatch' end
+    -- Keep the setback within the traced segment, including a hit at the muzzle.
+    local position=add(ray.origin,ray.direction,along-math.min(.4,along*.5))
     local ex,ey,ez=eye.x-position.x,eye.y-position.y,eye.z-position.z
     local distance=math.sqrt(ex*ex+ey*ey+ez*ez)
-    if distance<10 then return nil end
-    return {point=point,position=position,scale=math.max(.1,math.min(20,distance*.0015)),
+    if distance<10 then return nil,'marker-camera-near' end
+    return {point=point,position=position,near_hit=hit~=nil and along<2,
+        scale=math.max(.1,math.min(20,distance*.0015)),
         rotation={pitch=math.deg(math.atan(ez,math.sqrt(ex*ex+ey*ey))),yaw=math.deg(math.atan(ey,ex))}}
 end
 function M.new(uevr)
@@ -41,7 +49,8 @@ function M.new(uevr)
     local WIDGET_ALPHA_PARENT='Material /Engine/EngineMaterials/Widget3DPassThrough.Widget3DPassThrough'
     local state,recovered,query,descriptors,gs=nil,false,nil,nil,nil
     local s={stopped=false,status='not-stepped',ticks=0,acks=0,traces=0,placed=0,
-        material='not-created',rejected=0,last_rejection='none'}
+        material='not-created',rejected=0,last_rejection='none',
+        geometry_rejected=0,last_geometry_rejection='none',initial_overlaps=0,near_placed=0}
     local status_tick,last_logged,log_budget=nil,nil,12
     local function diagnostic(stage,force)
         s.status=stage
@@ -50,8 +59,10 @@ function M.new(uevr)
         -- Diagnostics must never break ownership recovery or disable gameplay.
         if not force and status_tick and s.ticks-status_tick<120 then return end
         status_tick=s.ticks
-        local text=string.format('v1\nstage=%s\nticks=%d\nacks=%d\ntraces=%d\nplaced=%d\nrejected=%d\nlast_rejection=%s\nmaterial=%s\nphase=%s\n',
-            stage,s.ticks,s.acks,s.traces,s.placed,s.rejected,s.last_rejection,s.material,s.phase or 'none')
+        local text=string.format('v1\nstage=%s\nticks=%d\nacks=%d\ntraces=%d\nplaced=%d\nrejected=%d\nlast_rejection=%s\nmaterial=%s\nphase=%s\n'..
+            'geometry_rejected=%d\nlast_geometry_rejection=%s\ninitial_overlaps=%d\nnear_placed=%d\n',
+            stage,s.ticks,s.acks,s.traces,s.placed,s.rejected,s.last_rejection,s.material,s.phase or 'none',
+            s.geometry_rejected,s.last_geometry_rejection,s.initial_overlaps,s.near_placed)
         local ok=pcall(function()
             fs.write('bolter3d.reticle.status',text)
             assert(fs.read('bolter3d.reticle.status')==text,'Reticle status write unavailable')
@@ -430,7 +441,19 @@ function M.new(uevr)
         local camera=prop(pc,'PlayerCameraManager');if not valid(camera) then return reject('camera-unavailable') end
         local eye=camera:GetCameraLocation()
         s.phase='trace';s.traces=s.traces+1
-        local placement=M.marker(ray,query(pawn,weapon,ray),{x=eye.X,y=eye.Y,z=eye.Z});if not placement then return reject('marker-invalid') end
+        local placement,reason=M.marker(ray,query(pawn,weapon,ray),{x=eye.X,y=eye.Y,z=eye.Z})
+        if not placement then
+            s.geometry_rejected=s.geometry_rejected+1;s.last_geometry_rejection=reason
+            if reason=='marker-initial-overlap' then
+                s.initial_overlaps=s.initial_overlaps+1
+                -- The acknowledged muzzle starts in a blocker. Keep the
+                -- world component hidden and withhold the centered fallback.
+                s.phase='hud'
+                suppress_hud(image)
+                return reason
+            end
+            return reject(reason)
+        end
         s.phase='placement'
         part:K2_SetWorldLocation(vector(placement.position),false,{},true)
         part:K2_SetWorldRotation(make(descriptors.rotator,{Pitch=placement.rotation.pitch,Yaw=placement.rotation.yaw,Roll=0}),false,{},true)
@@ -455,6 +478,7 @@ function M.new(uevr)
         s.phase='hud'
         suppress_hud(image)
         s.placed=s.placed+1
+        if placement.near_hit then s.near_placed=s.near_placed+1 end
         return 'placed'
     end
     function s:step(pawn,weapon,enabled)

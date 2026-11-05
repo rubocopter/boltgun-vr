@@ -1,19 +1,23 @@
-# Native world reticle (candidate 26)
+# Native world reticle
 
 Candidate 25 displayed the original HUD fallback in the 5 November headset
 session. It rejected the widget material before the first firing-ray request
 and reported zero world placements. Candidate 26 checks the cooked material
 instance and lets the widget prepare its texture before enabling world
-placement. The original crosshair remains the glyph source. The revised path
-awaits headset verification.
+placement. The original crosshair remains the glyph source. Its next headset
+session recorded 9,074 acknowledged firing traces and 7,623 placements, with
+intermittent `marker-invalid` reports during Heavy Bolter use. The video shows
+the Heavy Bolter glyph both present and absent and the original Shotgun glyph
+away from the center of the capture. Those counters record component placement,
+so they cannot confirm that the glyph was visible in either eye.
 
 ## For players
 
 The marker follows the **nominal firing ray** from the same muzzle origin used by the production native firing policy. With the default `freeaim_enabled=0`, it uses the game's real native barrel orientation. With free aim enabled and a fresh owned display-pose capture accepted, it uses the controller-directed orientation and origin from that policy. A rejected free-aim capture retains legacy native aim for supported projectile weapons.
 
-Lua traces up to **10,000 Unreal centimetres** from that muzzle. A valid blocking hit places the marker just before the surface; no hit places it at the range endpoint. The marker faces the camera, scales with distance and uses depth-tested world geometry. It is a nominal aiming aid: random spread, projectile travel, gravity and weapon-specific collision can produce a different impact. It does not predict a particular shot's random spread.
+Lua traces up to **10,000 Unreal centimetres** from that muzzle. A valid blocking hit places the marker at or just before the surface, including close hits. A miss places it just inside the range endpoint. The marker faces the camera, scales with distance and uses depth testing in each eye. Random spread, projectile travel, gravity and weapon-specific collision can produce a different impact.
 
-The marker requires an owned equipped weapon, an active tracked 3D firearm and a valid native muzzle lease. It hides when relevant gameplay/VR/menu guards fail. The exact original HUD crosshair image is hidden only while a valid world marker is displayed; other HUD elements are retained. If sampling, tracing or marker placement is unavailable, the module hides its marker and attempts to restore the original image.
+The marker requires an owned equipped weapon, an active tracked 3D firearm and a valid native muzzle lease. The original HUD crosshair image is suppressed during valid world placement, including when cover occludes the marker. If a valid firing trace starts inside a blocker, both crosshair glyphs stay hidden for that frame. If sampling or placement fails, or a menu opens, the module hides the world marker and restores the original HUD glyph when its owner is still valid.
 
 **Volkite and Gravgun:** these paths bypass the projectile helper. Their world marker is suppressed unless the experimental beam hooks are successfully registered (`g_beam_hooked`) **and** a fresh aimed pose passes the free-aim gate. The process-start environment variable `BOLTGUN_EXPERIMENTAL_BEAM_HOOKS=1` permits registration; it does not prove registration or accepted aim. Legacy beam firing has no world-marker guarantee. These hooks and their visuals need independent VR confirmation.
 
@@ -30,7 +34,22 @@ The native bridge reflects the equipped weapon's actual barrel transform and sha
 
 Lua creates a non-colliding pawn-owned `WidgetComponent` in world space and a separate instance of the original `W_PlayerHUD_Crosshair_C` widget. It hides the component and resets visibility before every synchronous request. Native code validates the engine thread, local pawn, equipped weapon, exact component class and ownership, then acknowledges a successful ray request through that component. Lua consumes the acknowledgement immediately, avoiding stale sample reuse. The bridge creates neither a projectile nor damage.
 
-All trace, placement and HUD operations run on post-engine tick. `LineTraceSingle` ignores the local pawn and weapon; `BreakHitResult` supplies the real blocking hit. Invalid geometry, initial overlap, inconsistent hit time/position or excessive camera proximity rejects marker placement.
+All trace, placement and HUD operations run on post-engine tick. The muzzle
+`LineTraceSingle` ignores the local pawn and weapon, and `BreakHitResult`
+supplies the real blocking hit. The world marker center stays on the sampled ray.
+Its 0.4 cm surface setback shrinks to at most half the hit distance near the
+muzzle. Contact at the muzzle uses zero setback. Invalid geometry,
+inconsistent hit time/position and excessive camera proximity retain the
+original HUD glyph. A blocking hit with `bInitialOverlap` keeps the widget
+hidden and uses the existing opacity journal to suppress the centered glyph.
+
+`bolter3d.reticle.status` reports `geometry_rejected` and
+`last_geometry_rejection` for rejected hit or camera geometry.
+`initial_overlaps` counts the subset confirmed as initial overlaps, and
+`near_placed` counts successful placements at hits under 2 cm from the muzzle.
+These counters persist through menu and pause gates within the same script
+instance. Occlusion is handled by the stereo depth test. A `placed` sample
+records a valid world transform and visibility flags.
 
 Candidate 25 reported `widget-alpha-unavailable` with zero native acknowledgements,
 traces and placements. The cooked `Widget3DPassThrough_Translucent` asset is a
@@ -62,8 +81,8 @@ and matching `SlateUI` binding allow sampling to proceed. A proxy redraw can
 reuse a completed draw while its glyph key, target and material instance match.
 Lua then hides the
 component and resets `bVisible` before the synchronous native ray request. The
-HUD gives way only after the sampled ray yields a valid placement and the world
-marker passes its transform and visibility checks.
+HUD gives way after a valid placement passes its transform and visibility
+checks, or when the sampled ray confirms an initial overlap.
 
 ### HUD restoration and reset
 

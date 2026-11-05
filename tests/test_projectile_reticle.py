@@ -29,15 +29,18 @@ class ReticleGeometryTests(unittest.TestCase):
             eye={x=0,y=20,z=0}''')
         marker = self.lua.eval('mod.marker(ray,{point={x=100,y=0,z=0},time=.01},eye)')
         self.assertAlmostEqual(marker.position.x, 99.6)
-        self.assertIsNone(self.lua.eval('mod.marker(ray,{point={x=100,y=0,z=0},time=.01,initial=true},eye)'))
+        self.assertEqual(self.lua.eval('mod.marker(ray,{point={x=100,y=0,z=0},time=.01,initial=true},eye)'),
+                         (None, 'marker-initial-overlap'))
         self.assertEqual(self.lua.eval('mod.marker(ray,nil,eye).point.x'), 10000)
 
     def test_marker_rejects_hit_off_ray_or_out_of_range(self):
         self.lua.globals().mod = self.module
         self.lua.execute('''ray=mod.ray({Translation={X=0,Y=0,Z=0},Rotation={X=0,Y=0,Z=0,W=1}})
             eye={x=0,y=20,z=0}''')
-        self.assertIsNone(self.lua.eval('mod.marker(ray,{point={x=100,y=400,z=0},time=.01},eye)'))
-        self.assertIsNone(self.lua.eval('mod.marker(ray,{point={x=-100,y=0,z=0},time=.01},eye)'))
+        for point in ('{x=100,y=400,z=0}', '{x=-100,y=0,z=0}'):
+            with self.subTest(point=point):
+                self.assertEqual(self.lua.eval(f'mod.marker(ray,{{point={point},time=.01}},eye)'),
+                                 (None, 'marker-hit-off-ray'))
 
 
 class ReticleIntegrationTests(unittest.TestCase):
@@ -177,6 +180,64 @@ class ReticleLifecycleTests(unittest.TestCase):
         self.assertEqual(self.value('ctx.breaks'), 1)
         self.assertAlmostEqual(self.value('ctx.location.Y'), 10019.6)
         self.assertTrue(self.value('part.bVisible and not reticle.stopped'))
+
+    def test_valid_near_muzzle_hit_stays_on_current_firing_ray(self):
+        self.run_lua('ctx.eye.X=-40;ctx.hit_y=.2;ctx.time=.00002')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'placed', self.value('ctx.log'))
+        self.assertAlmostEqual(self.value('ctx.location.X'), 10)
+        self.assertAlmostEqual(self.value('ctx.location.Y'), 20.1)
+        self.assertEqual(self.value('reticle.near_placed'), 1)
+        self.assertEqual(self.value('image.opacity'), 0)
+
+    def test_exact_muzzle_contact_without_overlap_stays_at_muzzle(self):
+        self.run_lua('ctx.eye.X=-40;ctx.hit_y=0;ctx.time=0')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'placed', self.value('ctx.log'))
+        self.assertAlmostEqual(self.value('ctx.location.Y'), 20)
+        self.assertEqual(self.value('image.opacity'), 0)
+
+    def test_initial_overlap_hides_both_glyphs_until_next_clear_hit(self):
+        self.frame()
+        self.run_lua('ctx.initial=true')
+        self.frame()
+        self.assertFalse(self.value('part.bVisible'))
+        self.assertTrue(self.value('part.bHiddenInGame'))
+        self.assertEqual(self.value('image.opacity'), 0)
+        self.assertEqual(self.value('reticle.status'), 'marker-initial-overlap')
+        self.assertEqual(self.value('reticle.placed'), 1)
+        self.run_lua('ctx.initial=false;ctx.hit_y=200;ctx.time=.02')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'placed')
+        self.assertAlmostEqual(self.value('ctx.location.Y'), 219.6)
+
+    def test_status_retains_geometry_and_overlap_after_pause(self):
+        self.run_lua('ctx.initial=true')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'marker-initial-overlap')
+        self.assertEqual(self.value('reticle.geometry_rejected'), 1)
+        self.assertEqual(self.value('image.opacity'), 0)
+        self.run_lua('reticle.ticks=120;ctx.paused=true')
+        self.frame()
+        self.assert_hidden()
+        status = self.value('ctx.status_file')
+        self.assertIn('stage=paused-or-menu\n', status)
+        self.assertIn('geometry_rejected=1\n', status)
+        self.assertIn('last_geometry_rejection=marker-initial-overlap\n', status)
+        self.assertIn('initial_overlaps=1\n', status)
+
+    def test_sampling_failure_restores_hud_after_confirmed_overlap(self):
+        for failure, stage in (('ctx.ack=false', 'native-ack-missing'),
+                               ("ctx.fail='LineTraceSingle'", 'api-error')):
+            with self.subTest(failure=failure):
+                self.setUp()
+                self.run_lua('ctx.initial=true')
+                self.frame()
+                self.assertEqual(self.value('image.opacity'), 0)
+                self.run_lua(failure)
+                self.frame()
+                self.assert_hidden()
+                self.assertEqual(self.value('reticle.status'), stage)
 
     def test_silent_world_setter_failure_hides_marker_and_restores_hud(self):
         for field in ('noop_location', 'noop_rotation', 'noop_scale'):
@@ -450,7 +511,6 @@ class ReticleLifecycleTests(unittest.TestCase):
                 ('ctx.paused=true', 'paused-or-menu'),
                 ('ctx.sample.Rotation.W=0', 'native-ray-invalid'),
                 ('camera.valid=false', 'camera-unavailable'),
-                ('ctx.initial=true', 'marker-invalid'),
                 ('ctx.noop_location=true', 'placement-readback'),
                 ('ctx.noop_rotation=true', 'facing-readback')):
             with self.subTest(stage=stage):
@@ -557,7 +617,7 @@ class ReticleLifecycleTests(unittest.TestCase):
 
     def test_malformed_samples_and_hits_hide_without_reusing_old_destination(self):
         for change in ('ctx.sample.Rotation.W=0', 'ctx.sample.Translation.X=0/0',
-                       'ctx.sample.Rotation=nil', 'ctx.initial=true', 'ctx.time=-1',
+                       'ctx.sample.Rotation=nil', 'ctx.time=-1',
                        'ctx.time=0/0', 'ctx.off_ray=true', 'ctx.bad_point=true',
                        'ctx.eye.X=0/0'):
             with self.subTest(change=change):
@@ -875,7 +935,7 @@ breaker=descriptor({'Time','ImpactPoint','Hit','bInitialOverlap','bBlockingHit',
   -- The fixture's sampled quaternion points along +Y. Expected coordinates in
   -- tests are literals, independent of the production ray/marker helpers.
   v.ImpactPoint.result={X=ctx.bad_point and 0/0 or (ctx.off_ray and 50 or ctx.start.X),
-   Y=ctx.start.Y+100,Z=ctx.start.Z}
+   Y=ctx.start.Y+(ctx.hit_y or 100),Z=ctx.start.Z}
  end
 end)
 gs.class=obj('Class Test.GameplayStatics','gsclass')
