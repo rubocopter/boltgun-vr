@@ -1,6 +1,6 @@
 # Experimental 3D firearm arsenal
 
-The current candidate is **firearm revision 26 / chainsword package 11**.
+The current candidate is **firearm revision 27 / chainsword package 12**.
 It replaces the equipped firearm sprite with a tracked original-game pickup
 mesh, loaded from the player's installation. No game mesh or texture is
 redistributed. Released revision 20/package 5 has historical VR confirmation;
@@ -24,7 +24,7 @@ Machine Spirit variants share the relevant pickup mesh. The chainsword is a sepa
 
 ## Experimental physical chainsword
 
-Chainsword **package 11** wires the actual owned left-hand blade to engine-side contact queries. With the 3D preview active, **hold the physical left Trigger** (`/actions/default/in/Trigger`, normally L2) and touch an enemy with the cutting edge. There is no additional contact toggle. No original attack combo, swing gesture or minimum swing speed is required; stationary contact can repeat after a 500 ms per-target cooldown. The original L2 binding remains active, and its existing cutting target takes priority over physical contact.
+Chainsword **package 12** wires the actual owned left-hand blade to engine-side contact queries. With the 3D preview active, **hold the physical left Trigger** (`/actions/default/in/Trigger`, normally L2) and touch an enemy with the cutting edge. There is no additional contact toggle. No original attack combo, swing gesture or minimum swing speed is required; stationary contact can repeat after a 500 ms per-target cooldown. The original L2 binding remains active, and its existing cutting target takes priority over physical contact.
 
 Stereo records only a scalar first-eye marker. The blade's displayed world pose is captured on `post_engine_tick` after attachment and processed on the next `pre_engine_tick`; stereo performs no UObject/VR calls. Hidden blades, menus, pause, loading, death, released Trigger, invalid/stale samples and changed ownership block contact. Walls and pawn-to-contact occlusion reject damage. Display recreation preserves the same weapon's cooldown; calibration changes require fresh poses. Real collision hits feed the game's original `DealCuttingDamage()` with weapon state restored afterward; enemy health is never written directly.
 
@@ -40,6 +40,14 @@ Ownership journaling protects existing components and supports restoration acros
 
 ## Visuals, firing and settings
 
+Both visible and reference meshes use the applied grip landmark and the inverse
+of UEVR's effective quaternion basis. For a mesh-local grip `(gx, gy, gz)` and
+scale `s`, the tracked translation offset adds `(s*gy, s*gz, -s*gx)` to the
+existing GLM trims. This puts the measured firearm handle on the controller
+with zero trims. The whole firearm can sit farther forward than in candidate 26
+because its old basis left a rearward residual. The attached right glove keeps
+its position relative to the visible weapon.
+
 The packaged default `profile/defaults/bolter3d.default.settings` enables `muzzle_enabled=1` and `recoil_enabled=1`. The model and firing reference use the same grip calibration, but recoil moves **only the visible mesh** after a successful supported native projectile spawn; the invisible reference holds the firing origin steady. A missing `recoil_enabled` key in older customized settings disables recoil. `muzzle_enabled=0` disables origin redirection while leaving the weapon model available. Settings refresh approximately every 250 ms.
 
 The Bolter uses the preserved landmark `(67.81414, 0, 53)` in local Unreal centimetres. The other nine `*_muzzle_x/y/z` landmarks are **estimates** from original pickup geometry, including the midpoint of the Multi-Melta barrels. Each firearm also has a `*_muzzle_enabled` switch. Released revision 20 preserves native direction/spread, game damage and reload logic. The current candidate supports opt-in controller-directed aim: `freeaim_enabled=1` (default `0`) can alter projectile direction, and native ray hooks require an additional opt-in. Pickup meshes do not provide hand-operated reload animation.
@@ -53,7 +61,7 @@ weapons, with deviations remaining; native interception logged calls but zero
 redirects. See [native muzzle implementation](NATIVE-MUZZLE.md) for those limits.
 
 The world reticle samples nominal production aim and traces real collisions.
-Revision 26 draws the native game glyph through an owned transparent world
+Revision 27 draws the native game glyph through an owned transparent world
 widget; it does not predict random spread or projectile flight. Its appearance
 and persistence await VR testing. Unsupported beam/hitscan paths keep native
 behavior unless separately guarded hooks are explicitly enabled.

@@ -372,11 +372,12 @@ local function apply_settings(profile)
     -- UEVR explicitly warns that a MotionControllerState pointer can be invalidated.
     -- Resolve it when needed and never store it in the script state.
     local location = UEVR_Vector3f.new()
-    -- Keep the existing controller calibration. The hand bridge publishes the
-    -- authored UE mesh landmark separately from this GLM offset tuple.
-    location.x = settings.x + scale*grip_z
-    location.y = settings.y - scale*grip_x
-    location.z = settings.z - scale*grip_y
+    -- UObjectHook's effective quaternion maps GLM (x,y,z) to UE (z,-x,-y).
+    -- Apply the inverse map to the negative scaled mesh grip, then retain
+    -- the user's controller-space trims. This seats the whole rig at the grip.
+    location.x = settings.x + scale*grip_y
+    location.y = settings.y + scale*grip_z
+    location.z = settings.z - scale*grip_x
     local pitch, yaw, roll = settings.pitch*math.pi/180, -settings.yaw*math.pi/180, -settings.roll*math.pi/180
     local cp,sp,cy,sy,cr,sr = math.cos(pitch/2),math.sin(pitch/2),math.cos(yaw/2),
         math.sin(yaw/2),math.cos(roll/2),math.sin(roll/2)

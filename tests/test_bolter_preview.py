@@ -1009,24 +1009,24 @@ class BolterPreviewTests(unittest.TestCase):
         self.tick(1)
         self.assertEqual(self.lua.globals().ctx.created,1)
         self.assertAlmostEqual(self.component().scale,.6)
-        self.assertEqual(self.component().offset.x,26.4)
-        self.assertAlmostEqual(self.component().offset.y,20.8)
-        self.assertEqual(self.component().offset.z,9)
+        self.assertEqual(self.component().offset.x,12)
+        self.assertAlmostEqual(self.component().offset.y,6.4)
+        self.assertAlmostEqual(self.component().offset.z,37.8)
 
     def test_invalid_calibration_uses_defaults(self):
         self.lua.globals().files['bolter3d.settings']='scale=nan\nx=inf\ny=999999\nz=broken'
         self.tick()
         self.assertEqual(self.lua.globals().ctx.created,1)
         self.assertAlmostEqual(self.component().scale,.5)
-        self.assertEqual(self.component().offset.y,24)
+        self.assertEqual(self.component().offset.z,24)
 
     def test_default_grip_point_lands_at_tracked_controller(self):
         self.tick()
         c=self.component()
-        # UObjectHook GLM->UE translation: (y,z,-x). Mesh grip is (-48,0,24) cm.
-        self.assertAlmostEqual(c.offset.y+c.scale*(-48),0)
-        self.assertAlmostEqual(c.offset.z,0)
-        self.assertAlmostEqual(-c.offset.x+c.scale*24,0)
+        # The pinned UEVR quaternion maps (x,y,z) to (z,-x,-y).
+        self.assertAlmostEqual(c.offset.z+c.scale*(-48),0)
+        self.assertAlmostEqual(-c.offset.x,0)
+        self.assertAlmostEqual(-c.offset.y+c.scale*24,0)
 
     def test_primary_sprite_hidden_only_after_visual_is_ready(self):
         self.tick()
@@ -1066,11 +1066,12 @@ class BolterPreviewTests(unittest.TestCase):
         self.assertTrue(self.lua.globals().primary.visible)
 
     def test_grip_origin_scales_without_drifting_from_controller(self):
-        self.lua.globals().files['bolter3d.settings']='scale=0.4'
+        self.lua.globals().files['bolter3d.settings']='scale=0.4\ngrip_y=5'
         self.tick()
         c=self.component()
-        self.assertAlmostEqual(c.offset.y+c.scale*(-48),0)
-        self.assertAlmostEqual(-c.offset.x+c.scale*24,0)
+        self.assertAlmostEqual(c.offset.z+c.scale*(-48),0)
+        self.assertAlmostEqual(-c.offset.x+c.scale*5,0)
+        self.assertAlmostEqual(-c.offset.y+c.scale*24,0)
 
     def test_barrel_inspection_reports_signature_without_calling_gameplay_function(self):
         self.lua.execute('''
