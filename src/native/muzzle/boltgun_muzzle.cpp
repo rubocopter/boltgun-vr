@@ -9,7 +9,6 @@
 #include "../../../dependencies/uevr/API.h"
 #include "muzzle_math.hpp"
 #include "weapon_profiles.hpp"
-#include "../white_palette.hpp"
 #pragma comment(lib,"bcrypt.lib")
 using namespace boltgun;
 using BarrelFn=Transform*(*)(UEVR_UObjectHandle,Transform*,float,float,void*,bool);
@@ -1067,16 +1066,8 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
         reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr))+0x10616a0,
         reinterpret_cast<void*>(spawn_detour),reinterpret_cast<void**>(&g_spawn_original));
     if(id<0) api->functions->log_warn("[Boltgun muzzle 3D] Hook unavailable; retaining native firing");
-    else api->functions->log_info("[Boltgun muzzle 3D] Revision 24: pre-activation native emission origins and diagnostic world reticle");
+    else api->functions->log_info("[Boltgun muzzle 3D] Revision 25: native HUD glyph on the production aiming ray");
     auto* module=reinterpret_cast<unsigned char*>(GetModuleHandleW(nullptr));
-    if(api->functions->get_persistent_dir) {
-        wchar_t directory[32768]{};
-        api->functions->get_persistent_dir(directory,32768);
-        if(directory[0]) {
-            try { boltgun_presentation::prepare_white_palette(std::filesystem::path(directory)); }
-            catch(...) { api->functions->log_warn("[Boltgun reticle] White palette preparation unavailable"); }
-        }
-    }
     if(id>=0&&native_emission_signature(module)) {
         const int emission_hook=api->functions->register_inline_hook(module+0xd778a0,
             reinterpret_cast<void*>(native_emission_detour),reinterpret_cast<void**>(&g_native_emission_original));

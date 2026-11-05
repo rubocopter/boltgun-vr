@@ -35,7 +35,8 @@ end
 function M.new(uevr)
     local api,hook,vr=uevr.api,uevr.types.UObjectHook,uevr.params.vr
     local JOURNAL='bolter3d.reticle.owned'
-    local CLASS='Class /Script/ProceduralMeshComponent.ProceduralMeshComponent'
+    local CLASS='Class /Script/UMG.WidgetComponent'
+    local LEGACY_CLASS='Class /Script/ProceduralMeshComponent.ProceduralMeshComponent'
     local state,recovered,query,descriptors,gs=nil,false,nil,nil,nil
     local s={stopped=false,status='not-stepped',ticks=0,acks=0,traces=0,placed=0,
         material='not-created',rejected=0,last_rejection='none'}
@@ -89,7 +90,8 @@ function M.new(uevr)
         restore_hud()
         if same(state.part) then
             assert(same(state.owner) and state.part.object:get_outer()==state.owner.object and
-                state.part.object:get_class():get_full_name()==CLASS,'Reticle owner changed')
+                (state.part.object:get_class():get_full_name()==CLASS or
+                 state.part.object:get_class():get_full_name()==LEGACY_CLASS),'Reticle owner changed')
             state.part.object:SetHiddenInGame(true,false);state.part.object:SetVisibility(false,false)
             state.part.object:K2_DestroyComponent(state.owner.object)
             -- UE unregisters/destroys the component before garbage collection
@@ -132,53 +134,24 @@ function M.new(uevr)
         local v=StructObject.new(desc);for k,n in pairs(values) do v:set_property(k,n) end;return v
     end
     local function vector(p) return make(descriptors.vector,{X=p.x,Y=p.y,Z=p.z}) end
-    local material_tick=0
-    local function material(part)
-        material_tick=s.ticks
-        -- This exact cooked pickup material is independently archived as unlit.
-        -- Bind an owned instance to the generated all-white hand palette; never
-        -- change the shared game material or use the pickup's original texture.
-        local pickup_name='MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun'
-        local pickup=api:find_uobject(pickup_name)
-        local ok,path=pcall(fs.read,'hands3d.texture_path')
-        path=ok and type(path)=='string' and path:gsub('\\','/') or ''
-        if valid(pickup) and pickup:get_full_name()==pickup_name and path:match('^%a:/') and
-            path:sub(-#'/data/hands3d_color.png')=='/data/hands3d_color.png' and not path:find('[\r\n]') then
-            local rendering=api:find_uobject('Class /Script/Engine.KismetRenderingLibrary')
-            local strings=api:find_uobject('Class /Script/Engine.KismetStringLibrary')
-            if valid(rendering) and valid(strings) and rendering:find_function('ImportFileAsTexture2D') and
-                strings:find_function('Conv_StringToName') then
-                local texture=rendering:get_class_default_object():ImportFileAsTexture2D(state.owner.object,path)
-                if valid(texture) then
-                    local names=strings:get_class_default_object()
-                    local bc=names:Conv_StringToName('BC')
-                    local dmi=part:CreateDynamicMaterialInstance(0,pickup,names:Conv_StringToName('BoltgunReticleWhite'))
-                    assert(valid(dmi) and dmi~=pickup,'Reticle dynamic material unavailable')
-                    dmi:SetTextureParameterValue(bc,texture)
-                    assert(dmi:K2_GetTextureParameterValue(bc)==texture and part:GetMaterial(0)==dmi,
-                        'Reticle white texture binding rejected')
-                    s.material='cooked-unlit-white';return
-                end
-            end
+    local function alpha_material(part)
+        -- WidgetComponent owns the render target and SlateUI binding. Use its
+        -- resident translucent pass-through, with depth testing, never a hand
+        -- palette or an opaque surface material that fills the glyph's holes.
+        local candidate=prop(part,'TranslucentMaterial')
+        if not valid(candidate) or prop(candidate,'MaterialDomain')~=0 or
+            prop(candidate,'ShadingModel')~=0 or prop(candidate,'BlendMode')~=2 or
+            prop(candidate,'bDisableDepthTest')~=false then
+            s.material='widget-alpha-unavailable';return false
         end
-        -- A resident engine material is optional: never assume an editor debug
-        -- asset was cooked. Verify its surface/unlit/opaque contract before use.
-        local name='Material /Engine/EngineDebugMaterials/VertexColorMaterial.VertexColorMaterial'
-        local candidate=api:find_uobject(name)
-        if valid(candidate) and candidate:get_full_name()==name and
-            prop(candidate,'MaterialDomain')==0 and prop(candidate,'ShadingModel')==0 and
-            prop(candidate,'BlendMode')==0 then
-            part:SetMaterial(0,candidate)
-            assert(part:GetMaterial(0)==candidate,'Reticle unlit material rejected')
-            s.material='verified-unlit-vertex-color'
-        else
-            local actual=part:GetMaterial(0)
-            s.material='default-surface-unverified'
-            if valid(actual) then
-                s.material=s.material..'; name='..actual:get_full_name():sub(1,180)..
-                    '; shading='..tostring(prop(actual,'ShadingModel'))
-            end
+        if not state.alpha or not same(state.alpha) or state.alpha.object~=candidate then
+            part:SetMaterial(0,candidate);state.appearance_key=nil;state.alpha=record(candidate)
         end
+        -- WidgetComponent may return its render-target MID from GetMaterial.
+        -- Reapplying the source every tick would recreate that MID repeatedly.
+        local actual,instance=part:GetMaterial(0),part:GetMaterialInstance()
+        assert(actual==candidate or valid(instance) and actual==instance,'Reticle alpha material rejected')
+        s.material='original-hud-brush-alpha';return true
     end
     local function parameters(fn,inputs)
         assert(fn,'Missing reticle function')
@@ -196,7 +169,7 @@ function M.new(uevr)
         return fields,seen
     end
     local function prepare_query()
-        descriptors={vector=structure('Vector'),rotator=structure('Rotator')}
+        descriptors={vector=structure('Vector'),vector2=structure('Vector2D'),rotator=structure('Rotator')}
         gs=library('GameplayStatics')
         local system=library('KismetSystemLibrary')
         local trace=system:get_class():find_function('LineTraceSingle')
@@ -224,16 +197,123 @@ function M.new(uevr)
             return {point={x=p.X,y=p.Y,z=p.Z},time=d.Time,initial=d.bInitialOverlap==true}
         end
     end
-    local function suppress_hud(controller)
+    local function hud_image(controller)
         local hud=controller:GetHUD()
-        if not valid(hud) or not hud:get_full_name():match('^Gameplay_HUD_C ') or prop(hud,'PlayerOwner')~=controller then restore_hud();return end
+        if not valid(hud) or not hud:get_full_name():match('^Gameplay_HUD_C ') or prop(hud,'PlayerOwner')~=controller then return end
         local root=prop(hud,'Player HUD Widget')
-        if not valid(root) or not root:get_full_name():match('^Gameplay_HUD_UI_C ') then restore_hud();return end
+        if not valid(root) or not root:get_full_name():match('^Gameplay_HUD_UI_C ') or not root:IsVisible() then return end
         local cross=prop(root,'W_PlayerHUD_Crosshair')
-        if not valid(cross) or not cross:get_full_name():match('^W_PlayerHUD_Crosshair_C ') then restore_hud();return end
+        if not valid(cross) or not cross:get_full_name():match('^W_PlayerHUD_Crosshair_C ') or not cross:IsVisible() then return end
         local image=prop(cross,'Crosshair')
         if not valid(image) or image:get_class():get_full_name()~='Class /Script/UMG.Image' or
-            image:get_full_name()~='Image '..cross:get_full_name():match('^[^ ]+ (.+)$')..'.WidgetTree.Crosshair' then restore_hud();return end
+            image:get_full_name()~='Image '..cross:get_full_name():match('^[^ ]+ (.+)$')..'.WidgetTree.Crosshair' then return end
+        if not image:IsVisible() then return end
+        return image,cross
+    end
+    local function equal(a,b,fields)
+        if not a or not b then return false end
+        for _,k in ipairs(fields) do
+            if not finite(a[k]) or not finite(b[k]) or math.abs(a[k]-b[k])>.00001 then return false end
+        end
+        return true
+    end
+    local function brush(image)
+        local b=prop(image,'Brush')
+        local size=b and b.ImageSize
+        if b and valid(b.ResourceObject) and size and finite(size.X) and finite(size.Y) and
+            size.X>0 and size.Y>0 and size.X<=512 and size.Y<=512 then return b end
+    end
+    local function key(...)
+        local fields={}
+        for i=1,select('#',...) do fields[i]=tostring(select(i,...)) end
+        return table.concat(fields,'|')
+    end
+    local function component(v,k) return v and v[k] end
+    local function canvas(transform,pivot)
+        -- A square bound using the L1 norm also covers rotations and shear.
+        -- Keep the authored centered 128px slot, with transparent padding;
+        -- scaling the native image must not crop it at the render target edge.
+        local scale,shift,shear=transform.Scale,transform.Translation,transform.Shear
+        if math.abs(shear.X)>=80 or math.abs(shear.Y)>=80 then return end
+        local radius=128*(math.abs(scale.X)*math.max(math.abs(pivot.X),math.abs(1-pivot.X))+
+            math.abs(scale.Y)*math.max(math.abs(pivot.Y),math.abs(1-pivot.Y))) *
+            (1+math.abs(math.tan(math.rad(shear.X)))+math.abs(math.tan(math.rad(shear.Y))))+
+            128*(math.abs(pivot.X-.5)+math.abs(pivot.Y-.5))+math.abs(shift.X)+math.abs(shift.Y)
+        local size=math.max(128,math.ceil(radius*2))
+        if size<=1024 then return size end
+    end
+    local function appearance(image,cross,pc)
+        local part=state.part.object
+        if not alpha_material(part) then return false end
+        if not state.widget then
+            local cls=api:find_uobject('Class /Script/UMG.WidgetBlueprintLibrary')
+            assert(valid(cls),'Missing widget library')
+            local widget=cls:get_class_default_object():Create(state.owner.object,cross:get_class(),pc)
+            assert(valid(widget) and widget~=cross and widget:get_class()==cross:get_class(),'Reticle widget creation failed')
+            state.widget=record(widget)
+            part:SetWidget(widget)
+            assert(part:GetUserWidgetObject()==widget,'Reticle widget binding rejected')
+            local glyph=prop(widget,'Crosshair')
+            assert(valid(glyph) and glyph~=image and glyph:get_class():get_full_name()=='Class /Script/UMG.Image' and
+                glyph:get_full_name()=='Image '..widget:get_full_name():match('^[^ ]+ (.+)$')..'.WidgetTree.Crosshair',
+                'Reticle glyph identity rejected')
+            state.glyph=record(glyph)
+        end
+        assert(same(state.widget) and same(state.glyph) and part:GetUserWidgetObject()==state.widget.object and
+            prop(state.widget.object,'Crosshair')==state.glyph.object,'Reticle widget identity changed')
+        local glyph=state.glyph.object
+        local b=brush(image);if not b then return false end
+        glyph:SetBrush(b)
+        local actual=prop(glyph,'Brush')
+        assert(actual and actual.ResourceObject==b.ResourceObject and equal(actual.ImageSize,b.ImageSize,{'X','Y'}),
+            'Reticle original brush rejected')
+        local color=prop(image,'ColorAndOpacity')
+        assert(equal(color,color,{'R','G','B','A'}),'Invalid native crosshair color')
+        glyph:SetColorAndOpacity(color)
+        assert(equal(prop(glyph,'ColorAndOpacity'),color,{'R','G','B','A'}),'Reticle color rejected')
+        local transform,pivot=prop(image,'RenderTransform'),prop(image,'RenderTransformPivot')
+        assert(transform and equal(transform.Scale,transform.Scale,{'X','Y'}) and
+            equal(transform.Translation,transform.Translation,{'X','Y'}) and
+            equal(transform.Shear,transform.Shear,{'X','Y'}) and finite(transform.Angle) and
+            equal(pivot,pivot,{'X','Y'}),'Invalid native crosshair transform')
+        glyph:SetRenderTransform(transform);glyph:SetRenderTransformPivot(pivot)
+        local t=prop(glyph,'RenderTransform')
+        assert(t and equal(t.Scale,transform.Scale,{'X','Y'}) and
+            equal(t.Translation,transform.Translation,{'X','Y'}) and equal(t.Shear,transform.Shear,{'X','Y'}) and
+            finite(t.Angle) and math.abs(t.Angle-transform.Angle)<.00001 and
+            equal(prop(glyph,'RenderTransformPivot'),pivot,{'X','Y'}),'Reticle glyph transform rejected')
+        local opacity=image:GetRenderOpacity()
+        if state.hud and state.hud.object==image and same(state.hud) and opacity~=0 then restore_hud() end
+        if state.hud and state.hud.object==image and same(state.hud) and opacity==0 then opacity=state.hud.opacity end
+        assert(finite(opacity) and opacity>=0 and opacity<=1,'Invalid native crosshair opacity')
+        glyph:SetRenderOpacity(opacity)
+        assert(glyph:GetRenderOpacity()==opacity,'Reticle glyph opacity rejected')
+        local visibility=prop(image,'Visibility')
+        glyph:SetVisibility(visibility)
+        assert(prop(glyph,'Visibility')==visibility,'Reticle glyph visibility rejected')
+        local size=canvas(transform,pivot);if not size then return false end
+        if not equal(part:GetDrawSize(),{X=size,Y=size},{'X','Y'}) then
+            part:SetDrawSize(make(descriptors.vector2,{X=size,Y=size}))
+        end
+        assert(equal(part:GetDrawSize(),{X=size,Y=size},{'X','Y'}),'Reticle padded canvas rejected')
+        local tint=b.TintColor
+        local tint_color=tint and tint.SpecifiedColor
+        local margin,uv=b.Margin,b.UVRegion
+        local lo,hi=uv and uv.Min,uv and uv.Max
+        local name=b.ResourceName
+        local current=key(image:get_address(),b.ResourceObject:get_address(),b.ImageSize.X,b.ImageSize.Y,
+            b.DrawAs,b.Tiling,b.Mirroring,b.ImageType,b.bIsDynamicallyLoaded,name and name:to_string(),
+            component(tint,'ColorUseRule'),component(tint_color,'R'),component(tint_color,'G'),
+            component(tint_color,'B'),component(tint_color,'A'),component(margin,'Left'),component(margin,'Top'),
+            component(margin,'Right'),component(margin,'Bottom'),component(uv,'bIsValid'),
+            component(lo,'X'),component(lo,'Y'),component(hi,'X'),component(hi,'Y'),
+            color.R,color.G,color.B,color.A,transform.Scale.X,transform.Scale.Y,
+            transform.Translation.X,transform.Translation.Y,transform.Shear.X,transform.Shear.Y,
+            transform.Angle,pivot.X,pivot.Y,opacity,visibility,size)
+        if state.appearance_key~=current then part:RequestRedraw();state.appearance_key=current end
+        return true
+    end
+    local function suppress_hud(image)
         if state.hud and (state.hud.name~=image:get_full_name() or state.hud.address~=tostring(image:get_address())) then restore_hud() end
         if not state.hud then
             local opacity=image:GetRenderOpacity();assert(finite(opacity) and opacity>=0 and opacity<=1,'Invalid HUD opacity')
@@ -262,8 +342,11 @@ function M.new(uevr)
         if not query then query=prepare_query() end
         local menu=prop(prop(pc,'MyHUD'),'CurrentMenu')
         if gs:IsGamePaused(pc)~=false or valid(menu) and menu:IsInViewport() and menu:IsVisible() then return reject('paused-or-menu') end
+        hide(true)
+        local image,cross=hud_image(pc)
+        if not image or not brush(image) then return reject('original-brush-unavailable') end
         if not state then
-            s.phase='geometry'
+            s.phase='widget'
             local engine=api:get_engine();assert(valid(engine),'Missing reticle engine')
             local class=api:find_uobject(CLASS);assert(valid(class),'Missing reticle component class')
             local part=api:add_component_by_class(pawn,class,false)
@@ -272,17 +355,35 @@ function M.new(uevr)
             part:SetHiddenInGame(true,false);part:SetVisibility(false,false)
             part:SetCollisionEnabled(0);part:SetGenerateOverlapEvents(false);part:SetMobility(2);part:SetCastShadow(false)
             part:SetOwnerNoSee(false);part:SetOnlyOwnerSee(false)
-            local dispatch=assert(uevr.params.functions.dispatch_custom_event,'Reticle bridge unavailable')
-            dispatch('boltgun.reticle.v1',table.concat({'mesh',tostring(pawn:get_address()),tostring(weapon:get_address()),tostring(part:get_address())},'|'))
-            assert(part:GetNumSections()==1,'Reticle geometry request rejected')
-            s.phase='material';material(part)
+            part:SetWidgetSpace(0);part:SetDrawAtDesiredSize(false);part:SetTickWhenOffscreen(true)
+            part:SetDrawSize(make(descriptors.vector2,{X=128,Y=128}))
+            part:SetPivot(make(descriptors.vector2,{X=.5,Y=.5}));part:SetWindowFocusable(false)
+            part:SetBackgroundColor({R=0,G=0,B=0,A=0})
+            assert(part:GetWidgetSpace()==0 and equal(part:GetDrawSize(),{X=128,Y=128},{'X','Y'}) and
+                equal(part:GetPivot(),{X=.5,Y=.5},{'X','Y'}) and part:GetWindowFocusable()==false,
+                'Reticle widget layout rejected')
         end
-        if s.material:match('^default%-surface') and s.ticks-material_tick>=120 then
-            s.phase='material';material(state.part.object)
+        s.phase='appearance'
+        if not appearance(image,cross,pc) then return reject('original-brush-unavailable') end
+        -- RequestRedraw is asynchronous. UE clears this reflected bit only
+        -- after submitting the widget draw. Warm the hidden component with
+        -- bVisible=true so its own tick can draw, and retain the original HUD.
+        local part=state.part.object
+        local target=part:GetRenderTarget()
+        local instance=part:GetMaterialInstance()
+        if not state.slate_name then
+            local strings=api:find_uobject('Class /Script/Engine.KismetStringLibrary')
+            assert(valid(strings),'Missing widget parameter names')
+            state.slate_name=strings:get_class_default_object():Conv_StringToName('SlateUI')
+        end
+        local size=part:GetDrawSize()
+        if not valid(target) or not valid(instance) or prop(part,'bRedrawRequested')~=false or
+            prop(target,'SizeX')~=size.X or prop(target,'SizeY')~=size.Y or
+            instance:K2_GetTextureParameterValue(state.slate_name)~=target then
+            part:SetVisibility(true,false);restore_hud();return 'glyph-render-pending'
         end
         s.phase='native-ray'
         hide(true) -- Reset acknowledgement before every synchronous request; marker remains hidden.
-        local part=state.part.object
         uevr.params.functions.dispatch_custom_event('boltgun.reticle.v1',table.concat(
             {'ray',tostring(pawn:get_address()),tostring(weapon:get_address()),tostring(part:get_address())},'|'))
         if prop(part,'bVisible')~=true then return reject('native-ack-missing') end
@@ -296,14 +397,17 @@ function M.new(uevr)
         s.phase='placement'
         part:K2_SetWorldLocation(vector(placement.position),false,{},true)
         part:K2_SetWorldRotation(make(descriptors.rotator,{Pitch=placement.rotation.pitch,Yaw=placement.rotation.yaw,Roll=0}),false,{},true)
-        part:SetWorldScale3D(vector({x=placement.scale,y=placement.scale,z=placement.scale}))
+        -- The authored slot is 128 pixels wide; retain the old marker's two
+        -- centimetre nominal quad footprint without changing the firing ray.
+        local world_scale=placement.scale/64
+        part:SetWorldScale3D(vector({x=world_scale,y=world_scale,z=world_scale}))
         local placed=part:K2_GetComponentToWorld()
         local actual=M.ray(placed)
         local scale=placed and placed.Scale3D
         local p=placement.position
         if not actual or not scale or not finite(scale.X) or not finite(scale.Y) or not finite(scale.Z) or
-            math.abs(scale.X-placement.scale)>.01 or math.abs(scale.Y-placement.scale)>.01 or
-            math.abs(scale.Z-placement.scale)>.01 or math.abs(actual.origin.x-p.x)>.05 or
+            math.abs(scale.X-world_scale)>world_scale*.01 or math.abs(scale.Y-world_scale)>world_scale*.01 or
+            math.abs(scale.Z-world_scale)>world_scale*.01 or math.abs(actual.origin.x-p.x)>.05 or
             math.abs(actual.origin.y-p.y)>.05 or math.abs(actual.origin.z-p.z)>.05 then return reject('placement-readback') end
         local dx,dy,dz=eye.X-p.x,eye.Y-p.y,eye.Z-p.z
         local facing=(actual.direction.x*dx+actual.direction.y*dy+actual.direction.z*dz)/math.sqrt(dx*dx+dy*dy+dz*dz)
@@ -312,7 +416,7 @@ function M.new(uevr)
         part:SetVisibility(true,false);part:SetHiddenInGame(false,false)
         if prop(part,'bVisible')~=true or prop(part,'bHiddenInGame')~=false then return reject('visibility-readback') end
         s.phase='hud'
-        suppress_hud(pc)
+        suppress_hud(image)
         s.placed=s.placed+1
         return 'placed'
     end

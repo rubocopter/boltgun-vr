@@ -1,6 +1,12 @@
-# World reticle (revision 22 core; candidate 24)
+# Native world reticle (candidate 25)
 
-Revision 22 introduced the world-space aiming marker for tracked 3D firearms; the maintainer reported it working in the 4 November 2026 session. Candidate 23 corrects deferred component cleanup and adds native renderer-emission alignment. Those changed paths still need VR confirmation and retain false runtime verification flags. Released v1.0.2 retains revision 20/package 5 and does not include this reticle. Deployment checks use temporary profiles. Installing a candidate does not establish VR validation.
+Candidate 25 replaces the procedural white cross with the original game's
+crosshair image, rendered by an owned world WidgetComponent. Its live Slate
+brush, texture, color, image transform and opacity follow the exact native HUD
+image. No extracted crosshair texture is packaged. The production ray policy is
+unchanged. The maintainer rejected candidate 24's white marker and confirmed its
+damage effect; this changed reticle still needs headset confirmation. Installing
+or passing automated checks does not establish VR validation.
 
 ## For players
 
@@ -16,16 +22,29 @@ The marker requires an owned equipped weapon, an active tracked 3D firearm and a
 
 The implementation is split across:
 
-- [`src/lua/boltgun_reticle.lua`](../src/lua/boltgun_reticle.lua): synchronous native requests, reflected world traces, procedural marker lifecycle and HUD ownership.
-- [`src/native/muzzle/projectile_reticle.hpp`](../src/native/muzzle/projectile_reticle.hpp): guarded `boltgun.reticle.v1` requests, procedural mesh geometry and production lease/barrel sampling.
+- [`src/lua/boltgun_reticle.lua`](../src/lua/boltgun_reticle.lua): synchronous native requests, reflected world traces, world-widget lifecycle, native glyph propagation and HUD ownership.
+- [`src/native/muzzle/projectile_reticle.hpp`](../src/native/muzzle/projectile_reticle.hpp): guarded `boltgun.reticle.v1` requests, exact WidgetComponent ownership and production lease/barrel sampling.
 - [`src/native/muzzle/projectile_reticle_math.hpp`](../src/native/muzzle/projectile_reticle_math.hpp): nominal transform construction matching the production legacy/free-aim branches.
 - [`src/lua/boltgun_bolter3d.lua`](../src/lua/boltgun_bolter3d.lua): post-engine-tick integration and reset stop/revocation.
 
 The native bridge reflects the equipped weapon's actual barrel transform and shares the production muzzle landmark, ownership generation, warmup and freshness gates. Legacy sampling uses the current mesh's muzzle translation and native barrel rotation. Accepted free aim remaps through the captured display pose. This is a sample of the real firing policy, rather than a separate controller-forward estimate.
 
-Lua creates a non-colliding pawn-owned `ProceduralMeshComponent`. It hides the component and resets visibility before every synchronous request. Native code validates the engine thread, local pawn, equipped weapon, exact component class and ownership, then acknowledges a successful ray request through that component. Lua consumes the acknowledgement immediately, avoiding stale sample reuse. The bridge creates neither a projectile nor damage.
+Lua creates a non-colliding pawn-owned `WidgetComponent` in world space and a separate instance of the original `W_PlayerHUD_Crosshair_C` widget. It hides the component and resets visibility before every synchronous request. Native code validates the engine thread, local pawn, equipped weapon, exact component class and ownership, then acknowledges a successful ray request through that component. Lua consumes the acknowledgement immediately, avoiding stale sample reuse. The bridge creates neither a projectile nor damage.
 
-All trace, placement and HUD operations run on post-engine tick. `LineTraceSingle` ignores the local pawn and weapon; `BreakHitResult` supplies the real blocking hit. Invalid geometry, initial overlap, inconsistent hit time/position or excessive camera proximity rejects marker placement. Native code supplies a simple double-sided cross using the engine's default surface material; no extracted game assets are required.
+All trace, placement and HUD operations run on post-engine tick. `LineTraceSingle` ignores the local pawn and weapon; `BreakHitResult` supplies the real blocking hit. Invalid geometry, initial overlap, inconsistent hit time/position or excessive camera proximity rejects marker placement. The component uses its resident unlit translucent pass-through material with
+depth testing and a transparent background. The engine owns the SlateUI render
+target binding and dynamic material. Lua preserves that instance between ticks
+instead of recreating it whenever GetMaterial returns the dynamic instance.
+The centered native 128px image slot sits in a padded canvas, enlarged when
+image scale/rotation/shear require it. The camera-facing world size is separate
+from this padding.
+
+Widget redraw is asynchronous. Lua waits for a valid render target, matching
+size, a cleared redraw request and a matching SlateUI texture before suppressing
+the original HUD image. During warmup or changed brush/settings, the component
+remains hidden but can tick offscreen to draw, and the original image remains
+available. Unavailable alpha materials, glyph resources or native samples leave
+the HUD crosshair intact; no white-dot fallback is generated.
 
 ### HUD restoration and reset
 
@@ -41,6 +60,6 @@ For creation hooks without a fresh successful shot, legacy origin-only firing ma
 
 ## Validation
 
-Offline Lua tests and native math harnesses exercise ray geometry and policy contracts. They cannot confirm live callback timing, reflected trace behavior, marker visibility, reset recovery or per-weapon alignment in a headset. Keep **`verifiedInGame: false`** for revision 22; chainsword package 7 separately retains **`runtimeVerified: false`** until maintainer VR confirmation.
+Offline Lua tests and native math harnesses exercise ray geometry and policy contracts. They cannot confirm live callback timing, reflected trace behavior, marker visibility, reset recovery or per-weapon alignment in a headset. Keep **`verifiedInGame: false`** for revision 25; chainsword package 10 separately retains **`runtimeVerified: false`** until maintainer VR confirmation.
 
 Use temporary profiles for deployment checks. Repository maintenance must not modify the live game profile, start SteamVR or inject UEVR. See [status](STATUS.md) and [experimental interactions](EXPERIMENTAL-INTERACTIONS.md).

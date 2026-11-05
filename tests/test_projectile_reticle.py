@@ -159,8 +159,8 @@ class ReticleLifecycleTests(unittest.TestCase):
                                 ('finish.X', 10), ('finish.Y', 10020), ('finish.Z', 30),
                                 ('location.X', 10), ('location.Y', 119.6), ('location.Z', 30),
                                 ('rotation.Pitch', 0), ('rotation.Yaw', -90),
-                                ('rotation.Roll', 0), ('scale.X', .1494),
-                                ('scale.Y', .1494), ('scale.Z', .1494)):
+                                ('rotation.Roll', 0), ('scale.X', .002334375),
+                                ('scale.Y', .002334375), ('scale.Z', .002334375)):
             with self.subTest(field=field):
                 self.assertAlmostEqual(self.value('ctx.' + field), expected)
         self.assertTrue(self.value('part.bVisible and not part.bHiddenInGame'))
@@ -207,14 +207,141 @@ class ReticleLifecycleTests(unittest.TestCase):
         self.assertAlmostEqual(self.value('ctx.start.Y'), 70)
         self.assertAlmostEqual(self.value('ctx.location.Y'), 169.6)
 
-    def test_mesh_rejection_reports_geometry_failure_and_never_traces(self):
-        self.run_lua('ctx.mesh_ack=false')
+    def test_world_widget_uses_original_brush_alpha_and_no_palette(self):
         self.frame()
-        self.assertTrue(self.value('reticle.stopped'))
-        self.assertIn('Reticle geometry request rejected', self.value('ctx.log'))
+        self.assertFalse(self.value('reticle.stopped'), self.value('ctx.log'))
+        self.assertTrue(self.value('part.class==widgetclass and part.widget~=cross'))
+        self.assertTrue(self.value('world_image.Brush.ResourceObject==glyph'))
+        self.assertAlmostEqual(self.value('world_image.ColorAndOpacity.A'), .65)
+        self.assertAlmostEqual(self.value('world_image.opacity'), .375)
+        self.assertEqual(self.value('part.space'), 0)
+        self.assertGreaterEqual(self.value('part.size.X'), 128)
+        self.assertEqual(self.value('part.pivot.X'), .5)
+        self.assertFalse(self.value('part.focusable'))
+        self.assertTrue(self.value('part.material==alpha_material'))
+        self.assertEqual(self.value('ctx.imports'), 0)
+        self.assertEqual(self.value('ctx.mesh_requests'), 0)
+        self.assertEqual(self.value('world_image.Brush.ImageSize.X'), 32)
+
+    def test_live_weapon_brush_and_settings_refresh_without_recreating_component(self):
+        self.frame()
+        self.run_lua('image.Brush=dlc_brush;image.ColorAndOpacity={R=.2,G=.4,B=.8,A=.5};'
+                     'image.RenderTransform.Scale={X=1.5,Y=1.5}')
+        self.frame()
+        self.assertTrue(self.value('world_image.Brush.ResourceObject==dlc_glyph'))
+        self.assertEqual(self.value('world_image.Brush.ImageSize.X'), 64)
+        self.assertAlmostEqual(self.value('world_image.ColorAndOpacity.B'), .8)
+        self.assertAlmostEqual(self.value('world_image.RenderTransform.Scale.X'), 1.5)
+        self.assertEqual(self.value('world_image.opacity'), .375)
+        self.assertEqual(self.value('ctx.created'), 1)
+        self.assertEqual(self.value('ctx.widget_creates'), 1)
+        self.assertEqual(self.value('ctx.material_creates'), 1)
+        self.assertGreaterEqual(self.value('part.size.X'), 192)
+
+    def test_widget_dynamic_material_is_not_recreated_each_tick(self):
+        self.run_lua('ctx.get_material_returns_instance=true')
+        self.frame()
+        self.assertFalse(self.value('reticle.stopped'), self.value('ctx.log'))
+        self.frame()
+        self.assertFalse(self.value('reticle.stopped'), self.value('ctx.log'))
+        self.assertEqual(self.value('ctx.material_creates'), 1)
+
+    def test_missing_or_empty_original_brush_restores_hud_and_can_resume(self):
+        for change in ('image.Brush=nil', 'image.Brush.ResourceObject=nil',
+                       'glyph.valid=false', 'image.Brush.ImageSize.X=0',
+                       'image.Brush.ImageSize.Y=0/0'):
+            with self.subTest(change=change):
+                self.setUp()
+                self.frame()
+                self.run_lua(change)
+                self.frame()
+                self.assert_hidden()
+                self.assertFalse(self.value('reticle.stopped'), self.value('ctx.log'))
+                self.run_lua('glyph.valid=true;image.Brush=dlc_brush')
+                self.frame()
+                self.assertTrue(self.value('part.bVisible'))
+
+    def test_unverified_or_depth_disabled_alpha_material_never_replaces_hud(self):
+        for change in ('alpha_material.valid=false', 'alpha_material.BlendMode=0',
+                       'alpha_material.MaterialDomain=1', 'alpha_material.ShadingModel=1',
+                       'alpha_material.bDisableDepthTest=true'):
+            with self.subTest(change=change):
+                self.setUp()
+                self.run_lua(change)
+                self.frame()
+                self.assertFalse(self.value('part.bVisible'))
+                self.assertEqual(self.value('image.opacity'), .375)
+                self.assertEqual(self.value('ctx.traces'), 0)
+
+    def test_widget_setters_are_checked_before_hud_suppression(self):
+        for change in ('ctx.reject_widget=true', 'ctx.reject_brush=true',
+                       'ctx.reject_material=true', 'ctx.reject_draw_size=true'):
+            with self.subTest(change=change):
+                self.setUp()
+                self.run_lua(change)
+                self.frame()
+                self.assert_hidden()
+                self.assertTrue(self.value('reticle.stopped'))
+                self.assertEqual(self.value('ctx.destroyed'), 1)
+
+    def test_hud_remains_until_render_target_and_native_glyph_redraw_complete(self):
+        self.run_lua('ctx.auto_render=false;ctx.render_ready=false')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
+        self.assertTrue(self.value('part.bHiddenInGame and part.bVisible and part.offscreen'))
+        self.assertEqual(self.value('image.opacity'), .375)
         self.assertEqual(self.value('ctx.traces'), 0)
-        self.assertEqual(self.value('ctx.destroyed'), 1)
-        self.assertEqual(self.value('ctx.journal'), '')
+        self.run_lua('ctx.render_ready=true')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
+        self.assertEqual(self.value('image.opacity'), .375)
+        self.run_lua('part.bRedrawRequested=false')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'placed')
+        self.assertEqual(self.value('image.opacity'), 0)
+        self.assertEqual(self.value('ctx.traces'), 1)
+
+    def test_changed_native_glyph_keeps_hud_until_its_new_frame_is_drawn(self):
+        self.frame()
+        self.run_lua('ctx.auto_render=false;image.Brush=dlc_brush')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
+        self.assertTrue(self.value('part.bHiddenInGame'))
+        self.assertEqual(self.value('image.opacity'), .375)
+        self.run_lua('part.bRedrawRequested=false')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'placed')
+        self.assertEqual(self.value('image.opacity'), 0)
+        self.assertTrue(self.value('world_image.Brush.ResourceObject==dlc_glyph'))
+
+    def test_wrong_render_target_binding_cannot_hide_original_hud(self):
+        self.run_lua('ctx.wrong_slate=true')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
+        self.assertTrue(self.value('part.bHiddenInGame'))
+        self.assertEqual(self.value('image.opacity'), .375)
+        self.assertEqual(self.value('ctx.traces'), 0)
+
+    def test_native_visibility_changes_never_leave_world_marker_visible(self):
+        for target in ('image','cross','root'):
+            with self.subTest(target=target):
+                self.setUp()
+                self.frame()
+                self.run_lua(target+'.Visibility=2')
+                self.frame()
+                self.assert_hidden()
+                self.run_lua(target+'.Visibility=0')
+                self.frame()
+                self.assertTrue(self.value('part.bVisible and not part.bHiddenInGame'))
+
+    def test_recovery_removes_previous_procedural_marker_without_creating_one(self):
+        self.frame()
+        self.run_lua('part.class=partclass;reticle:stop();reticle=mod.new(uevr)')
+        self.frame(False)
+        self.assertFalse(self.value('reticle.stopped'),self.value('ctx.log'))
+        self.assertEqual(self.value('ctx.journal'),'')
+        self.assertEqual(self.value('ctx.destroyed'),1)
+        self.assertEqual(self.value('image.opacity'),.375)
 
     def test_status_identifies_silent_rejection_and_survives_without_log_spam(self):
         self.run_lua('ctx.ack=false')
@@ -249,59 +376,12 @@ class ReticleLifecycleTests(unittest.TestCase):
                 self.assertEqual(self.value('reticle.status'), stage)
                 self.assert_hidden()
 
-    def test_status_reports_default_material_and_verified_unlit_override(self):
-        self.frame()
-        self.assertIn('material=default-surface-unverified', self.value('ctx.status_file'))
-        self.setUp()
-        self.run_lua('ctx.unlit_available=true')
-        self.frame()
-        self.assertTrue(self.value('part.material==unlit'))
-        self.assertIn('material=verified-unlit-vertex-color', self.value('ctx.status_file'))
-        for change in ('unlit.ShadingModel=1', 'unlit.MaterialDomain=1', 'unlit.BlendMode=1'):
-            self.setUp()
-            self.run_lua('ctx.unlit_available=true;' + change)
-            self.frame()
-            self.assertIsNone(self.value('part.material'))
-            self.assertIn('material=default-surface-unverified', self.value('ctx.status_file'))
-
     def test_diagnostic_file_failure_does_not_disable_marker_or_break_ownership(self):
         self.run_lua('ctx.status_fail=true')
         self.frame()
         self.assertFalse(self.value('reticle.stopped'))
         self.assertTrue(self.value('part.bVisible'))
         self.assertNotEqual(self.value('ctx.journal'), '')
-
-    def test_cooked_unlit_pickup_material_uses_white_palette_and_owned_instance(self):
-        self.run_lua("ctx.pickup_available=true;ctx.palette_path='E:/Temporary Profile/data/hands3d_color.png'")
-        self.frame()
-        self.assertTrue(self.value('part.material and part.material~=pickup and part.material.texture==texture'))
-        self.assertEqual(self.value('ctx.imports'), 1)
-        self.assertIn('material=cooked-unlit-white', self.value('ctx.status_file'))
-        self.frame()
-        self.assertEqual(self.value('ctx.imports'), 1)
-
-    def test_white_fallback_retries_after_hands_palette_becomes_available(self):
-        self.run_lua('ctx.pickup_available=true')
-        self.frame()
-        self.assertEqual(self.value('reticle.material'), 'default-surface-unverified')
-        self.run_lua("ctx.palette_path='E:/Temporary Profile/data/hands3d_color.png';"
-                     'for i=1,120 do reticle:step(pawn,weapon,true) end')
-        self.assertEqual(self.value('reticle.material'), 'cooked-unlit-white')
-        self.assertTrue(self.value('part.bVisible and not reticle.stopped'))
-
-    def test_white_fallback_rejects_untrusted_paths_and_failed_texture_binding(self):
-        for path in ('relative.png', 'E:/other.png', 'E:/data/hands3d_color.png\nignored'):
-            self.setUp()
-            self.lua.globals().ctx.palette_path = path
-            self.run_lua('ctx.pickup_available=true')
-            self.frame()
-            self.assertEqual(self.value('ctx.imports'), 0)
-            self.assertFalse(self.value('reticle.stopped'))
-        self.setUp()
-        self.run_lua("ctx.pickup_available=true;ctx.palette_path='E:/data/hands3d_color.png';ctx.reject_texture=true")
-        self.frame()
-        self.assertTrue(self.value('reticle.stopped'))
-        self.assert_hidden()
 
     def test_successive_frames_retain_exact_hud_snapshot_until_disable(self):
         self.frame()
@@ -386,7 +466,7 @@ class ReticleLifecycleTests(unittest.TestCase):
                 self.run_lua(change)
                 self.frame()
                 self.assertFalse(self.value('reticle.stopped'), self.value('ctx.log'))
-                self.assertTrue(self.value('part.bVisible'))
+                self.assertFalse(self.value('part and part.bVisible or false'))
                 self.assertEqual(self.value('image.opacity'), .375)
                 self.assertEqual(self.value('#ctx.opacity_writes'), 0)
 
@@ -478,7 +558,7 @@ class ReticleLifecycleTests(unittest.TestCase):
 # from the engine's usual order, and the breaker accepts only the actual trace hit.
 FIXTURE = r'''
 ctx={touches=0,created=0,destroyed=0,traces=0,breaks=0,placements=0,journal='',journal_writes=0,
- status_file='',status_writes=0,logs={},imports=0,palette_path='',
+ status_file='',status_writes=0,logs={},imports=0,palette_path='',mesh_requests=0,widget_creates=0,material_creates=0,auto_render=true,render_ready=true,
  opacity_writes={},runtime=true,hmd=true,controllers=true,aim=true,ack=true,mesh_ack=true,
  hit=true,blocking=true,time=.01,eye={X=10,Y=20,Z=30},
  sample={Translation={X=10,Y=20,Z=30},Rotation={X=0,Y=0,Z=math.sqrt(.5),W=math.sqrt(.5)}}}
@@ -489,7 +569,8 @@ function touch(method)
 end
 objects={}
 function obj(name,address,outer)
- local o={name=name,address=address,outer=outer,valid=true}
+ local o={name=name,address=address,outer=outer,valid=true,Visibility=0}
+ function o:IsVisible()touch('IsVisible');return self.Visibility==0 or self.Visibility==3 or self.Visibility==4 end
  objects[name]=o
  function o:get_full_name()touch('get_full_name');return self.name end
  function o:get_address()touch('get_address');return self.address end
@@ -512,7 +593,7 @@ hud=obj('Gameplay_HUD_C Test.HUD','hud');hud.PlayerOwner=controller;controller.M
 function controller:GetHUD()touch('GetHUD');return hud end
 root=obj('Gameplay_HUD_UI_C Test.Root','root');hud['Player HUD Widget']=root
 cross=obj('W_PlayerHUD_Crosshair_C Test.Cross','cross');root.W_PlayerHUD_Crosshair=cross
-imageclass=obj('Class /Script/UMG.Image','imageclass')
+imageclass=obj('Class /Script/UMG.Image','imageclass');imageclass.find_property=generic.find_property
 image=obj('Image Test.Cross.WidgetTree.Crosshair','image');image.class=imageclass;image.opacity=.375
 other_image=obj('Image Test.Cross.WidgetTree.Other','other_image');other_image.opacity=.8
 cross.Crosshair=image
@@ -520,6 +601,42 @@ function image:GetRenderOpacity()touch('GetRenderOpacity');return self.opacity e
 function image:SetRenderOpacity(v)
  touch('SetRenderOpacity');ctx.opacity_writes[#ctx.opacity_writes+1]=v
  if not ctx.reject_opacity or v~=0 then self.opacity=v end
+end
+function copy_struct(v)
+ if type(v)~='table' or v.get_address then return v end
+ local out={};for k,n in pairs(v)do out[k]=copy_struct(n)end;return out
+end
+glyph=obj('Texture2D /Game/Test.Crosshairs_Boltgun','glyph')
+dlc_glyph=obj('Texture2D /Game/Test.Crosshairs_MultiMelta','dlcglyph')
+image.Brush={ResourceObject=glyph,ImageSize={X=32,Y=32},DrawAs=1}
+dlc_brush={ResourceObject=dlc_glyph,ImageSize={X=64,Y=64},DrawAs=1}
+image.ColorAndOpacity={R=1,G=1,B=1,A=.65}
+image.RenderTransform={Translation={X=0,Y=0},Scale={X=1,Y=1},Shear={X=0,Y=0},Angle=0}
+image.RenderTransformPivot={X=.5,Y=.5}
+widgetclass=obj('Class /Script/UMG.WidgetComponent','widgetclass')
+widgetclass.find_property=generic.find_property
+crossclass=obj('WidgetBlueprintGeneratedClass /Game/Blueprints/UI/Gameplay_HUD/W_PlayerHUD_Crosshair.W_PlayerHUD_Crosshair_C','crossclass')
+cross.class=crossclass
+crossclass.find_property=generic.find_property
+alpha_material=obj('Material /Engine/EngineMaterials/Widget3DPassThrough_Translucent.Widget3DPassThrough_Translucent','alpha')
+alpha_material.MaterialDomain=0;alpha_material.ShadingModel=0;alpha_material.BlendMode=2
+alpha_material.bDisableDepthTest=false
+factory=obj('Class /Script/UMG.WidgetBlueprintLibrary','factory')
+function factory:get_class_default_object()return self end
+function factory:Create(owner,cls,pc)
+ touch('Create');assert(owner==pawn and cls==crossclass and pc==controller)
+ ctx.widget_creates=ctx.widget_creates+1
+ local widget=obj('W_PlayerHUD_Crosshair_C Test.WorldCross','worldwidget'..ctx.widget_creates);widget.class=crossclass
+ world_image=obj('Image Test.WorldCross.WidgetTree.Crosshair','worldimage');world_image.class=imageclass
+ world_image.Brush={};widget.Crosshair=world_image
+ function world_image:SetVisibility(v)touch('SetGlyphVisibility');self.Visibility=v end
+ function world_image:SetBrush(v)touch('SetBrush');if not ctx.reject_brush then self.Brush=copy_struct(v) end end
+ function world_image:SetColorAndOpacity(v)touch('SetColorAndOpacity');self.ColorAndOpacity=copy_struct(v) end
+ function world_image:SetRenderOpacity(v)touch('SetWorldOpacity');self.opacity=v end
+ function world_image:GetRenderOpacity()return self.opacity end
+ function world_image:SetRenderTransform(v)touch('SetRenderTransform');self.RenderTransform=copy_struct(v) end
+ function world_image:SetRenderTransformPivot(v)touch('SetRenderTransformPivot');self.RenderTransformPivot=copy_struct(v) end
+ return widget
 end
 menu=obj('Menu Test.Menu','menu');menu.valid=false;hud.CurrentMenu=menu
 function menu:IsInViewport()touch('IsInViewport');return true end
@@ -541,9 +658,29 @@ function rendering:ImportFileAsTexture2D(owner,path)
  touch('ImportFileAsTexture2D');assert(owner==pawn and path==ctx.palette_path)
  ctx.imports=ctx.imports+1;return texture
 end
+target=obj('TextureRenderTarget2D Test.Glyph','target')
 function newpart()
  local o=obj('ProceduralMeshComponent Test.Part','part'..ctx.created,pawn);o.class=partclass
- o.bVisible=false;o.bHiddenInGame=true;o.sections=0
+ o.bVisible=false;o.bHiddenInGame=true;o.sections=0;o.TranslucentMaterial=alpha_material
+ function o:SetTickWhenOffscreen(v)self.offscreen=v end
+ function o:SetWidgetSpace(v)touch('SetWidgetSpace');self.space=v end
+ function o:GetWidgetSpace()return self.space end
+ function o:SetDrawAtDesiredSize(v)self.desired=v end
+ function o:SetDrawSize(v)touch('SetDrawSize');if not ctx.reject_draw_size then self.size=v end end
+ function o:GetDrawSize()return self.size or {X=0,Y=0} end
+ function o:SetPivot(v)touch('SetPivot');self.pivot=v end
+ function o:GetPivot()return self.pivot end
+ function o:SetWindowFocusable(v)touch('SetWindowFocusable');self.focusable=v end
+ function o:GetWindowFocusable()return self.focusable end
+ function o:SetBackgroundColor(v)touch('SetBackgroundColor');self.background=v end
+ function o:SetWidget(v)touch('SetWidget');if not ctx.reject_widget then self.widget=v end end
+ function o:GetUserWidgetObject()return self.widget end
+ function o:RequestRedraw()touch('RequestRedraw');self.bRedrawRequested=not ctx.auto_render end
+ function o:GetRenderTarget()
+  touch('GetRenderTarget');if not ctx.render_ready then return nil end
+  target.SizeX=self.size.X;target.SizeY=self.size.Y;return target
+ end
+ function o:GetMaterialInstance()touch('GetMaterialInstance');return self.dmi end
  function o:SetHiddenInGame(v,propagate)touch('SetHiddenInGame');assert(propagate==false);self.bHiddenInGame=v end
  function o:SetVisibility(v,propagate)touch('SetVisibility');assert(propagate==false);self.bVisible=v end
  function o:SetCollisionEnabled(v)touch('SetCollisionEnabled');ctx.collision=v end
@@ -553,8 +690,16 @@ function newpart()
  function o:SetOwnerNoSee(v)touch('SetOwnerNoSee');ctx.owner_no_see=v end
  function o:SetOnlyOwnerSee(v)touch('SetOnlyOwnerSee');ctx.only_owner=v end
  function o:GetNumSections()touch('GetNumSections');return self.sections end
- function o:GetMaterial(index)touch('GetMaterial');assert(index==0);return self.material end
- function o:SetMaterial(index,material)touch('SetMaterial');assert(index==0);self.material=material end
+ function o:GetMaterial(index)touch('GetMaterial');assert(index==0);return ctx.get_material_returns_instance and self.dmi or self.material end
+ function o:SetMaterial(index,material)
+  touch('SetMaterial');assert(index==0);ctx.material_creates=ctx.material_creates+1
+  if not ctx.reject_material then self.material=material end
+  self.dmi=obj('MaterialInstanceDynamic Test.Widget','widgetdmi',self)
+  function self.dmi:K2_GetTextureParameterValue(key)
+   touch('K2_GetTextureParameterValue');assert(key=='SlateUI')
+   return not ctx.wrong_slate and ctx.render_ready and target or nil
+  end
+ end
  function o:CreateDynamicMaterialInstance(index,source,name)
   touch('CreateDynamicMaterialInstance');assert(index==0 and source==pickup and name=='BoltgunReticleWhite')
   local dmi=obj('MaterialInstanceDynamic Test.ReticleWhite','dmi',self)
@@ -637,7 +782,7 @@ function library(name,o)
  function c:get_class_default_object()touch('get_class_default_object');return o end
 end
 library('GameplayStatics',gs);library('KismetSystemLibrary',system)
-for _,name in ipairs({'Vector','Rotator'}) do
+for _,name in ipairs({'Vector','Vector2D','Rotator'}) do
  local d=obj('ScriptStruct /Script/CoreUObject.'..name,name)
  function d:as_struct()touch('as_struct');return self end
 end
@@ -663,8 +808,8 @@ uevr={api={get_engine=function()touch('get_engine');return engine end,
   if name==pickup.name and not ctx.pickup_available then return nil end
   return objects[name] end,
  add_component_by_class=function(_,owner,class,deferred)
-  touch('add_component_by_class');assert(owner==pawn and class==partclass and deferred==false)
-  ctx.created=ctx.created+1;part=newpart();return part
+  touch('add_component_by_class');assert(owner==pawn and (class==partclass or class==widgetclass) and deferred==false)
+  ctx.created=ctx.created+1;part=newpart();part.class=class;return part
  end},types={UObjectHook={exists=function(o)touch('exists');return o and o.valid==true end}},
  params={vr={is_runtime_ready=function()return ctx.runtime end,is_hmd_active=function()return ctx.hmd end,
  is_using_controllers=function()return ctx.controllers end,is_aim_allowed=function()return ctx.aim end},
@@ -676,7 +821,7 @@ uevr={api={get_engine=function()touch('get_engine');return engine end,
   assert(p==pawn.address and w==weapon.address and c==part.address)
   touch('dispatch_'..command)
   assert(part.bHiddenInGame and not part.bVisible,'native request reused stale visible ack')
-  if command=='mesh' then if ctx.mesh_ack then part.sections=1 end
+  if command=='mesh' then ctx.mesh_requests=ctx.mesh_requests+1;if ctx.mesh_ack then part.sections=1 end
   elseif command=='ray' then
    if ctx.ack then
     -- Native sampling moves the component to a fresh transform. World setters

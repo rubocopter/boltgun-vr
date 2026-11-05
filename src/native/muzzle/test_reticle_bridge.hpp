@@ -35,7 +35,7 @@ static bool is_a(UEVR_UObjectHandle object,UEVR_UClassHandle cls) {
 }
 static UEVR_UObjectHandle find(const wchar_t* name) {
     ++accesses;
-    if(std::wcscmp(name,L"Class /Script/ProceduralMeshComponent.ProceduralMeshComponent")==0)
+    if(std::wcscmp(name,L"Class /Script/UMG.WidgetComponent")==0)
         return id(400);
     return ::find(name);
 }
@@ -46,7 +46,7 @@ static bool get_bool(UEVR_UObjectHandle object,const wchar_t* name) {
 }
 static void set_bool(UEVR_UObjectHandle object,const wchar_t* name,bool value) {
     ++accesses;assert(object==id(401)&&std::wcscmp(name,L"bVisible")==0&&value);
-    // Ack must follow a successful write, and must not unhide the native mesh.
+    // Ack must follow a successful write, and must not unhide the world widget.
     assert(hidden&&writes==acks+1);
     if(throw_ack) RaiseException(0xE0000041,0,0,nullptr);
     visible=true;++acks;
@@ -191,9 +191,15 @@ static void run() {
         on_event("boltgun.reticle.v1",text);
         assert(accesses==0&&writes==0&&acks==0&&g_enabled&&!g_faulted);
     }
-    sdk.farrayproperty=nullptr;rejected();assert(accesses==0);sdk.farrayproperty=&array_props;
-    sdk.malloc=nullptr;rejected();assert(accesses==0);sdk.malloc=&allocator;
+    // Ray sampling has no geometry arrays or UE allocator dependency now.
+    reset();sdk.farrayproperty=nullptr;sdk.malloc=nullptr;
+    matches_spawn();sdk.farrayproperty=&array_props;sdk.malloc=&allocator;
 
+    // The original-glyph marker uses an exact WidgetComponent. Procedural
+    // meshes and subclasses must not receive a sample or stale acknowledgement.
+    reset();component_class=id(420);rejected();
+    reset();on_event("boltgun.reticle.v1","mesh|1|2|401");
+    assert(accesses==0&&writes==0&&acks==0&&!visible);
     reset();local=id(9);rejected();
     reset();unequipped=true;rejected();
     reset();owner=id(9);rejected();
