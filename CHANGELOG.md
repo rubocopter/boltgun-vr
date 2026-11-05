@@ -2,6 +2,10 @@
 
 ## Unreleased candidate 25 / chainsword package 10 — 5 November 2026
 
+- Consolidate current runtime evidence and the prioritized test/implementation
+  backlog. Retire superseded candidate 24 and revision 16/17 development notes
+  from current guides and the player ZIP; keep their history in Git.
+
 - Render the native HUD crosshair brush, color and transform at the production
   aiming destination through an owned transparent world widget.
 - Replace white cuboid hands with imported CC0 gauntlets, a curled grip pose,

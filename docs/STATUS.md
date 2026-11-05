@@ -1,51 +1,71 @@
 # Current status and validation
 
-**Current candidate: firearm revision 25 / chainsword package 10.** On 5 November 2026 the maintainer confirmed that candidate 24's damage presentation was good and some firearm muzzle effects improved. The white marker was rejected in favor of the game's own crosshair. The recorded hands were white blocks displaced from the weapons. Candidate 25 uses the native crosshair widget/brush at the production aim destination and replaces the prototype with imported, recolored CC0 armored gloves in calibrated weapon grip frames. The confirmed damage runtime is unchanged. Native death-arm sprites remain suppressed; tracked hands are still hidden during death. See [candidate notes](CANDIDATE-25.md). The changed reticle and hand paths still require VR confirmation; both runtime verification flags remain false.
+Updated 5 November 2026. This page is the reference for current versions and
+runtime evidence. The actionable test and implementation backlog is in
+[PENDING.md](PENDING.md).
 
-**v1.0.2 — 1 November 2026.** Sense profile **v7**, firearm arsenal **revision 20**, chainsword **package 5** (runtime unchanged since v1.0.1). Current unreleased integration targets firearm **revision 22** and chainsword **package 7**; neither has maintainer VR confirmation.
+## Current build and release
 
-The maintainer confirmed the runtime corrections in VR on 16 October 2026 (v1.0.1), after testing the installed revision with PS VR2 Sense. Released revision 20 had `verifiedInGame: true`; unreleased revision 22 must retain **`verifiedInGame: false`**, with `previousVerifiedRevision` recording revision 20. Chainsword package 7 must retain **`runtimeVerified: false`**, with package 5 recorded as the last VR-verified version. Version 1.0.2 changes the installer to preserve incompatible SteamVR bindings; this fallback is covered by isolated tests but has not been reconfirmed in VR.
-
-**Unreleased revision 22** samples the real production native barrel orientation and muzzle origin for a Lua-traced world reticle. The legacy path retains native aim; opt-in free aim requires a fresh owned stereo capture. The marker shows nominal aim, not random projectile spread. Volkite/Gravgun markers require successful experimental beam-hook registration (`g_beam_hooked`) and a fresh aimed pose. The exact original HUD crosshair image is suppressed only while a valid world marker is displayed; an ownership journal supports restoration after script reset. See [reticle behavior and lifecycle](RETICLE.md).
-
-**Unreleased chainsword package 7** integrates physical blade contact gated by the left-source OpenXR Trigger action, owned displayed poses, real `SphereTraceSingle` results, world occlusion and a per-target cooldown. Damage goes through the game's original chainsword routine. Pure tracking/melee policy modules and the optional native diagnostic remain separate evidence; they do not authenticate every live tracking sample. The UEVR Lua API still lacks per-device tracking-valid/focus bits.
-
-The unreleased menu module leases stationary-panel settings while recognized menus own input, handles native cursor visibility and mouse capture, and restores owned settings on return to gameplay. This runtime handling is distinct from the standalone menu ray/click policy modules. Headset calibration and controller pointer/click behavior remain unverified. See [experimental interactions](EXPERIMENTAL-INTERACTIONS.md).
-
-| Component | Current evidence | Scope and remaining limits |
+| Scope | Version | Evidence |
 | --- | --- | --- |
-| Sense controls and weapon wheel | Maintainer VR feedback and offline input tests | Supplied PS VR2 Sense mapping; other controller profiles unvalidated |
-| 3D firearm recovery | Maintainer confirmed firearms stay 3D; repeated save-load regressions | DLC matrix and other game builds are not certified |
-| Firearm effects | Revision 22 session still showed offset emissions; revision 23 has native harness coverage | New renderer path requires VR confirmation; detached/unknown effects retain native behavior |
-| Chainsword | Maintainer confirmation of the latest recovery/tracking correction; lifecycle tests | Other hardware and individual alignment preferences remain outside scope |
-| Two-hand aim | Offline tests; explicitly disabled unless opted in | Experimental comfort/offsets need separate validation |
+| Current repository candidate | Firearm revision **25**, chainsword package **10**, Sense profile **v7** | Built, packaged and installed locally on 5 November; exact file hashes checked. New reticle/hands await headset feedback. |
+| Published player release | **v1.0.2**, firearm revision **20**, chainsword package **5**, Sense profile **v7** | Runtime inherited from v1.0.1, confirmed in the maintainer's 16 October VR session. The v1.0.2 installer fallback has offline coverage. |
 
-The maintainer confirmations in the table refer to the released revision 20/package 5 runtime. They do not validate revision 22 reticle/FX, package 7 contact or the unreleased menu changes.
+The current candidate is not a new published release. Both current manifest
+flags, `verifiedInGame` and `runtimeVerified`, remain **false**. Earlier or partial
+feedback does not certify the complete revision 25/package 10 runtime.
+[Candidate 25 notes](CANDIDATE-25.md) describe the latest changes.
 
-## Changes since v1.0.0
+## Current feature evidence
 
-- Prevent engine-tick callback recursion in Sense tracking and require explicit `on` for proximity two-hand aiming.
-- Recognize the original Sense script for safe installation upgrades.
-- Rebuild firearm models after save loads, including renamed/recycled components and delayed pawn or renderer initialization.
-- Apply equivalent recovery safeguards to the chainsword while retaining Codex scale restoration and foreign-object protection.
-- Align approved local attached and reused Niagara effects with each weapon's barrel after renderer updates.
+| Feature | Implemented now | Observed in VR / remaining boundary |
+| --- | --- | --- |
+| Sense controls and weapon wheel | Head-oriented movement, turning, Options/Create adaptation and R3 weapon selection | Previously confirmed with PS VR2 Sense; other controller mappings are unvalidated. |
+| 3D firearms and save-load recovery | Ten exact weapon classes, owned pickup meshes and sprite fallback | Revision 20 recovery was confirmed. Latest feedback says shots appear better aligned; no complete current weapon/DLC matrix exists. |
+| Original-game world reticle | Revision 25 renders the native HUD brush/color/transform through an owned transparent world widget at the production aiming destination | Not yet tested in VR. Earlier reticle success does not validate the replacement glyph or its asynchronous rendering. |
+| Muzzle/casing effects | Reflected creation hooks, owned-renderer correction and guarded native pre-activation interception | Candidate 24 improved some weapons; other effects remained offset. Full alignment is unresolved. Latest inspected native-hook counters showed calls but zero redirects. |
+| Stable menu panels | Automatic aim/panel leases, native cursor visibility and mouse-capture handling | Maintainer reported stable panels. A tracked controller hover/click bridge is not implemented. |
+| Peripheral damage halo | Exact native blood UI suppression and an owned red postprocess | Maintainer approved candidate 24's appearance on 5 November. Those runtime files are unchanged in candidate 25; transition/recovery coverage is still incomplete. |
+| Armored hands | Package 10 replaces white cuboids with imported CC0 blue/charcoal/brass fixed-grip gauntlets and calibrated weapon frames | Installed but untested in VR. Bolter/sword fit estimates were inspected offline; other weapons need individual checks. |
+| Death presentation | Exact old death-arm sprites are suppressed; tracked hands hide during death | Maintainer reported no hands at death. There is no 3D death-hand/arm presentation. |
+| Physical chainsword contact | Engine queries and original damage routine are wired, gated by held left Trigger | No additional damage has been confirmed. Loading was corrected, but the latest inspected contact diagnostics remained at the Trigger gate with no samples/sweeps/damage. |
+| Recoil, haptics and optional two-hand aim | Supported projectile feedback; two-hand aim is opt-in | Current intensity, offsets and broader hardware behavior need headset checks. |
 
-Earlier revisions 18 and 19 were intermediate corrections. Revision 18 still stopped on foreign-component cleanup; revision 19 fixed the firearm path, while the subsequent log revealed the corresponding chainsword failure. Release 1.0.1 contains the final revision 20/package 5 corrections confirmed by the maintainer.
+## Operating limits
 
-## Offline validation
+- The native bridge accepts only executable SHA-256
+  `BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A`.
+  Unsupported game builds retain native firing.
+- `freeaim_enabled=0` is the repository default. Opt-in free aim uses a fresh,
+  owned display pose and falls back to native orientation when its gate fails.
+  The reticle samples the same decision; it does not predict random spread,
+  projectile travel, collision radius or a guaranteed hit.
+- Volkite/Gravgun ray hooks require the separate process-start opt-in
+  `BOLTGUN_EXPERIMENTAL_BEAM_HOOKS=1`, successful registration and accepted fresh
+  aim. Other unsupported beam/hitscan paths retain native behavior.
+- Muzzle correction is restricted to exact allowed assets and local ownership.
+  Unknown, detached flight/impact and enemy effects are excluded. Complete
+  per-weapon alignment has not been demonstrated.
+- Contact damage currently requires the physical left Trigger. Touching or
+  swinging the blade with that Trigger released does not activate this adapter.
+  Original L2 attacks remain active. Physical reloads, animated fingers, full
+  articulated arms and controller menu pointing are not implemented.
+- Multi-Melta and Missile Launcher require the DLC. DLC/Machine Spirit coverage
+  and other headsets/controllers have no exhaustive validation.
 
-The repository includes Python/Lua cases, chainsword converter tests, native C++ harnesses, and isolated PowerShell setup/restore checks. MSVC x64 builds use `/W4 /WX`; source and rebuilt DLL hashes are checked before packaging. These checks establish program contracts and complement the maintainer's released-runtime VR session. Candidate 25/package 10 passed 336 Python/Lua tests, six preparation tests, six native harnesses, MSVC builds and isolated deployment/setup/snapshot checks. Passing offline tests does not establish headset behavior.
+## Validation and maintenance
 
-Deployment checks use temporary profiles. A candidate may replace the installed profile when explicitly authorized by the maintainer; installation does not establish VR validation. Repository maintenance does not start SteamVR or inject UEVR.
+The candidate passed 336 Python/Lua tests, six preparation tests, six native
+harnesses, MSVC x64 `/W4 /WX` builds, package hash checks and isolated
+installation/setup/snapshot checks. These prove offline contracts and file
+integrity, not stereo rendering, tracking validity or actual game damage.
+[Build instructions](BUILD.md) list the reproducible checks.
 
-## Known boundaries
+Repository maintenance uses temporary profiles and does not change the live
+profile, start the game/SteamVR, inject UEVR or publish. The candidate installation
+above was a separate, explicitly authorized action. Keep local recordings,
+extracted game resources, logs and deployment receipts outside Git.
 
-The native bridge accepts executable SHA-256 `BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A`. Other game builds retain native firing. Released revision 20 preserves projectile direction/spread; unreleased revision 22 can modify direction when free aim is enabled and a fresh owned stereo capture is available. Effects outside the exact asset allowlist or verified local renderer ancestry are not moved. Beam/hitscan implementations bypassing the supported helper keep native origins, except for the separately gated Volkite/Gravgun experiment.
-
-Revision 22 records the exact most recent successful projectile transform for approved observed muzzle FX, scoped to the current weapon and ownership generation and valid for at most two engine frames and 100 ms. The effect retains its authored scale. Without a fresh shot, legacy origin-only firing may use the mesh muzzle fallback; free aim leaves the effect untouched. The former global scan moving older effects is removed. FX bypassing the observed creation hooks have no guaranteed correction.
-
-The Bolter muzzle landmark is `(67.81414, 0, 53)` in mesh-local Unreal centimetres. Other weapon landmarks derive from pickup geometry; the maintainer's confirmation does not imply exhaustive per-weapon or DLC calibration. Optional recoil moves the visible mesh while the firing reference remains stationary. Firearm assets load from the user's own game. Multi-Melta and Missile Launcher require DLC.
-
-The released chainsword has no physical contact damage. Unreleased package 7 adds held-trigger contact with original game damage, occlusion rejection and a 500 ms per-target cooldown; it remains experimental and requires VR confirmation. Physical reloads are not implemented. Codex scaling changes presentation rather than physical distance. Other controller mappings are not supplied or validated.
-
-See [installation](EASY-SETUP.md), [native muzzle details](NATIVE-MUZZLE.md), [build instructions](BUILD.md), and [source/third-party notices](SOURCE-AND-NOTICES.md).
+See [reticle](RETICLE.md), [native muzzle](NATIVE-MUZZLE.md), [chainsword](CHAINSAW.md),
+[hands](HANDS.md), [damage comfort](COMFORT.md) and [menus](MENU.md) for the current
+implementation contracts. Superseded iteration notes are available in Git history.

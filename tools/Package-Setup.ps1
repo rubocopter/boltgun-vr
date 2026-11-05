@@ -21,7 +21,7 @@ $scriptFiles=@('Install.ps1','Restore.ps1','Setup-BoltgunVR.ps1','Menu.ps1',
     'Play-BoltgunVR.ps1','Bolter3D.ps1','Chainsword3D.ps1','Comprobar-perfil.ps1')
 $toolFiles=@('Paths.ps1','Check-Repository.ps1','Snapshots.ps1')
 $guideFiles=@('ARCHITECTURE.md','ARSENAL.md','BUILD.md','CHAINSAW.md',
-    'CONTROLS.md','CANDIDATE-24.md','CANDIDATE-25.md','COMFORT.md','HANDS.md','EASY-SETUP.md','EXPERIMENTAL-INTERACTIONS.md','INSTALACION-FACIL.es.md','INSTALL.md',
+    'CONTROLS.md','CANDIDATE-25.md','PENDING.md','COMFORT.md','HANDS.md','EASY-SETUP.md','EXPERIMENTAL-INTERACTIONS.md','INSTALACION-FACIL.es.md','INSTALL.md',
     'NATIVE-MUZZLE.md','RETICLE.md','MENU.md','README.es.md','REINSTALL.md','REPOSITORY.md',
     'SOURCE-AND-NOTICES.md','STATUS.md','TROUBLESHOOTING.md')
 
@@ -47,9 +47,6 @@ foreach ($name in $rootFiles) { Add-PackageFile $name }
 foreach ($name in $scriptFiles) { Add-PackageFile "scripts\$name" }
 foreach ($name in $toolFiles) { Add-PackageFile "tools\$name" }
 foreach ($name in $guideFiles) { Add-PackageFile "docs\$name" }
-foreach ($revision in 16..17) {
-    Add-PackageFile "docs\history\2026-10-10-revision$revision.md"
-}
 foreach ($name in @('bolter3d.package.json','chainsword3d.package.json')) {
     Add-PackageFile "manifests\$name"
 }

@@ -23,8 +23,10 @@ hashes and preserves recognised previous hashes. Review JSON changes before comm
 Deployment, guided setup and snapshot tests use temporary repository copies/profiles,
 never the live installation.
 Reinstall-backup tests likewise use temporary fixtures and do not read the live profile.
-The prepared, credited sword mesh/texture are supplied under `assets/chainsword`;
-original downloads are not required. Its converter lives in `src/native/chainsword`.
+Prepared sword and hand meshes/textures are supplied under `assets/chainsword`
+and `assets/hands`, with their own notices. Original downloads are not required
+to build or install them. Converters live in `src/native/chainsword`; reproducing
+the hand artwork requires the pinned CC0 source GLB listed in its credits.
 Git preserves exact runtime bytes because manifests depend on SHA-256.
 
 `tools/Package-Setup.ps1` assembles the player ZIP from deployment/package
@@ -46,3 +48,8 @@ differ from the CI compiler output. Exact DLL bytes can vary by toolchain versio
 compare the hashes produced by your release toolchain before distributing a
 package. A green workflow confirms offline contracts and installer isolation,
 but does not establish in-game behaviour or validate tracking and weapon effects.
+
+Current guides and the backlog are packaged; superseded development notes are
+retained in Git history. Check local Markdown links after moving/removing guides,
+and run the guided-setup test to verify the actual ZIP inventory. Documentation
+maintenance does not deploy, inject, launch VR or change verification flags.

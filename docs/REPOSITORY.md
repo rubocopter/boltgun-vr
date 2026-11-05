@@ -5,7 +5,7 @@
 | `src/lua`, `src/native` | Runtime modules, plugins, harnesses and converter |
 | `profile` | Active Sense inputs, UEVR config and optional module defaults |
 | `game-config` | Declared INI inputs |
-| `assets` | Metadata and credited external chainsword |
+| `assets` | Banner, credited CC BY sword and CC0 armored hand payloads |
 | `dependencies/uevr` | MIT plugin API header |
 | `manifests` | Optional package inventories/upgrades |
 | `scripts` | Installer, restore, launcher and optional module commands |
@@ -15,8 +15,9 @@
 `research`, `backups`, `diagnostics`, `previews` and `tools/python` remain ignored local
 archives: previous iterations, extracts, recordings, downloaded runtimes and diagnostics.
 Local research and previous prototypes remain outside Git. The public documentation
-contains the current implementation and the two most recent technical notes;
-superseded preparation notes are retained in Git history, not in the player package.
+contains current player/developer guides, candidate 25 notes, STATUS.md and
+PENDING.md. Superseded candidate 24 and revision 16/17 notes were retired; their
+content remains in Git history, outside the current player package.
 
 No extracted game meshes, executable, PAK, dump or compiler products belong in Git.
 GitHub and Git track source only; they do not contain user calibrations or Windows
@@ -25,7 +26,9 @@ The player archive contains a curated subset of these directories, one English
 root menu launcher and the compiled native plugins. The old starter profile and obsolete
 experimental probes were retired. Installation snapshots live in ignored
 `backups/install/`; the separate reinstall snapshot tool covers user calibration.
-The runtime revisions in v1.0.2 were confirmed by the maintainer in VR with v1.0.1; the v1.0.2 installer fallback has offline tests only. See STATUS.md for the scope.
+Current source is candidate 25/package 10; published v1.0.2 retains the older
+revision 20/package 5 runtime confirmed with v1.0.1. New reticle/hands await VR
+feedback. See [STATUS.md](STATUS.md) and [PENDING.md](PENDING.md).
 Original project-authored code is under [GPL-3.0-or-later](../LICENSE).
 For exceptions and redistribution requirements see [copyright and reuse](../COPYRIGHT_AND_REUSE.md) and [source and third-party notices](SOURCE-AND-NOTICES.md).
 The repository already has a public remote.

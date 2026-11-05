@@ -39,10 +39,16 @@ Latest release: **v1.0.2** · [Changelog](CHANGELOG.md)
 - **Motion controls.** Head-oriented movement, turning, pause/recenter mappings and PS VR2 Sense button assignments.
 - **Weapon wheel.** Hold R3, tilt the right stick towards a weapon group and release. Return to the centre to cancel.
 - **Optional tracked firearms.** Up to ten weapon-specific 3D replacements assembled from meshes already in the installed game; the Multi-Melta and Missile Launcher require the DLC. The mod can fall back to the original sprite when a mesh fails to load.
-- **Optional chainsword.** A separate tracked model on the left controller. Released attacks, damage and sounds use the original game's mechanics; unreleased package 8 adds experimental physical contact while the left Trigger is held.
-- **Presentation tweaks.** Reduced Codex reading scale, comfort options and a normally hidden UEVR menu.
+- **Optional chainsword.** A separate tracked model on the left controller. Released attacks, damage and sounds use the original game's mechanics; candidate package 10 includes an experimental held-left-Trigger contact adapter whose additional damage remains unconfirmed.
+- **Current candidate presentation.** Native-game world crosshair, imported armored hands, stable menu panels and a peripheral damage halo. The new reticle/hands await VR feedback; the damage appearance was approved. Reduced Codex scale remains available.
 
-Firearms have experimental visual recoil and firing haptics on intercepted projectile spawns. The **released** runtime preserves native aim and spread. Revision 23 retains the nominal world reticle, supports creation-hook flash alignment and additionally moves exact-allowlisted active muzzle/casing emitters attached to the local weapon renderer after the tracked pose update. Detached projectile/impact effects and unsupported beam paths retain native behavior. The marker does not predict random spread or a guaranteed hit. Physical reloads remain unimplemented. See [reticle and effect limits](docs/RETICLE.md).
+Firearms have experimental visual recoil and haptics on supported projectile
+spawns. The repository default preserves native orientation; free aim is opt-in.
+The current reticle samples nominal production aim and does not predict spread
+or a guaranteed hit. Some muzzle effects improved, while remaining deviations
+and chainsword contact damage need investigation. Controller menu pointing,
+physical reloads, finger animation and 3D hands during death are not implemented.
+See [current evidence](docs/STATUS.md) and [pending work](docs/PENDING.md).
 
 ## Install
 
@@ -57,16 +63,22 @@ For prerequisites, exact file locations, backups and restoring your previous pro
 
 ## Current development status
 
-| Component | Evidence | What remains |
+The locally installed candidate is **firearm revision 25 / chainsword package 10**.
+It is distinct from the published v1.0.2 runtime. Both current verification flags
+remain false until the maintainer confirms the exact changed revision in VR.
+
+| Component | Current evidence | Next step |
 | --- | --- | --- |
-| Sense controls and weapon wheel | Maintainer-confirmed VR session; offline Lua tests | Other controller mappings remain unvalidated |
-| 3D firearms (revision 20) | Maintainer-confirmed gameplay and recovery across save loads | DLC coverage and individual grip preferences |
-| Native muzzle bridge | Maintainer-confirmed barrel effect alignment; native harnesses | Unsupported beam/hitscan and unrelated effect paths |
-| Tracked chainsword (package 5) | Maintainer-confirmed recovery and tracking | Other hardware and individual alignment preferences |
+| Native-game world reticle | Implemented and installed; offline coverage | Check glyph, transparency, aim position and persistence in VR |
+| Imported armored hands | Blue/charcoal/brass fixed-grip model and calibrated attachment | Check both eyes and fit for every weapon |
+| Damage comfort and menu panels | Maintainer approved the halo and reported stable panels | Check lifecycle regressions; controller hover/click is still unimplemented |
+| Projectiles and emission effects | Shots appear better aligned; some muzzle effects improved | Resolve remaining deviations and zero native-emission redirects |
+| Physical chainsword contact | Adapter loads; additional damage has not been demonstrated | Diagnose Trigger/pose gates and prove real contacts/damage |
 
-The v1.0.1 runtime, retained in v1.0.2, keeps the 3D mode through supported save-load transitions and prevents stale component references from permanently disabling the firearm or chainsword modules. Two-hand aiming is explicitly opt-in. Read [validation scope and limitations](docs/STATUS.md) for the tested boundary.
-
-Revision 22 received partial session confirmation for the reticle and menu. Revision 23 emission corrections and package 8 contact loading remain unreleased candidates requiring headset confirmation. Keep `verifiedInGame` and `runtimeVerified` false for these changed runtimes.
+The historical revision 20/package 5 runtime was confirmed in the maintainer's
+16 October session. This does not certify all current experiments, DLC variants
+or other hardware. Use [STATUS.md](docs/STATUS.md) for evidence and
+[PENDING.md](docs/PENDING.md) for the prioritized validation/implementation list.
 
 ## Documentation
 
@@ -76,7 +88,8 @@ Revision 22 received partial session confirmation for the reticle and menu. Revi
 | [Sense controls](docs/CONTROLS.md) | [Build & tests](docs/BUILD.md) |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | [Arsenal implementation](docs/ARSENAL.md) |
 | [Installation & restore](docs/INSTALL.md) | [Native muzzle bridge](docs/NATIVE-MUZZLE.md) |
-| [Headset validation & limitations](docs/STATUS.md) | [Chainsword implementation](docs/CHAINSAW.md) |
+| [Headset validation & limitations](docs/STATUS.md) | [Pending tests & implementation](docs/PENDING.md) |
+| [Hands & damage comfort](docs/HANDS.md) · [Halo](docs/COMFORT.md) | [Chainsword implementation](docs/CHAINSAW.md) |
 | [World reticle (unreleased)](docs/RETICLE.md) | [Experimental interactions (unreleased)](docs/EXPERIMENTAL-INTERACTIONS.md) |
 | [Windows reinstall & backup](docs/REINSTALL.md) | [Source, licensing & credits](docs/SOURCE-AND-NOTICES.md) |
 
@@ -100,4 +113,4 @@ See [build requirements](docs/BUILD.md) and [repository layout](docs/REPOSITORY.
 
 ---
 
-**Unofficial fan project.** Not affiliated with or endorsed by Auroch Digital, Games Workshop, Focus Entertainment, praydog, Valve or Sony Interactive Entertainment. Warhammer 40,000: Boltgun and UEVR are required separately. Original game assets are not redistributed. The credited chainsword model is by Kaiser-E (CC BY 4.0). Original project-authored source code is under **[GPL-3.0-or-later](LICENSE)**; see [copyright and reuse scope](COPYRIGHT_AND_REUSE.md). UEVR, the credited chainsword artwork and game assets retain their own rights; consult [third-party notices](docs/SOURCE-AND-NOTICES.md).
+**Unofficial fan project.** Not affiliated with or endorsed by Auroch Digital, Games Workshop, Focus Entertainment, praydog, Valve or Sony Interactive Entertainment. Warhammer 40,000: Boltgun and UEVR are required separately. Original game assets are not redistributed. The chainsword model is by Kaiser-E (CC BY 4.0); the armored hand model is adapted from Grab3D (CC0). Original project-authored source code is under **[GPL-3.0-or-later](LICENSE)**; see [copyright and reuse scope](COPYRIGHT_AND_REUSE.md). UEVR, credited third-party artwork and game assets retain their own rights; consult [third-party notices](docs/SOURCE-AND-NOTICES.md).

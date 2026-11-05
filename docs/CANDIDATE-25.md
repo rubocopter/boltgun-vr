@@ -41,3 +41,7 @@ false until the maintainer confirms this exact revision in VR.
 
 See [reticle integration](RETICLE.md), [hands and calibration](HANDS.md),
 [damage comfort](COMFORT.md) and [asset provenance](SOURCE-AND-NOTICES.md).
+
+Use [current evidence](STATUS.md) and the [prioritized test/implementation backlog](PENDING.md)
+for follow-up. Installation is recorded, but this candidate has no new
+reticle/hand headset confirmation.

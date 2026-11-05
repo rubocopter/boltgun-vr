@@ -1,39 +1,73 @@
-# Unreleased experimental VR interactions
+# Experimental VR interactions
 
-**Current candidate: revision 23 / package 8.** The 4 November session confirmed the previous candidate's reticle/menu behavior but exposed a deferred Lua dependency load failure and native emissions bypassing the Niagara spawn hooks. The new candidate resolves contact modules at script load, handles deferred reticle garbage collection and corrects active owned renderer muzzle/casing emitters after the tracked pose update. These fixes require VR confirmation.
+The current source candidate is **firearm revision 25 / chainsword package 10**.
+The published v1.0.2 runtime remains revision 20/package 5. See
+[STATUS.md](STATUS.md) for the evidence boundary and [PENDING.md](PENDING.md) for
+prioritized tests and implementation work.
 
-The current player release is **v1.0.2**, retaining the maintainer-confirmed revision 20 firearm and package 5 chainsword runtime. The following revision 22 firearm/package 7 chainsword integration is unreleased and has not received in-headset validation. No live deployment has been performed for this integration; deployment checks use temporary profiles. Follow the [validation status](STATUS.md), [reticle guide](RETICLE.md) and [native muzzle details](NATIVE-MUZZLE.md).
+## Firearm aiming, reticle and effects
 
-## 1. Controller-directed firearm aim and native rays
+The repository default `freeaim_enabled=0` retains native projectile orientation
+while using the owned mesh muzzle origin. Opt-in free aim requires a fresh
+engine-thread display pose with matching ownership/frame/generation. Rejected
+captures fall back to native orientation.
 
-Revision 22 retains the optional controller-directed aim introduced in revision 21. The default `freeaim_enabled=0` preserves native projectile orientation. With explicit opt-in, the bridge derives aim from a recent tracked display pose and the weapon's reflected native barrel baseline. It captures stereo pose only on the engine thread and checks age, frame, generation and ownership when spawning; a rejected capture falls back to the game's original orientation. Other-thread callbacks are counted but never used to access Unreal objects. The actual callback threading and timing must be tested in VR.
+The world reticle samples that same production policy synchronously on Lua's
+post-engine tick. Revision 25 renders the original HUD crosshair brush through
+an owned transparent WidgetComponent. Original HUD suppression waits for valid
+widget rendering, a native ray acknowledgement and checked world placement.
+It is nominal aim, not a random-spread or projectile-impact prediction.
+The new glyph path is installed locally but has no headset confirmation yet.
+See [RETICLE.md](RETICLE.md).
 
-The revision 22 world reticle synchronously samples this production native policy, using the same muzzle origin and either native barrel orientation or accepted free aim. Lua runs `LineTraceSingle` on the post-engine tick and displays a world marker at the blocking hit or range endpoint. It predicts nominal aim, not random spread, projectile travel or a guaranteed hit. Only the exact owned HUD crosshair image is hidden, and only while the world marker is valid. The reticle ownership journal supports HUD restoration and component cleanup after reset on the next instance's engine tick. See [reticle lifecycle and fallbacks](RETICLE.md).
+Exact allowed local muzzle/casing effects have reflected-creation, renderer and
+native pre-activation correction paths. The maintainer observed improvement in
+some weapons, with deviations remaining. The inspected native-hook counters
+showed calls but no redirects; complete effect alignment is unresolved.
+See [NATIVE-MUZZLE.md](NATIVE-MUZZLE.md).
 
-The experimental Volkite/Gravgun SphereTrace detours are separately guarded at process launch by `BOLTGUN_EXPERIMENTAL_BEAM_HOOKS=1`, in addition to the per-weapon free-aim setting and exact executable/signature checks. Their marker is suppressed unless `g_beam_hooked` confirms successful registration and a fresh aimed pose is accepted; setting the environment variable alone is insufficient. Their native ABI, hit results and visuals are **not verified in game**. Never infer full coverage of other beam/hitscan weapons from these scoped routines.
+Volkite/Gravgun ray hooks separately require
+`BOLTGUN_EXPERIMENTAL_BEAM_HOOKS=1` at process start, successful registration and
+accepted fresh free aim. Their marker remains suppressed without that accepted
+path. Leave the switch unset for normal gameplay; other beam/hitscan routines
+are not covered by this experiment.
 
-Approved local muzzle FX observed by the Niagara creation hooks can reuse the exact most recent successful projectile translation/rotation for the same weapon and ownership generation, within two engine frames and 100 ms, retaining authored scale. A missing fresh shot permits the legacy mesh-origin fallback only with free aim disabled. The former global scan moving older effects has been removed. Unobserved FX have no guaranteed correction.
+## Chainsword contact
 
-## 2. Experimental chainsword contact
+The contact runtime is connected to the visual chainsword. It requires the
+physical left Trigger, an owned visible blade, a loaded living local pawn,
+fresh displayed poses and real engine collision hits. Damage goes through the
+original game routine with weapon state restored afterward. A stationary
+contact may repeat after 500 ms per target; release, occlusion and invalid poses
+block processing. Touching/swinging with the Trigger released does not activate
+this path, and the original L2 attack remains bound.
 
-Package 7 integrates `src/lua/boltgun_chainsword_contact.lua` and `src/lua/boltgun_chainsword_engine.lua` with the tracked chainsword. Contact requires the **left-source OpenXR `/actions/default/in/Trigger` action held** (L2 on Sense), active VR/controllers, allowed gameplay aim, an owned visible blade and the living local pawn's equipped chainsword. Displayed blade poses are captured after attachment and consumed on engine tick with matching ownership and scale. Missing/stale samples, invalid timing, discontinuities and menus reject contact processing.
+Dependencies resolve at script load, before UEVR restores its Lua search path;
+Unreal access is deferred to engine tick. The earlier loading failure was
+corrected, but no additional damage has been confirmed. Latest inspected
+counters remained at the left Trigger gate with no samples/sweeps/damage.
+See [CHAINSAW.md](CHAINSAW.md) for diagnostics and the full callback contract.
 
-`boltgun_blade_sweep.lua` supplies bounded cutting-edge sweeps. The runtime uses real reflected `SphereTraceSingle`/`BreakHitResult` queries and accepts only game enemy actors. Blocking world geometry cancels the frame; a separate pawn-to-contact occlusion query also rejects a blade already inserted through a wall. A **500 ms per-target cooldown** survives display-component rebuilds for the same owned weapon. Query budgets and errors stop unsafe processing.
+The standalone tracking/melee policy modules and optional read-only native pose
+probe are separate diagnostics, not proof of real contact damage or tracking
+validity. The Lua API exposes no authenticated per-device tracking-valid/focus bit.
 
-Damage uses the original `DealCuttingDamage` routine with the engine-produced `HitResult` and the weapon's original `StrikeDamage` value. Temporary chainsword hit/target/damage fields are restored after the call; the module does not directly write enemy health. It does not replace the game's normal left-trigger attacks. Physical contact is experimental and is absent from released v1.0.2.
+## Menus, hands and damage presentation
 
-The standalone `boltgun_tracking_policy.lua` and `boltgun_melee_policy.lua` remain offline policy modules. Their hypothetical authenticated-sample requirements and 350 ms swing-policy cooldown are separate from the integrated contact runtime's 500 ms cooldown. Caller-supplied contact/trust flags are not collision evidence. The live path reads the actual UEVR controller matrix and owned blade, but Lua exposes no per-device tracking-valid/focus bit; tracking loss, physical scale, occlusion and damage cadence still need headset validation.
+Stable menu panels and native cursor/capture handling are connected and panel
+stability was reported in VR. The controller ray/click bridge is not implemented;
+its standalone math/policy helpers do not deliver native UI events.
+See [MENU.md](MENU.md).
 
-The optional read-only native pose probe introduced in unreleased package 6 remains a separate diagnostic. For a **temporary test profile**, write `on` into `data/chainsword3d.physical_probe` before launching the game. With the 3D chainsword attached and L2 held, it logs a summary of left grip translation/rotation samples each second under `[Boltgun Chainsword 3D]`. Removing that file or setting it to `off` disables it on the next plugin load. The log's `peak_linear` value is in UEVR API tracking-space units per second; no physical-to-game scale or headset tracking reliability has been established. The probe cannot authenticate poses for hits and does not itself invoke collisions or deliver damage/haptics. Enabling it does not enable the Lua contact path. It is absent from verified v1.0.2 and **has not been tried in VR**.
+[Imported armored hands](HANDS.md) now replace the white cuboid prototype and
+inherit weapon calibration. Their fixed grip and appearance need VR checks.
+Tracked hands hide on death; there is no 3D death-arm replacement.
 
-## 3. Menu runtime and pointer policies
+The maintainer approved the [peripheral damage halo](COMFORT.md) in candidate 24.
+Its runtime bytes are unchanged in candidate 25. That feature-level feedback
+does not validate the entire candidate or every transition.
 
-The unreleased `profile/scripts/boltgun_menu_stable.lua` leases `VR_AimMethod=0`, `UI_FollowView=false` and `VR_DecoupledPitchUIAdjust=false` while a recognized frontend, native pause/widget, loading or UEVR menu is active. It restores owned values on return to gameplay and yields to external setting changes. Recognized native game menus also receive guarded cursor visibility and `SetInputMode_GameAndUIEx` capture handling. This runtime work has offline mock coverage and still needs headset calibration; it does not establish controller ray/click coverage.
-
-`src/lua/boltgun_menu_ray.lua` computes a tracked controller's forward ray intersection against an explicitly supplied oriented UI quad and returns normalized panel coordinates. `src/lua/boltgun_menu_policy.lua` models a separately gated right-trigger-to-confirm button edge in authenticated frontend focus, and drains held input across transitions. These standalone modules remain offline-only; they do not themselves install menu click/hover events or gameplay trigger remapping. A verified frontend/panel transform, controller source ownership and UI event delivery remain separate requirements from the existing runtime stabilization/cursor handling.
-
-## Validation boundaries
-
-Offline Python/Lua tests and native harnesses exercise geometry, lifecycle and policy guards, but cannot establish OpenXR provenance, UEVR render-thread behavior, native SphereTrace calling conventions, in-game targeting or input ownership. Preserve **`verifiedInGame: false`** for firearm revision 23 and **`runtimeVerified: false`** for chainsword package 8 until the maintainer confirms those exact revisions in VR. Deployment checks must use **temporary profiles**. Do not modify the live profile, start SteamVR or inject UEVR as part of repository maintenance.
-
-Background research: [RolandWinston/Boltgun-VR](https://github.com/RolandWinston/Boltgun-VR); [source and license notices](SOURCE-AND-NOTICES.md).
+All current manifest verification flags remain false. Offline tests cannot
+establish stereo visibility, native damage, real input routing or broad hardware
+coverage. Maintenance uses temporary profiles and does not start/inject the game
+or deploy to the live profile. Historical iterations remain in Git history.

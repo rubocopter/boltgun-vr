@@ -1,32 +1,57 @@
 # Boltgun VR
 
-Mod de **Warhammer 40,000: Boltgun** para PCVR basado en UEVR/OpenXR, desarrollado con **PS VR2 Sense**. Añade controles adaptados, una rueda para elegir grupos de armas y, como opciones experimentales, modelos 3D de las diez armas de fuego y una espada sierra que sigue la mano izquierda.
+Mod de **Warhammer 40,000: Boltgun** para PCVR mediante UEVR/OpenXR, desarrollado
+con **PS VR2 Sense**. Incluye controles adaptados, rueda de armas y modelos 3D
+opcionales para diez armas de fuego y la espada sierra.
 
-**Versión validada en VR por el mantenedor el 16 de octubre de 2026.** Incluye el **perfil Sense v7, arsenal 3D revisión 20 y chainsword paquete 5**: corrige el cierre al mover el arma, la recuperación 3D al cargar partidas, la espada y la alineación de los efectos con el cañón. La validación corresponde a las partidas probadas con PS VR2 Sense; no certifica todas las armas DLC ni otros mandos.
+## Estado actual
 
-Está publicada la **versión 1.0.2** en [GitHub Releases](https://github.com/rubocopter/boltgun-vr/releases/latest), con un ZIP que incluye el menú en inglés, los plugins nativos compilados y la licencia del proyecto. Corrige la instalación cuando SteamVR genera un binding SystemButton incompatible: conserva ese archivo y permite continuar, dejando Options/Create para configurar manualmente. Este cambio tiene pruebas automáticas, pero aún no se ha comprobado en visor; los módulos VR mantienen las versiones validadas con 1.0.1. No incluye el juego ni UEVR.
+El candidato instalado localmente el **5 de noviembre de 2026** es el **arsenal
+revisión 25 / chainsword paquete 10**, con perfil Sense v7. No es una nueva
+versión publicada. Sus indicadores globales de validación en VR siguen en falso.
 
-**En desarrollo (sin publicar):** la revisión 21 del arsenal incorpora apuntado experimental desde el arma rastreada, desactivado por defecto; los desvíos de rayos de Volkite/Gravgun tienen una segunda activación independiente. Esta revisión aún no se ha validado con el visor. La geometría de contacto de la espada y las políticas del puntero de menús solo tienen pruebas offline y no están conectadas al juego. Consulta las [interacciones experimentales](EXPERIMENTAL-INTERACTIONS.md).
+| Función | Estado real |
+| --- | --- |
+| Retícula del propio juego en el punto de apuntado | Implementada e instalada en la revisión 25; pendiente de probar su dibujo, transparencia y persistencia en VR. Sustituye al punto/cruz blanca del prototipo. |
+| Manos blindadas azules, negras y doradas | Modelo CC0 importado, dedos en postura fija y agarre ajustado inicialmente al bólter y la espada. Pendientes de comprobar materiales, escala y encaje en visor y otras armas. |
+| Halo rojo al recibir daño | Aspecto aprobado por el mantenedor en el candidato 24; esos archivos no cambian en el 25. Quedan transiciones y recuperación por comprobar. |
+| Menús estables | Estabilidad comunicada por el mantenedor. El puente para apuntar, pasar por encima y pulsar con un mando no está implementado. |
+| Disparos y efectos | Mejor alineación comunicada y algunos fogonazos corregidos; siguen efectos desviados. No se considera resuelto para todas las armas. |
+| Daño físico de la espada | Adaptador conectado, pero no se ha demostrado daño adicional. Exige mantener el gatillo izquierdo; los últimos diagnósticos inspeccionados no avanzaban de esa condición. Los ataques L2 originales siguen activos. |
+| Muerte | Se ocultan los antiguos sprites de brazos y también las manos 3D. No existe una presentación de manos/brazos 3D al morir. |
 
-## Qué puedes probar
+No hay recargas físicas, animación de dedos ni brazos articulados completos.
+El contacto o gesto de espada con el gatillo izquierdo suelto no activa el
+adaptador. El apuntado desde el arma y el modo a dos manos son opciones
+experimentales desactivadas por defecto; los rayos de Volkite/Gravgun tienen
+una activación independiente.
 
-- Movimiento orientado con la cabeza, giro configurable y controles Sense.
-- Rueda de armas: mantén R3, inclina el stick derecho y suelta para elegir; vuelve al centro para cancelar.
-- Armas 3D opcionales: usan mallas del juego instalado. Dos requieren el DLC. El prototipo restaura el arma original cuando no puede cargar una malla.
-- Espada sierra 3D opcional en la mano izquierda, conservando ataques y daño originales.
-- Retroceso visual y vibración en disparos interceptados, con efectos locales compatibles alineados con el cañón; los efectos no incluidos y ciertas rutas de rayos e impactos conservan el comportamiento original.
-
-No hay recargas físicas ni daño causado por gestos con la espada. El modo de apuntado a dos manos se distribuye desactivado.
+La versión publicada **v1.0.2** conserva el runtime de **revisión 20 / paquete 5**,
+validado en las partidas con PS VR2 Sense del 16 de octubre. Su cambio de
+instalador permite continuar si SteamVR genera un SystemButton incompatible,
+conservando ese binding y dejando Options/Create para asignar manualmente.
+Esa validación histórica no certifica los cambios nuevos ni todo el DLC/otros
+mandos. El [paquete publicado](https://github.com/rubocopter/boltgun-vr/releases/latest)
+no incluye el juego ni UEVR.
 
 ## Instalación y documentación
 
-Consulta la [instalación guiada](INSTALACION-FACIL.es.md) o la [guía avanzada y restauración](INSTALL.md) (en inglés). El menú permite instalar, iniciar, activar módulos, revisar el perfil y restaurar copias. El instalador comprueba hashes y no inyecta automáticamente. Necesitas el juego original, un visor PCVR, SteamVR/OpenXR y UEVR por separado.
+Consulta la [instalación guiada](INSTALACION-FACIL.es.md) o la
+[guía avanzada y restauración](INSTALL.md). La rueda se usa manteniendo R3,
+inclinando el stick derecho y soltando; vuelve al centro para cancelar.
+El instalador verifica hashes y conserva calibraciones compatibles; no inyecta
+automáticamente. Necesitas el juego, UEVR y un entorno PCVR/OpenXR propios.
 
-| Jugadores | Desarrollo |
+| Jugadores | Desarrollo y seguimiento |
 | --- | --- |
-| [Controles Sense](CONTROLS.md) | [Arquitectura](ARCHITECTURE.md) |
-| [Problemas conocidos](STATUS.md) | [Compilación y pruebas](BUILD.md) |
-| [Solución de problemas](TROUBLESHOOTING.md) | [Arsenal](ARSENAL.md) |
-| [Copias y recuperación de Windows](REINSTALL.md) | [Créditos y licencias](SOURCE-AND-NOTICES.md) |
+| [Controles Sense](CONTROLS.md) | [Estado y evidencia](STATUS.md) |
+| [Manos](HANDS.md) · [Daño](COMFORT.md) | [Pendiente de probar e implementar](PENDING.md) |
+| [Solución de problemas](TROUBLESHOOTING.md) | [Arquitectura](ARCHITECTURE.md) · [Arsenal](ARSENAL.md) |
+| [Copias y recuperación](REINSTALL.md) | [Compilación y pruebas](BUILD.md) |
+| [Retícula](RETICLE.md) · [Menús](MENU.md) | [Créditos y licencias](SOURCE-AND-NOTICES.md) |
 
-Proyecto de aficionados, sin afiliación con los titulares del juego, UEVR o los fabricantes de visores. El código original del proyecto tiene licencia **GPL-3.0-or-later**; la espada externa es de Kaiser-E (CC BY 4.0) y conserva sus créditos. Consulta [la licencia](../LICENSE), [los términos de reutilización](../COPYRIGHT_AND_REUSE.md) y [los avisos de terceros](SOURCE-AND-NOTICES.md).
+Proyecto de aficionados sin afiliación con los titulares del juego, UEVR o los
+fabricantes de visores. Código original: **GPL-3.0-or-later**. Espada de Kaiser-E:
+**CC BY 4.0**. Guantelete de Grab3D: **CC0**. Se conservan sus avisos; no se
+redistribuyen recursos extraídos del juego. Véanse [licencia](../LICENSE) y
+[términos de reutilización](../COPYRIGHT_AND_REUSE.md).

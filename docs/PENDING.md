@@ -1,0 +1,72 @@
+# Pending validation and implementation
+
+Updated 5 November 2026. Applies to **firearm revision 25 / chainsword package 10**.
+[STATUS.md](STATUS.md) records what exists and what the maintainer has observed.
+An unchecked item below is not an implementation or verification claim.
+
+## Next headset checks
+
+Use one exact candidate revision for a session. Record the weapon/variant, game
+build, headset/controllers, relevant settings, reproduction steps and bounded log
+excerpts. Keep recordings and full logs in ignored local archives.
+
+| ID | Priority | Check | Acceptance / evidence needed |
+| --- | --- | --- | --- |
+| V1 | High | Native reticle appearance and persistence | Original game glyph, transparent background, correct tint/scale; no white dot or duplicate centered image. Follow the actual aiming destination at near/far surfaces and in empty space; survive weapon switches, save loads, pause and script reload. |
+| V2 | High | Imported hand appearance and grip | Blue armor, dark glove and gold trim render correctly in both eyes. Fingers/thumb wrap the actual grips without floating or severe clipping. Check Bolter and chainsword first, then every other weapon; record per-weapon offsets. |
+| V3 | High | Remaining weapon effect deviation | Record projectiles, muzzle flashes, smoke, casing ejection and impact effects separately for each weapon. Compare the emission origin to its projectile muzzle. Capture reflected-hook, renderer and native-emission counters. Partial improvement is not a pass for all effects. |
+| V4 | High | Physical chainsword damage | Hold left Trigger and contact an enemy from outside the native attack aim where possible, so the existing normal cutting target does not mask the adapter. Confirm samples, sweeps, real contacts and applied-damage counters advance, and that damage is additional to original L2 attacks. Test stationary repeat, release, walls and the 500 ms per-target cooldown. |
+| V5 | Medium | Lifecycle and death transitions | Check hands/reticle through death, respawn, loading, save/load, pause and script reset. Old large death-arm sprites stay absent; current tracked hands intentionally hide on death. No duplicates, stale models or hidden native HUD after recovery. |
+| V6 | Medium | Confirmed damage halo regression | Preserve the approved appearance through repeated hits, low health, death, menus and `comfort.mode=off`/reload. The current halo files match the approved candidate; broader lifecycle coverage remains open. |
+| V7 | Medium | Menu and input regression | Panel stays stationary while moving the right controller; Options/Create and existing native mouse/game navigation work. Controller hover/laser/trigger-click is not an implemented feature to accept yet. |
+| V8 | Medium | Firing modes and optional feedback | Check native-aim defaults and explicitly opted-in free aim, recoil, firing haptics, close-range collision and fallback after stale tracking. Run experimental Volkite/Gravgun hooks only in a separate opt-in session. |
+| V9 | Later | Compatibility matrix | All ten weapons, Machine Spirit variants, owned DLC, repeated save-load sessions and other controller/headset mappings. Report tested combinations individually. |
+
+Do not set either manifest verification flag merely because the candidate loads,
+one feature looks correct or automated tests pass. Confirm the exact revision and
+record the scope in STATUS.md before promoting runtime verification.
+
+## Fixes and implementation work
+
+- [ ] **I1 — Finish effect alignment.** Identify why the guarded native emission
+  hook receives calls but has not redirected the inspected live requests.
+  Establish the real local ownership/caller path before changing the gate.
+  Verify world-space particles at activation, renderer scan overflow and
+  weapon-specific source/rotation. Preserve authored scale and exclude foreign
+  actors, flight trails and impacts. V3 supplies the missing runtime evidence.
+- [ ] **I2 — Resolve the physical-contact failure.** Trace the real left Trigger
+  source/action and subsequent pose gates in the failing session. Distinguish
+  original L2 attack damage from adapter damage; demonstrate the real hit and
+  original `DealCuttingDamage` call. The loader fix alone did not prove contact.
+  Gesture/contact damage with the Trigger released is not implemented; a change
+  to that behavior needs an explicit activation design and regression checks.
+- [ ] **I3 — Refine hand fit from VR feedback.** Correct V2's material, scale,
+  intrinsic orientation or per-weapon grip offsets as needed. The current mesh
+  is a fixed-grip generic gauntlet; anatomical finger animation, a full
+  Ultramarine-style articulated arm and hands during death are future work.
+- [ ] **I4 — Implement controller menu pointing.** Connect an owned tracked ray
+  to the verified native panel transform and deliver real hover/click events,
+  with input ownership, held-trigger draining and gameplay/menu transitions.
+  Existing ray/policy helpers are offline-only; stable panels and a visible
+  native cursor do not provide that bridge.
+- [ ] **I5 — Physical reload interactions.** No hand-operated magazine, reload
+  gesture or weapon-specific reload state machine exists. Define supported
+  weapons and native reload integration before implementation.
+- [ ] **I6 — Broaden support after the core checks.** Calibrate DLC/variants and
+  additional controller mappings; assess other executable versions separately.
+  Do not bypass the current executable/signature and ownership checks.
+
+Reticle and imported hands are already implemented; do not recreate their old
+prototypes while waiting for V1/V2. Two-hand aim and scoped beams already exist
+as opt-in experiments, with additional validation pending.
+
+## Before another candidate or release
+
+- [ ] Complete the relevant checks above and record both successes and failures.
+- [ ] Run [build, unit, hash and isolated installer checks](BUILD.md); preserve
+  exact source/DLL SHA-256 contracts and third-party hand/sword notices.
+- [ ] Use a temporary profile for deployment tests. Preserve calibration and a
+  verified backup when a separate live candidate deployment is authorized.
+- [ ] Refresh current status, candidate notes and this backlog from the exact
+  delivered revision. Keep private evidence out of Git and player packages.
+- [ ] Publish only when requested; candidate installation is not a release.

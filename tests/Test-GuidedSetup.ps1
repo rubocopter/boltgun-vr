@@ -51,7 +51,7 @@ try {
     Assert ($names -contains 'docs/INSTALACION-FACIL.es.md') 'Spanish player instructions missing.'
     Assert ($names -contains 'docs/ARSENAL.md') 'Maintained arsenal guide missing.'
     Assert ($names -contains 'docs/NATIVE-MUZZLE.md') 'Maintained muzzle guide missing.'
-    foreach ($guide in @('RETICLE.md','MENU.md','CANDIDATE-24.md','CANDIDATE-25.md','COMFORT.md','HANDS.md','EXPERIMENTAL-INTERACTIONS.md')) {
+    foreach ($guide in @('RETICLE.md','MENU.md','CANDIDATE-25.md','PENDING.md','COMFORT.md','HANDS.md','EXPERIMENTAL-INTERACTIONS.md')) {
         Assert ($names -contains "docs/$guide") "Interaction guide missing: $guide"
     }
     foreach ($module in @('boltgun_reticle','boltgun_chainsword_contact','boltgun_chainsword_engine','boltgun_blade_sweep','boltgun_comfort','boltgun_hands')) {
@@ -61,10 +61,8 @@ try {
     foreach ($asset in @('right_grip.bgmesh','hands_color.png','CREDITS.txt','LICENSE.txt')) {
         Assert ($names -contains "assets/hands/$asset") "Imported hand asset or notice missing: $asset"
     }
-    Assert ($names -contains 'docs/history/2026-10-10-revision16.md') 'Current diagnostic notes missing.'
-    Assert ($names -contains 'docs/history/2026-10-10-revision17.md') 'Current lifecycle notes missing.'
     Assert ($names -contains 'assets/banner/boltgun-vr.png') 'Landing banner missing.'
-    Assert (@($names | Where-Object { $_ -like 'docs/history/2026-10-09-*' }).Count -eq 0) 'Superseded revision notes in player ZIP.'
+    Assert (@($names | Where-Object { $_ -like 'docs/history/*' -or $_ -eq 'docs/CANDIDATE-24.md' }).Count -eq 0) 'Superseded development notes in player ZIP.'
     Assert (@($names | Where-Object { $_ -like "*$fixtureName" }).Count -eq 0) 'Untracked private source file leaked into player ZIP.'
     Assert (@($names | Where-Object { $_ -like "*$guideFixtureName" }).Count -eq 0) 'Unlisted local guide leaked into player ZIP.'
     Assert (@($names | Where-Object { $_ -match '(^|/)(superpowers|backups|research|diagnostics|\.git|UEVRInjector\.exe)(/|$)|\.(exe|pak|pdb|dmp)$' }).Count -eq 0) 'Forbidden/private content in player ZIP.'

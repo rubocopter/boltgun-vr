@@ -1,7 +1,10 @@
-# Blood comfort candidate
+# Peripheral damage comfort
 
 Replace the native blood rectangle with a quiet red peripheral effect. This is
-an unverified VR candidate: `runtimeVerified` and `verifiedInGame` remain false.
+a feature whose appearance the maintainer approved on 5 November 2026 in
+candidate 24. Its runtime files are unchanged in candidate 25. The complete
+revision 25/package 10 retains false verification flags; that approval does not
+certify unrelated features or every lifecycle path.
 The runtime module does not install, deploy, launch the game, or start VR.
 
 ## For players
@@ -20,10 +23,10 @@ The presentation bootstrap controls activation through `comfort.mode`; `off`
 disables the candidate on its next engine tick. Death-arm handling belongs to
 the separate hands module.
 
-The material's stereo UV behavior, visual intensity, and interaction with UEVR
-postprocessing settings still require maintainer testing in VR. A successful
-Lua test does not establish those properties. Keep both verification flags false
-until that revision is confirmed.
+The reported session approved the damage appearance. Broader stereo settings,
+repeated damage/low-health transitions, disable/reload and recovery still need
+coverage. See V6 in [PENDING.md](PENDING.md). A successful Lua test alone does not
+establish these properties or validate the complete candidate.
 
 ## For developers
 
