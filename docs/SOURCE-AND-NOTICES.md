@@ -19,6 +19,17 @@ Prepared mesh/texture derive from **Wh-40k-chainsword** by **Kaiser-E**, **CC BY
 adaptations: 95 cm length, grip origin, Unreal axes and 2K texture. The installer deploys
 these credits with the assets. Retain them with redistributed copies.
 
+## Armored hands
+
+The fixed-grip hand mesh and texture derive from [Gauntlet by Grab3D](https://grab3d.com/models/weapons/gauntlet/), released under CC0 1.0.
+[CREDITS.txt](../assets/hands/CREDITS.txt) records the pinned source SHA-256,
+recoloring, curved grip pose, scale, axes and mirrored left hand. The original
+dedication is preserved in [LICENSE.txt](../assets/hands/LICENSE.txt).
+The supplier describes procedural Blender geometry/textures with AI-assisted
+generator code; this is a generic gauntlet, not an extracted Warhammer model.
+The installer includes both notices with the prepared artwork. The reproducible
+converter is `src/native/chainsword/prepare_hands.py` and requires the pinned GLB.
+
 ## Game and profile inputs
 
 Original game assets belong to their rights holders. Firearm meshes/materials resolve

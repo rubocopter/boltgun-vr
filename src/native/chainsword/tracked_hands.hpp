@@ -1,8 +1,9 @@
 #pragma once
-// Original fixed-grip gauntlets. No skeletal game mesh or third-party hand asset.
+// Imported CC0 fixed-grip gauntlets; provenance is in assets/hands/CREDITS.txt.
 #include "hand_geometry.hpp"
 namespace tracked_hands {
 inline bool submit(UEVR_UObjectHandle pawn,UEVR_UObjectHandle component,bool left) {
+    if(imported.positions.empty()) return false;
     const auto generated=geometry(left);
     return fill_geometry(pawn,component,generated);
 }
@@ -16,7 +17,7 @@ static void tracked_hands_inner(const char* data) {
        !api->sdk->uobject->get_bool_property(component,L"bHiddenInGame")||
        api->sdk->uobject->get_bool_property(component,L"bVisible")) return;
     const bool ok=tracked_hands::submit(pawn,component,side==0);
-    api->functions->log_info(ok?"[Boltgun Hands] Original gauntlet geometry submitted":"[Boltgun Hands] Geometry rejected");
+    api->functions->log_info(ok?"[Boltgun Hands] Imported armored grip submitted":"[Boltgun Hands] Geometry rejected");
 }
 static bool tracked_hands_event(const char* name,const char* data) {
     if(!name||std::strcmp(name,"boltgun.hands.v1")) return false;

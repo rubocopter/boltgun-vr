@@ -10,7 +10,6 @@
 #include "../../../dependencies/uevr/API.h"
 #include "mesh_data.hpp"
 #include "motion_probe.hpp"
-#include "../white_palette.hpp"
 #pragma comment(lib,"bcrypt.lib")
 static const UEVR_PluginInitializeParam* api{};
 static std::atomic<DWORD> engine_thread{};
@@ -266,7 +265,14 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
     // has no get_persistent_dir. Supply a UTF-8 absolute filename only after
     // the actual native mesh and packaged texture are present.
     const auto root=std::filesystem::path(dir);
-    boltgun_presentation::prepare_white_palette(root);
+    if(tracked_hands::load(root/L"data/hands3d/right_grip.bgmesh")&&
+       std::filesystem::is_regular_file(root/L"data/hands3d/hands_color.png")) {
+        const auto hand_path=(root/L"data/hands3d/hands_color.png").generic_u8string();
+        if(hand_path.find_first_of("\r\n")==std::string::npos) {
+            std::ofstream hand_hint(root/L"data/hands3d.texture_path",std::ios::binary|std::ios::trunc);
+            hand_hint.write(hand_path.data(),static_cast<std::streamsize>(hand_path.size()));
+        }
+    }
     // Explicit diagnostic opt-in. Never install or change the live profile.
     // This is a read-only sample probe with no gameplay effects.
     {

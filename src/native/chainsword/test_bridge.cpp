@@ -192,12 +192,15 @@ int main(){
     native=false;assert(!fill(obj(&fake_pawn),obj(&fake_component)));
     assert(calls==1&&allocations.empty());
     objects.get_bool_property=get_bool;
-    native=true;expected_vertices=576;engine_thread=GetCurrentThreadId();
+    native=true;expected_vertices=12776;engine_thread=GetCurrentThreadId();
     const auto hand_request=std::to_string(reinterpret_cast<uintptr_t>(obj(&fake_pawn)))+"|"+
         std::to_string(reinterpret_cast<uintptr_t>(obj(&fake_component)))+"|0";
     const auto sword_positions=mesh.positions;
     event("boltgun.hands.v1",hand_request.c_str());
-    assert(calls==2&&allocations.empty()&&copied_positions.size()==576);
+    assert(calls==1&&allocations.empty()); // A missing asset never submits placeholder geometry.
+    assert(tracked_hands::load(L"../../../assets/hands/right_grip.bgmesh"));
+    event("boltgun.hands.v1",hand_request.c_str());
+    assert(calls==2&&allocations.empty()&&copied_positions.size()==12776);
     assert(mesh.positions.size()==sword_positions.size()&&mesh.positions[0].x==sword_positions[0].x);
     for(int bad=0;bad<5;++bad) {
         hand_visible=bad==0;hand_hidden=bad!=1;correct_owner=bad!=2;hmd=bad!=3;ui=bad==4;

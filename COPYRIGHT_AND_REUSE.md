@@ -16,6 +16,7 @@ The grant only covers works whose copyrights the project contributors control. T
 - `dependencies/uevr/API.h`: praydog / UEVR, **MIT**, with upstream notice retained. The UEVR injector is not distributed.
 - `assets/chainsword/`: adapted **Kaiser-E Wh-40k-chainsword** mesh and textures, **CC BY 4.0**, with credit and change history in [assets/chainsword/CREDITS.txt](assets/chainsword/CREDITS.txt). This artwork is not relicensed under project GPL.
 - Other marked third-party material remains subject to its own terms.
+- `assets/hands/`: adapted **Gauntlet** by **Grab3D**, **CC0 1.0**, with its source, pinned model hash and adaptations recorded in [assets/hands/CREDITS.txt](assets/hands/CREDITS.txt). The source dedication is retained in `LICENSE.txt` beside the artwork.
 
 See [docs/SOURCE-AND-NOTICES.md](docs/SOURCE-AND-NOTICES.md) for further provenance and [docs/BUILD.md](docs/BUILD.md) for build instructions.
 

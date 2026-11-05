@@ -1,10 +1,17 @@
 # Tracked armored hands
 
-The candidate adds two original procedural gauntlets attached to the UEVR
-controllers. The initial geometry uses a fixed grip pose, with separate fingers,
-thumb, palm armor and wrist cuff. It is approximately 19 × 10 × 10 cm per hand.
-Finger animation is not implemented in this revision; it remains a possible
-future extension.
+Candidate 25 replaces the white cuboid prototype with an imported, fixed-grip
+armored glove. The source is [Gauntlet by Grab3D](https://grab3d.com/models/weapons/gauntlet/),
+released under CC0. The prepared model has 12,776 vertices and 14,926 source
+triangles per hand, supplied double-sided to preserve the source's appearance.
+It uses cobalt-blue armor and forearm cuff, a charcoal glove and brass trim.
+The fingers are curled around a grip-centered origin; the left hand mirrors the
+right. The posed bounds are approximately 22 × 11 × 14 cm. The grip opening runs
+along the weapon's vertical handle axis, with thumbs up and dorsal armor facing
+outward. These are generic
+armored gloves, not extracted Ultramarine character assets. There is no finger
+animation in this revision. [Asset credits](../assets/hands/CREDITS.txt) retain
+the source, license, pinned download hash and conversion details.
 
 This revision has automated boundary tests. Controller alignment, appearance,
 occlusion and death transitions still require the maintainer's VR check.
@@ -29,7 +36,13 @@ Profile settings live under `data/`:
 Calibration accepts `scale` from 0.5 to 1.5, plus `left_x`, `left_y`, `left_z`,
 `right_x`, `right_y`, `right_z` in Unreal centimeters from −20 to 20. Each hand
 also accepts `_pitch`, `_yaw` and `_roll` from −180 to 180 degrees. Defaults are
-scale 1 and zero offsets. Invalid or out-of-range values use their defaults.
+scale 1 and zero local trims. Each hand inherits its weapon module's calibrated
+rotation and grip translation; initial mesh-local grip fits are +3/+2.5/-2 cm
+for the firearm hand and +2.4/0/0 cm for the sword hand, measured against the
+existing Bolter and chainsword meshes. Other weapon grips remain initial fits
+requiring VR adjustment. Firearm mesh-origin offsets are canceled rather
+than copied into the hand. Hand trims compose in the grip frame, so a rotation
+trim does not rotate the calibrated grip position around the controller. Invalid or out-of-range values use their defaults.
 
 ```ini
 scale=1
@@ -103,15 +116,17 @@ using the Unreal allocator and reflected UE4 array contracts. The chainsword's
 global animation mesh remains separate.
 
 Lua requires exactly one resulting section before proceeding. Native
-initialization writes the generated original 1 × 1 opaque-white PNG to
-`data/hands3d_color.png` and its absolute UTF-8 filename to
-`data/hands3d.texture_path`. The reticle may share this white texture. Lua accepts
-an absolute Windows path ending in `/data/hands3d_color.png`, imports it through
+initialization reads `data/hands3d/right_grip.bgmesh`, validates its geometry
+and hand-size bounds, and writes the absolute UTF-8 texture filename to
+`data/hands3d.texture_path` only when the packaged color texture is present.
+Missing/invalid hand data never substitutes the old white boxes.
+Lua accepts an absolute Windows path ending in `/data/hands3d/hands_color.png`,
+rejects the obsolete 1 × 1 texture, imports the 1024px atlas through
 `KismetRenderingLibrary`, and verifies the `BC` binding on each owned dynamic
-material. The existing game material is
-`/Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun`; it is referenced from the
-user's installation, never redistributed. If needed, the Lua owner loads only
-this material through the reflected UE4 AssetRegistry layout.
+material. The existing game unlit material is
+`/Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun`; it is referenced from
+the user's installation, never redistributed. If needed, the Lua owner loads
+only this material through the reflected UE4 AssetRegistry layout.
 
 `hands3d.owned` is a versioned recovery journal. It stores engine name/address,
 pawn name/address, component name/address, and, for death planes, renderer
@@ -134,9 +149,10 @@ The [hands tutorial](https://github.com/jbusfield/hands_tutorial_uevr) and its
 were inspected before choosing this route. The library creates poseable copies
 from an existing skeletal mesh. Local cooked
 `BP_PlayerCharacter_Sternguard` metadata has `Mesh=null`; Boltgun renders the
-first-person weapon/arm animations as sprites. This implementation uses authored
-procedural geometry instead. No tutorial code, third-party hand mesh or
-extracted game asset is included.
+first-person weapon/arm animations as sprites. This implementation submits the imported CC0 fixed-grip mesh through a
+procedural component instead. No tutorial code or extracted game asset is
+included. Recreate the prepared artwork using `prepare_hands.py` and the pinned
+source GLB; Pillow is the converter's only nonstandard dependency.
 
 Run the actual Lua owner against the simulated engine boundary with:
 
@@ -144,7 +160,7 @@ Run the actual Lua owner against the simulated engine boundary with:
 python -m unittest discover -s tests -p 'test_hands.py' -q
 ```
 
-The 18 focused tests cover paired attachment, visibility gates, all 25 exact
+The focused tests cover paired attachment, visibility gates, all 25 exact
 death frames, dynamic BC recognition, unknown-frame rejection, death-pawn
 possession, original/native visibility restoration, reload recovery, foreign
 ownership, malformed journals, settings bounds and partial creation failures.

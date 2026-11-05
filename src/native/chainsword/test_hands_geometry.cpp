@@ -2,27 +2,40 @@
 #include <cassert>
 #include <fstream>
 int main(int argc,char** argv) {
+    assert(!tracked_hands::load(L"../../../assets/hands/missing.bgmesh"));
+    assert(tracked_hands::geometry(false).positions.empty());
+    assert(tracked_hands::load(L"../../../assets/hands/right_grip.bgmesh"));
     const auto right=tracked_hands::geometry(false),left=tracked_hands::geometry(true);
-    assert(right.positions.size()==576&&right.indices.size()==864);
+    assert(right.positions.size()==12776&&right.indices.size()==89556);
     assert(right.normals.size()==right.positions.size()&&right.uvs.size()==right.positions.size());
     float minx=100,maxx=-100,miny=100,maxy=-100,minz=100,maxz=-100;
     for(size_t i=0;i<right.positions.size();++i) {
         const auto p=right.positions[i],l=left.positions[i],n=right.normals[i];
         assert(std::isfinite(p.x)&&std::isfinite(p.y)&&std::isfinite(p.z));
-        assert(p.x==l.x&&p.y==-l.y&&p.z==l.z);
+        assert(std::fabs((p.x-3)-(l.x-2.4f))<.00001f&&
+               std::fabs((p.y-2.5f)+l.y)<.00001f&&std::fabs((p.z+2)-l.z)<.00001f);
         assert(std::fabs(n.x*n.x+n.y*n.y+n.z*n.z-1)<.001f);
         minx=std::min(minx,p.x);maxx=std::max(maxx,p.x);
         miny=std::min(miny,p.y);maxy=std::max(maxy,p.y);
         minz=std::min(minz,p.z);maxz=std::max(maxz,p.z);
     }
-    assert(maxx-minx<20&&maxy-miny<12&&maxz-minz<12);
+    assert(maxx-minx>20&&maxx-minx<24&&maxy-miny<12&&maxz-minz<15);
+    float minu=1,maxu=0,minv=1,maxv=0;
+    for(const auto uv:right.uvs) {
+        assert(uv.x>=0&&uv.x<=1&&uv.y>=0&&uv.y<=1);
+        minu=std::min(minu,uv.x);maxu=std::max(maxu,uv.x);
+        minv=std::min(minv,uv.y);maxv=std::max(maxv,uv.y);
+    }
+    assert(maxu-minu>.9f&&maxv-minv>.9f); // Real atlas, never constant-white UVs.
     for(size_t i=0;i<right.indices.size();i+=3) {
         const int a=right.indices[i],b=right.indices[i+1],c=right.indices[i+2];
         assert(a>=0&&b>=0&&c>=0&&static_cast<size_t>(std::max({a,b,c}))<right.positions.size());
         assert(left.indices[i]==a&&left.indices[i+1]==c&&left.indices[i+2]==b);
-        const auto p=right.positions[a],q=right.positions[b],r=right.positions[c],n=right.normals[a];
-        const float ux=q.x-p.x,uy=q.y-p.y,uz=q.z-p.z,vx=r.x-p.x,vy=r.y-p.y,vz=r.z-p.z;
-        assert((uy*vz-uz*vy)*n.x+(uz*vx-ux*vz)*n.y+(ux*vy-uy*vx)*n.z>0);
+        const size_t half=right.indices.size()/2;
+        const auto front=i<half?i:i-half;
+        assert(right.indices[front]==right.indices[front+half]);
+        assert(right.indices[front+1]==right.indices[front+half+2]);
+        assert(right.indices[front+2]==right.indices[front+half+1]);
     }
     if(argc==2) {
         std::ofstream file(argv[1]);assert(file);
@@ -30,5 +43,5 @@ int main(int argc,char** argv) {
         for(size_t i=0;i<right.indices.size();i+=3)
             file<<"f "<<right.indices[i]+1<<' '<<right.indices[i+1]+1<<' '<<right.indices[i+2]+1<<'\n';
     }
-    std::puts("Hands geometry: original mirrored gauntlets, dimensions, normals and winding passed");
+    std::puts("Hands geometry: imported CC0 grip, normals, atlas, mirrored winding and missing-asset guard passed");
 }

@@ -1,0 +1,15 @@
+Gauntlet by Grab3D
+Source: https://grab3d.com/models/weapons/gauntlet/
+Download: https://grab3d.com/dl/gauntlet/gauntlet.glb
+License: CC0 1.0 Universal (see LICENSE.txt)
+Source GLB SHA-256: 4234274A6A7B2C62EB42C384DAB8439E2381A82D5132FDFE64CF3C2041313D51
+Downloaded 2026-11-05. Source published 2026-10-19.
+Origin: procedural Blender geometry and textures; AI-assisted generator code,
+according to the source license and manifest. No generative image/model output.
+
+Boltgun VR adaptations: fixed curled-finger grip, 85 cm per source meter,
+grip-centered Unreal axes, left-hand mirror, double-sided triangles,
+1024px recolored cobalt armor / charcoal glove / retained brass trim.
+Reproduce with src/native/chainsword/prepare_hands.py and the pinned source GLB.
+This generic armored glove is not an extracted Warhammer game asset.
+Adapted artwork remains available under the source CC0 dedication.
