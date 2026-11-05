@@ -40,12 +40,13 @@ also accepts `_pitch`, `_yaw` and `_roll` from −180 to 180 degrees. Defaults a
 scale 1 and zero local trims. Each hand attaches at the visible weapon's
 mesh-local grip, and shares its calibrated pose and visual recoil. Model scale
 is compensated so a half-scale weapon keeps the gauntlet at its configured
-size. The initial hand geometry fits are +3/+2.5/−2 cm for the firearm hand and
-+2.4/0/0 cm for the sword hand, measured against the existing Bolter and
-chainsword meshes. Other weapons use their individual grip landmarks and
-still require headset validation. Existing trim values keep their controller
-axis convention and rotate about the grip. Invalid or out-of-range values use
-their defaults.
+size. The approved firearm hand retains its +3/+2.5/−2 cm geometry fit.
+The left hand source turns the mirrored gauntlet 180° around the handle's
+local Z axis, so the cuff extends toward the wrist with the sword's default
+180° yaw. The center of the curl sits at the measured sword handle landmark,
+approximately `(2.4, 0, 0)` cm in sword mesh coordinates. This fit is pending
+headset validation. Existing trims keep their axis convention and rotate
+about the published grip. Invalid or out-of-range values use their defaults.
 
 ```ini
 scale=1
@@ -148,7 +149,8 @@ owners expose `uevr.boltgun_weapon_grips.right(pawn)` and `left(pawn)` from that
 state. A getter returns the verified visible owned component, the mesh-local
 `x, y, z` grip landmark and the applied model scale. The firearm getter
 returns the visual recoil target when a separate hidden muzzle reference
-exists. The sword's handle is at its mesh origin. The hands owner uses
+exists. The sword getter publishes the handle center and its native gauntlet
+geometry is centered on that attachment point. The hands owner uses
 `K2_AttachToComponent` and a relative transform, so stereo pose changes
 propagate through Unreal's scene attachment in the same frame. Weapon teardown
 calls the hand owner's `before_destroy(visual)` on the engine tick to hide and

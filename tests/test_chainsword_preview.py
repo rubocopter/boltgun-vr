@@ -144,7 +144,7 @@ class ChainswordTests(unittest.TestCase):
         self.assertFalse(self.component().visible)
         self.assertEqual(self.eval('ctx.destroyed'),0)
 
-    def test_hand_grip_is_sword_origin_and_revokes_when_the_sword_is_hidden(self):
+    def test_hand_grip_is_handle_center_and_revokes_when_the_sword_is_hidden(self):
         self.lua.execute("""
             files['chainsword3d.settings']='scale=.75'
             function read_grip()
@@ -155,7 +155,7 @@ class ChainswordTests(unittest.TestCase):
             end
         """)
         self.start()
-        self.assertEqual(self.eval('read_grip()'), (True, 0, 0, 0, .75))
+        self.assertEqual(self.eval('read_grip()'), (True, 2.4, 0, 0, .75))
         self.lua.execute("sprite_mat.get_full_name=function()return 'MaterialInstanceConstant /Game/Dash/MI_Hand' end")
         self.tick()
         self.assertEqual(self.eval('read_grip()'), (False, None, None, None, None))
@@ -168,6 +168,27 @@ class ChainswordTests(unittest.TestCase):
         self.tick(.3)
         self.assertTrue(self.eval('ctx.retired_visible'))
         self.assertEqual(self.eval('ctx.destroyed'), 1)
+
+    def test_controller_offset_cancels_scaled_handle_in_sword_axes(self):
+        self.lua.globals().files['chainsword3d.settings'] = (
+            'scale=1\nx=0\ny=0\nz=0\npitch=0\nyaw=180\nroll=0')
+        self.start()
+        component = self.component()
+        # UObjectHook rotates the whole offset with the calibrated sword.
+        # Its effective GLM -> UE map is (z, -x, -y). +UE X is +GLM Z.
+        self.assertEqual((component.offset.x, component.offset.y), (0, 0))
+        self.assertAlmostEqual(component.offset.z, -2.4)
+        self.assertAlmostEqual(abs(component.rotation.y), 1)
+
+        self.lua.globals().files['chainsword3d.settings'] = (
+            'scale=.75\nx=-2\ny=6\nz=1\npitch=30\nyaw=25\nroll=-20')
+        self.tick(.3)
+        self.assertEqual(self.eval('ctx.created'), 1)
+        self.assertEqual((component.offset.x, component.offset.y), (-2, 6))
+        self.assertAlmostEqual(component.offset.z, 1 - .75 * 2.4)
+        self.assertEqual(component.scale, .75)
+        self.assertTrue(component.permanent)
+
     def test_off_restores_sprite_and_destroys_visual(self):
         self.start();self.lua.execute("files['chainsword3d.mode']='off'");self.tick(.3)
         self.assertFalse(self.eval('secondary.hidden'))

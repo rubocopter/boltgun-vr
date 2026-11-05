@@ -10,10 +10,13 @@ int main(int argc,char** argv) {
     assert(right.normals.size()==right.positions.size()&&right.uvs.size()==right.positions.size());
     float minx=100,maxx=-100,miny=100,maxy=-100,minz=100,maxz=-100;
     for(size_t i=0;i<right.positions.size();++i) {
-        const auto p=right.positions[i],l=left.positions[i],n=right.normals[i];
+        const auto p=right.positions[i],l=left.positions[i],n=right.normals[i],ln=left.normals[i];
+        const auto source=tracked_hands::imported.positions[i],sn=tracked_hands::imported.normals[i];
         assert(std::isfinite(p.x)&&std::isfinite(p.y)&&std::isfinite(p.z));
-        assert(std::fabs((p.x-3)-(l.x-2.4f))<.00001f&&
-               std::fabs((p.y-2.5f)+l.y)<.00001f&&std::fabs((p.z+2)-l.z)<.00001f);
+        assert(p.x==source.x+3&&p.y==source.y+2.5f&&p.z==source.z-2);
+        assert(n.x==sn.x&&n.y==sn.y&&n.z==sn.z);
+        assert(l.x==-source.x&&l.y==source.y&&l.z==source.z);
+        assert(ln.x==-sn.x&&ln.y==sn.y&&ln.z==sn.z);
         assert(std::fabs(n.x*n.x+n.y*n.y+n.z*n.z-1)<.001f);
         minx=std::min(minx,p.x);maxx=std::max(maxx,p.x);
         miny=std::min(miny,p.y);maxy=std::max(maxy,p.y);

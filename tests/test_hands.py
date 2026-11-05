@@ -45,7 +45,7 @@ class HandsTests(unittest.TestCase):
         sword=visual('Sword preview',1310,proc_class,pawn)
         gun=visual('Firearm preview',1311,mesh_class,pawn)
         uevr.boltgun_weapon_grips={
-          left=function(owner) engine_only();assert(owner==pawn);return sword,0,0,0,1 end,
+          left=function(owner) engine_only();assert(owner==pawn);return sword,2.4,0,0,1 end,
           right=function(owner) engine_only();assert(owner==pawn);return gun,-48,2,24,.5 end}
         math_class=class('Class /Script/Engine.KismetMathLibrary')
         math_library=object('Default__KismetMathLibrary',1312,math_class)
@@ -381,7 +381,7 @@ class HandsTests(unittest.TestCase):
         files['chainsword3d.settings']='x=-2\ny=6\nz=1\nyaw=180'
         """)
         self.start()
-        for hand, location, scale in ((1, (0, 0, 0), 1), (2, (-48, 2, 24), 2)):
+        for hand, location, scale in ((1, (2.4, 0, 0), 1), (2, (-48, 2, 24), 2)):
             for axis, want in zip('XYZ', location):
                 self.assertEqual(self.value(f'ctx.components[{hand}].location.{axis}'), want)
             self.assertEqual(self.value(f'ctx.components[{hand}].scale'), scale)

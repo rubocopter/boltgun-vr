@@ -21,14 +21,16 @@ inline bool load(const std::filesystem::path& filename) {
 inline chainsword::Mesh geometry(bool left) {
     auto out=imported;
     if(left) {
-        for(auto& p:out.positions) p.y=-p.y;
-        for(auto& n:out.normals) n.y=-n.y;
+        // Mirror Y for handedness, then yaw 180 degrees around the Z grip axis
+        // to oppose the sword's default yaw. Together these reflect X.
+        // Keep the curl at the origin; Lua seats it on the sword handle.
+        for(auto& p:out.positions) p.x=-p.x;
+        for(auto& n:out.normals) n.x=-n.x;
         for(size_t i=0;i<out.indices.size();i+=3) std::swap(out.indices[i+1],out.indices[i+2]);
+        return out;
     }
-    // The authored source opens about zero. These initial weapon-local offsets
-    // were fitted against private cross-sections of the existing Bolter grip
-    // and the packaged sword handle. Keep them independent of MC calibration.
-    const chainsword::V3 grip=left?chainsword::V3{2.4f,0,0}:chainsword::V3{3,2.5f,-2};
+    // Preserve the approved Bolter fit independently of MC calibration.
+    const chainsword::V3 grip{3,2.5f,-2};
     for(auto& p:out.positions) { p.x+=grip.x;p.y+=grip.y;p.z+=grip.z; }
     return out;
 }

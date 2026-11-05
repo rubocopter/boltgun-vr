@@ -7,6 +7,8 @@ local weapon_grips = uevr.boltgun_weapon_grips
 local MODE, SETTINGS, JOURNAL = 'chainsword3d.mode', 'chainsword3d.settings', 'chainsword3d.owned'
 local CLASS = 'Class /Script/ProceduralMeshComponent.ProceduralMeshComponent'
 local PLANE_CLASS = 'Class /Script/Engine.StaticMeshComponent'
+-- Handle cross-sections of the submitted mesh center near UE (2.4, 0, 0) cm.
+local HANDLE_X = 2.4
 local MATERIAL = 'MaterialInstanceConstant /Game/Art/Pickups/Powerups/Materials/MI_Pickups_Boltgun.MI_Pickups_Boltgun'
 local function texture_path()
     -- The native bridge resolves the active profile with the UEVR C API and
@@ -393,7 +395,10 @@ local function apply_settings()
     local state = hook.get_or_add_motion_controller_state(owned)
     assert(state ~= nil, 'Left controller attachment unavailable')
     local location = UEVR_Vector3f.new()
-    location.x,location.y,location.z = settings.x,settings.y,settings.z
+    -- UObjectHook rotates this GLM offset in the same calibrated frame as the
+    -- sword. Its quaternion maps (x,y,z) to UE (z,-x,-y), so subtract the
+    -- scaled handle on GLM Z to seat it at the tracked grip plus user trim.
+    location.x,location.y,location.z = settings.x,settings.y,settings.z-settings.scale*HANDLE_X
     local pitch,yaw,roll = settings.pitch*math.pi/180,-settings.yaw*math.pi/180,-settings.roll*math.pi/180
     local cp,sp,cy,sy,cr,sr = math.cos(pitch/2),math.sin(pitch/2),math.cos(yaw/2),math.sin(yaw/2),math.cos(roll/2),math.sin(roll/2)
     local rotation = UEVR_Quaternionf.new()
@@ -472,10 +477,9 @@ local function contact_enabled()
         owner:get_full_name()==owner_name and tostring(owner:get_address())==owner_address and check_sprite()
 end
 
--- The submitted sword geometry is authored around its handle origin.
 weapon_grips.left = function(pawn)
     if pawn == owner and contact_enabled() and reference(owned, 'bVisible') == true and
-        reference(owned, 'bHiddenInGame') == false then return owned, 0, 0, 0, settings.scale end
+        reference(owned, 'bHiddenInGame') == false then return owned, HANDLE_X, 0, 0, settings.scale end
 end
 
 local function create(pawn)
