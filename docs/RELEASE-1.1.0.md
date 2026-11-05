@@ -5,7 +5,9 @@
 The 5 November 2026 PS VR2 Sense session confirmed that both armored hands
 sit correctly and the weapons feel even in reach. The maintainer reported
 good alignment on the other weapons played. The **Grav-Cannon** and
-**Volkite Caliver** still deviate with the release settings.
+**Volkite Caliver** still deviated in that session. The tested profile had
+`freeaim_enabled=1`. Fresh installations default to native aim
+(`freeaim_enabled=0`).
 
 ## Changes since v1.0.2
 

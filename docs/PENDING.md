@@ -19,7 +19,7 @@ excerpts. Keep recordings and full logs in ignored local archives.
 | V5 | High | Return to main menu and reload | Load a save, inspect both hands, then return to the main menu and reload the save. Repeat with the 3D previews active. Check death, respawn and pause as separate transitions. Capture the latest crash context if an access violation recurs. |
 | V6 | Medium | Confirmed damage halo regression | Preserve the approved appearance through repeated hits, low health, death, menus and `comfort.mode=off`/reload. The current halo files match the approved candidate; broader lifecycle coverage remains open. |
 | V7 | Medium | Menu and input regression | Panel stays stationary while moving the right controller; Options/Create and existing native mouse/game navigation work. Controller hover/laser/trigger-click is not an implemented feature to accept yet. |
-| V8 | High | Grav-Cannon and Volkite Caliver aim | Reproduce both deviations with release defaults. Compare the displayed muzzle, damage ray, beam visual and reticle fallback. Evaluate experimental hooks in a separate opt-in session. |
+| V8 | High | Grav-Cannon and Volkite Caliver aim | Reproduce both deviations with the tested free-aim setting, then check the native-aim default. Compare the displayed muzzle, damage ray, beam visual and reticle fallback. Evaluate experimental hooks in a separate opt-in session. |
 | V9 | Later | Compatibility matrix | All ten weapons, Machine Spirit variants, owned DLC, repeated save-load sessions and other controller/headset mappings. Report tested combinations individually. |
 
 Do not set either manifest verification flag merely because the candidate loads,

@@ -14,6 +14,8 @@ runtime evidence. The actionable test and implementation backlog is in
 The package-wide flags `verifiedInGame` and `runtimeVerified` remain **false**.
 The session confirmed specific features. Physical contact damage, repeated
 transitions and the full weapon and DLC matrix still need validation.
+The tested profile had `freeaim_enabled=1`. Fresh installations default to
+native aim.
 See the [v1.1.0 release notes](RELEASE-1.1.0.md).
 
 ## Current feature evidence

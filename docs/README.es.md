@@ -27,7 +27,9 @@ adaptador. El apuntado desde el arma y el modo a dos manos son opciones
 experimentales desactivadas por defecto; los rayos de Volkite/Gravgun tienen
 una activación independiente.
 
-La validación cubre las funciones observadas con PS VR2 Sense. Quedan
+La validación cubre las funciones observadas con PS VR2 Sense. El perfil de
+prueba tenía `freeaim_enabled=1`. Una instalación nueva usa el apuntado
+nativo por defecto. Quedan
 pendientes el daño por contacto, las transiciones repetidas y la cobertura
 completa de variantes, DLC y otros mandos. El
 [paquete publicado](https://github.com/rubocopter/boltgun-vr/releases/latest)
