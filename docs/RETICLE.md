@@ -1,12 +1,11 @@
-# Native world reticle (candidate 25)
+# Native world reticle (candidate 26)
 
-Candidate 25 replaces the procedural white cross with the original game's
-crosshair image, rendered by an owned world WidgetComponent. Its live Slate
-brush, texture, color, image transform and opacity follow the exact native HUD
-image. No extracted crosshair texture is packaged. The production ray policy is
-unchanged. The maintainer rejected candidate 24's white marker and confirmed its
-damage effect; this changed reticle still needs headset confirmation. Installing
-or passing automated checks does not establish VR validation.
+Candidate 25 displayed the original HUD fallback in the 5 November headset
+session. It rejected the widget material before the first firing-ray request
+and reported zero world placements. Candidate 26 checks the cooked material
+instance and lets the widget prepare its texture before enabling world
+placement. The original crosshair remains the glyph source. The revised path
+awaits headset verification.
 
 ## For players
 
@@ -31,20 +30,40 @@ The native bridge reflects the equipped weapon's actual barrel transform and sha
 
 Lua creates a non-colliding pawn-owned `WidgetComponent` in world space and a separate instance of the original `W_PlayerHUD_Crosshair_C` widget. It hides the component and resets visibility before every synchronous request. Native code validates the engine thread, local pawn, equipped weapon, exact component class and ownership, then acknowledges a successful ray request through that component. Lua consumes the acknowledgement immediately, avoiding stale sample reuse. The bridge creates neither a projectile nor damage.
 
-All trace, placement and HUD operations run on post-engine tick. `LineTraceSingle` ignores the local pawn and weapon; `BreakHitResult` supplies the real blocking hit. Invalid geometry, initial overlap, inconsistent hit time/position or excessive camera proximity rejects marker placement. The component uses its resident unlit translucent pass-through material with
-depth testing and a transparent background. The engine owns the SlateUI render
-target binding and dynamic material. Lua preserves that instance between ticks
-instead of recreating it whenever GetMaterial returns the dynamic instance.
+All trace, placement and HUD operations run on post-engine tick. `LineTraceSingle` ignores the local pawn and weapon; `BreakHitResult` supplies the real blocking hit. Invalid geometry, initial overlap, inconsistent hit time/position or excessive camera proximity rejects marker placement.
+
+Candidate 25 reported `widget-alpha-unavailable` with zero native acknowledgements,
+traces and placements. The cooked `Widget3DPassThrough_Translucent` asset is a
+`MaterialInstanceConstant` whose exact parent is `Widget3DPassThrough`. Lua checks
+the parent's surface domain and depth testing, then reads the effective blend
+and shading from the parent and the enabled `BasePropertyOverrides` flags.
+It requires the cooked two-sided override. The component's reflected `BlendMode`
+is set to `Transparent` before the background and material are configured.
+The engine owns the dynamic material instance and its `SlateUI` binding. Lua
+verifies the instance's parent and reuses the instance between ticks.
+
 The centered native 128px image slot sits in a padded canvas, enlarged when
 image scale/rotation/shear require it. The camera-facing world size is separate
 from this padding.
 
-Widget redraw is asynchronous. Lua waits for a valid render target, matching
-size, a cleared redraw request and a matching SlateUI texture before suppressing
-the original HUD image. During warmup or changed brush/settings, the component
-remains hidden but can tick offscreen to draw, and the original image remains
-available. Unavailable alpha materials, glyph resources or native samples leave
-the HUD crosshair intact; no white-dot fallback is generated.
+The Boltgun shipping executable (SHA-256 `bd32aecb2ef6feb3fd2edfb0095b7e534176c92c01d5fa5ccc43a0ddc639b01a`)
+registers `WidgetComponent.bRedrawRequested` in its property table at RVA
+`0x3fd1068`. Its `ShouldDrawWidget` at RVA `0x271cde0` calls the component's
+visibility check at RVA `0x2abaa70`, which rejects `bHiddenInGame` and requires
+`bVisible`. `TickWhenOffscreen` bypasses the recent-render check after that
+visibility gate. The draw path clears `bRedrawRequested` after obtaining a
+render target.
+
+During warmup or a glyph change, Lua keeps the HUD visible and allows the owned
+widget to tick with both visibility flags in the drawing state. It first verifies
+disabled collision and reads back zero world scale so the world quad has no
+drawable area. A cleared redraw request, valid target, matching target dimensions
+and matching `SlateUI` binding allow sampling to proceed. A proxy redraw can
+reuse a completed draw while its glyph key, target and material instance match.
+Lua then hides the
+component and resets `bVisible` before the synchronous native ray request. The
+HUD gives way only after the sampled ray yields a valid placement and the world
+marker passes its transform and visibility checks.
 
 ### HUD restoration and reset
 
@@ -60,6 +79,10 @@ For creation hooks without a fresh successful shot, legacy origin-only firing ma
 
 ## Validation
 
-Offline Lua tests and native math harnesses exercise ray geometry and policy contracts. They cannot confirm live callback timing, reflected trace behavior, marker visibility, reset recovery or per-weapon alignment in a headset. Keep **`verifiedInGame: false`** for revision 25; chainsword package 10 separately retains **`runtimeVerified: false`** until maintainer VR confirmation.
+Offline tests cover the cooked material contract, visibility-dependent warmup,
+HUD fallback, owned widget cleanup and the native aim geometry and policy.
+Headset validation still needs to confirm render-thread timing, glyph alpha
+and depth, live reset recovery and per-weapon alignment. Keep **`verifiedInGame: false`**
+until maintainer VR confirmation.
 
 Use temporary profiles for deployment checks. Repository maintenance must not modify the live game profile, start SteamVR or inject UEVR. See [status](STATUS.md) and [experimental interactions](EXPERIMENTAL-INTERACTIONS.md).

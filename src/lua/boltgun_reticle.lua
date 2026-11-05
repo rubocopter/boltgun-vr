@@ -37,6 +37,8 @@ function M.new(uevr)
     local JOURNAL='bolter3d.reticle.owned'
     local CLASS='Class /Script/UMG.WidgetComponent'
     local LEGACY_CLASS='Class /Script/ProceduralMeshComponent.ProceduralMeshComponent'
+    local WIDGET_ALPHA='MaterialInstanceConstant /Engine/EngineMaterials/Widget3DPassThrough_Translucent.Widget3DPassThrough_Translucent'
+    local WIDGET_ALPHA_PARENT='Material /Engine/EngineMaterials/Widget3DPassThrough.Widget3DPassThrough'
     local state,recovered,query,descriptors,gs=nil,false,nil,nil,nil
     local s={stopped=false,status='not-stepped',ticks=0,acks=0,traces=0,placed=0,
         material='not-created',rejected=0,last_rejection='none'}
@@ -135,15 +137,28 @@ function M.new(uevr)
     end
     local function vector(p) return make(descriptors.vector,{X=p.x,Y=p.y,Z=p.z}) end
     local function alpha_material(part)
-        -- WidgetComponent owns the render target and SlateUI binding. Use its
-        -- resident translucent pass-through, with depth testing, never a hand
-        -- palette or an opaque surface material that fills the glyph's holes.
+        -- Boltgun's resident pass-through is a cooked MIC. Domain and depth
+        -- testing belong to its parent; blend and shading can be overridden.
+        s.material='widget-alpha-unavailable'
         local candidate=prop(part,'TranslucentMaterial')
-        if not valid(candidate) or prop(candidate,'MaterialDomain')~=0 or
-            prop(candidate,'ShadingModel')~=0 or prop(candidate,'BlendMode')~=2 or
-            prop(candidate,'bDisableDepthTest')~=false then
-            s.material='widget-alpha-unavailable';return false
+        if not valid(candidate) or candidate:get_full_name()~=WIDGET_ALPHA then return false end
+        local parent=prop(candidate,'Parent')
+        if not valid(parent) or parent:get_full_name()~=WIDGET_ALPHA_PARENT or
+            prop(parent,'MaterialDomain')~=0 or prop(parent,'bDisableDepthTest')~=false then return false end
+        local overrides=prop(candidate,'BasePropertyOverrides')
+        if not overrides or type(overrides.bOverride_BlendMode)~='boolean' or
+            type(overrides.bOverride_ShadingModel)~='boolean' or
+            overrides.bOverride_TwoSided~=true or overrides.TwoSided~=true then return false end
+        local blend=prop(parent,'BlendMode')
+        if overrides.bOverride_BlendMode then blend=overrides.BlendMode end
+        local unlit
+        if overrides.bOverride_ShadingModel then
+            unlit=overrides.ShadingModel==0 -- MSM_Unlit
+        else
+            local models=prop(parent,'ShadingModels')
+            unlit=models and models.ShadingModelField==1 -- only MSM_Unlit
         end
+        if blend~=2 or not unlit then return false end -- BLEND_Translucent
         if not state.alpha or not same(state.alpha) or state.alpha.object~=candidate then
             part:SetMaterial(0,candidate);state.appearance_key=nil;state.alpha=record(candidate)
         end
@@ -151,6 +166,7 @@ function M.new(uevr)
         -- Reapplying the source every tick would recreate that MID repeatedly.
         local actual,instance=part:GetMaterial(0),part:GetMaterialInstance()
         assert(actual==candidate or valid(instance) and actual==instance,'Reticle alpha material rejected')
+        if valid(instance) and prop(instance,'Parent')~=candidate then return false end
         s.material='original-hud-brush-alpha';return true
     end
     local function parameters(fn,inputs)
@@ -244,7 +260,6 @@ function M.new(uevr)
     end
     local function appearance(image,cross,pc)
         local part=state.part.object
-        if not alpha_material(part) then return false end
         if not state.widget then
             local cls=api:find_uobject('Class /Script/UMG.WidgetBlueprintLibrary')
             assert(valid(cls),'Missing widget library')
@@ -342,7 +357,6 @@ function M.new(uevr)
         if not query then query=prepare_query() end
         local menu=prop(prop(pc,'MyHUD'),'CurrentMenu')
         if gs:IsGamePaused(pc)~=false or valid(menu) and menu:IsInViewport() and menu:IsVisible() then return reject('paused-or-menu') end
-        hide(true)
         local image,cross=hud_image(pc)
         if not image or not brush(image) then return reject('original-brush-unavailable') end
         if not state then
@@ -356,19 +370,27 @@ function M.new(uevr)
             part:SetCollisionEnabled(0);part:SetGenerateOverlapEvents(false);part:SetMobility(2);part:SetCastShadow(false)
             part:SetOwnerNoSee(false);part:SetOnlyOwnerSee(false)
             part:SetWidgetSpace(0);part:SetDrawAtDesiredSize(false);part:SetTickWhenOffscreen(true)
+            -- UE4 exposes the enum property but not SetBlendMode to reflection.
+            -- Set it before SetBackgroundColor and the engine's MID creation.
+            part:set_property('BlendMode',2) -- EWidgetBlendMode::Transparent
             part:SetDrawSize(make(descriptors.vector2,{X=128,Y=128}))
             part:SetPivot(make(descriptors.vector2,{X=.5,Y=.5}));part:SetWindowFocusable(false)
             part:SetBackgroundColor({R=0,G=0,B=0,A=0})
-            assert(part:GetWidgetSpace()==0 and equal(part:GetDrawSize(),{X=128,Y=128},{'X','Y'}) and
+            assert(part:GetWidgetSpace()==0 and prop(part,'BlendMode')==2 and
+                equal(part:GetDrawSize(),{X=128,Y=128},{'X','Y'}) and
                 equal(part:GetPivot(),{X=.5,Y=.5},{'X','Y'}) and part:GetWindowFocusable()==false,
                 'Reticle widget layout rejected')
         end
+        local part=state.part.object
+        assert(same(state.owner) and part:get_outer()==state.owner.object,'Reticle owner changed')
+        s.phase='material'
+        if not alpha_material(part) then return reject('widget-alpha-unavailable') end
         s.phase='appearance'
         if not appearance(image,cross,pc) then return reject('original-brush-unavailable') end
-        -- RequestRedraw is asynchronous. UE clears this reflected bit only
-        -- after submitting the widget draw. Warm the hidden component with
-        -- bVisible=true so its own tick can draw, and retain the original HUD.
-        local part=state.part.object
+        -- RequestRedraw is asynchronous. UE clears this reflected bit on
+        -- the widget draw path.
+        local redraw=prop(part,'bRedrawRequested')
+        if type(redraw)~='boolean' then return reject('glyph-redraw-unavailable') end
         local target=part:GetRenderTarget()
         local instance=part:GetMaterialInstance()
         if not state.slate_name then
@@ -377,11 +399,26 @@ function M.new(uevr)
             state.slate_name=strings:get_class_default_object():Conv_StringToName('SlateUI')
         end
         local size=part:GetDrawSize()
-        if not valid(target) or not valid(instance) or prop(part,'bRedrawRequested')~=false or
+        -- Visibility/transform changes can request a proxy redraw. An already
+        -- drawn glyph is still usable while its target, material and key match.
+        local drawn=state.drawn_key==state.appearance_key and state.drawn_target==target and state.drawn_mid==instance
+        if not valid(target) or not valid(instance) or (redraw and not drawn) or
             prop(target,'SizeX')~=size.X or prop(target,'SizeY')~=size.Y or
             instance:K2_GetTextureParameterValue(state.slate_name)~=target then
-            part:SetVisibility(true,false);restore_hud();return 'glyph-render-pending'
+            state.drawn_key,state.drawn_target,state.drawn_mid=nil,nil,nil
+            s.phase='glyph-warmup'
+            -- This UE4 build's IsVisible checks bHiddenInGame. Give the widget
+            -- tick a visible component with a collapsed, non-colliding quad.
+            if part:GetCollisionEnabled()~=0 then return reject('warmup-collision-enabled') end
+            part:SetWorldScale3D(vector({x=0,y=0,z=0}))
+            local transform=part:K2_GetComponentToWorld()
+            local scale=transform and transform.Scale3D
+            if not scale or scale.X~=0 or scale.Y~=0 or scale.Z~=0 then return reject('warmup-scale-readback') end
+            part:SetVisibility(true,false);part:SetHiddenInGame(false,false)
+            if prop(part,'bVisible')~=true or prop(part,'bHiddenInGame')~=false then return reject('visibility-readback') end
+            restore_hud();return 'glyph-render-pending'
         end
+        state.drawn_key,state.drawn_target,state.drawn_mid=state.appearance_key,target,instance
         s.phase='native-ray'
         hide(true) -- Reset acknowledgement before every synchronous request; marker remains hidden.
         uevr.params.functions.dispatch_custom_event('boltgun.reticle.v1',table.concat(

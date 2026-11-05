@@ -215,10 +215,13 @@ class ReticleLifecycleTests(unittest.TestCase):
         self.assertAlmostEqual(self.value('world_image.ColorAndOpacity.A'), .65)
         self.assertAlmostEqual(self.value('world_image.opacity'), .375)
         self.assertEqual(self.value('part.space'), 0)
+        self.assertEqual(self.value('part.BlendMode'), 2)
+        self.assertEqual(self.value('part.background.A'), 0)
         self.assertGreaterEqual(self.value('part.size.X'), 128)
         self.assertEqual(self.value('part.pivot.X'), .5)
         self.assertFalse(self.value('part.focusable'))
         self.assertTrue(self.value('part.material==alpha_material'))
+        self.assertEqual(self.value('reticle.material'), 'original-hud-brush-alpha')
         self.assertEqual(self.value('ctx.imports'), 0)
         self.assertEqual(self.value('ctx.mesh_requests'), 0)
         self.assertEqual(self.value('world_image.Brush.ImageSize.X'), 32)
@@ -262,9 +265,15 @@ class ReticleLifecycleTests(unittest.TestCase):
                 self.assertTrue(self.value('part.bVisible'))
 
     def test_unverified_or_depth_disabled_alpha_material_never_replaces_hud(self):
-        for change in ('alpha_material.valid=false', 'alpha_material.BlendMode=0',
-                       'alpha_material.MaterialDomain=1', 'alpha_material.ShadingModel=1',
-                       'alpha_material.bDisableDepthTest=true'):
+        for change in (
+            'alpha_material.valid=false', 'alpha_material.name=pickup.name',
+            'alpha_material.Parent=nil', 'alpha_parent.name=unlit.name',
+            'alpha_parent.MaterialDomain=1', 'alpha_parent.ShadingModels.ShadingModelField=3',
+            'alpha_parent.bDisableDepthTest=true', 'alpha_material.BasePropertyOverrides=nil',
+            'overrides.BlendMode=0', 'overrides.bOverride_BlendMode=false;alpha_parent.BlendMode=0',
+            'overrides.bOverride_ShadingModel=true;overrides.ShadingModel=1',
+            'overrides.bOverride_BlendMode=nil', 'overrides.TwoSided=false',
+        ):
             with self.subTest(change=change):
                 self.setUp()
                 self.run_lua(change)
@@ -272,6 +281,22 @@ class ReticleLifecycleTests(unittest.TestCase):
                 self.assertFalse(self.value('part.bVisible'))
                 self.assertEqual(self.value('image.opacity'), .375)
                 self.assertEqual(self.value('ctx.traces'), 0)
+                self.assertEqual(self.value('reticle.acks'), 0)
+                self.assertEqual(self.value('reticle.status'), 'widget-alpha-unavailable')
+                self.assertFalse(self.value('reticle.stopped'))
+
+    def test_material_override_applies_only_when_enabled(self):
+        self.run_lua('alpha_parent.BlendMode=0;overrides.ShadingModel=1')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'placed', self.value('ctx.log'))
+
+    def test_material_loss_restores_hud_after_successful_placement(self):
+        self.frame()
+        self.run_lua('alpha_parent.bDisableDepthTest=true')
+        self.frame()
+        self.assert_hidden()
+        self.assertEqual(self.value('reticle.status'), 'widget-alpha-unavailable')
+        self.assertEqual(self.value('ctx.traces'), 1)
 
     def test_widget_setters_are_checked_before_hud_suppression(self):
         for change in ('ctx.reject_widget=true', 'ctx.reject_brush=true',
@@ -288,14 +313,15 @@ class ReticleLifecycleTests(unittest.TestCase):
         self.run_lua('ctx.auto_render=false;ctx.render_ready=false')
         self.frame()
         self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
-        self.assertTrue(self.value('part.bHiddenInGame and part.bVisible and part.offscreen'))
+        self.assertTrue(self.value('not part.bHiddenInGame and part.bVisible and part.offscreen'))
         self.assertEqual(self.value('image.opacity'), .375)
         self.assertEqual(self.value('ctx.traces'), 0)
-        self.run_lua('ctx.render_ready=true')
+        self.run_lua('ctx.render_ready=true;visibility_changes=part.visibility_changes')
         self.frame()
         self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
         self.assertEqual(self.value('image.opacity'), .375)
-        self.run_lua('part.bRedrawRequested=false')
+        self.assertEqual(self.value('part.visibility_changes'), self.value('visibility_changes'))
+        self.run_lua('draw_widget()')
         self.frame()
         self.assertEqual(self.value('reticle.status'), 'placed')
         self.assertEqual(self.value('image.opacity'), 0)
@@ -306,21 +332,80 @@ class ReticleLifecycleTests(unittest.TestCase):
         self.run_lua('ctx.auto_render=false;image.Brush=dlc_brush')
         self.frame()
         self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
-        self.assertTrue(self.value('part.bHiddenInGame'))
+        self.assertTrue(self.value('not part.bHiddenInGame and part.bVisible'))
         self.assertEqual(self.value('image.opacity'), .375)
-        self.run_lua('part.bRedrawRequested=false')
+        self.run_lua('draw_widget()')
         self.frame()
         self.assertEqual(self.value('reticle.status'), 'placed')
         self.assertEqual(self.value('image.opacity'), 0)
         self.assertTrue(self.value('world_image.Brush.ResourceObject==dlc_glyph'))
 
+    def test_proxy_redraw_does_not_invalidate_unchanged_glyph_on_same_target(self):
+        self.frame()
+        self.run_lua('ctx.auto_render=false;part.bRedrawRequested=true')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'placed')
+        self.assertEqual(self.value('image.opacity'), 0)
+        self.run_lua("target=obj('TextureRenderTarget2D Test.RecreatedGlyph','new_target')")
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
+        self.assertEqual(self.value('image.opacity'), .375)
+        self.assertEqual(self.value('reticle.acks'), 2)
+
     def test_wrong_render_target_binding_cannot_hide_original_hud(self):
         self.run_lua('ctx.wrong_slate=true')
         self.frame()
         self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
-        self.assertTrue(self.value('part.bHiddenInGame'))
+        self.assertTrue(self.value('part.transform.Scale3D.X==0'))
         self.assertEqual(self.value('image.opacity'), .375)
         self.assertEqual(self.value('ctx.traces'), 0)
+
+    def test_warmup_scale_failure_keeps_component_hidden_and_can_retry(self):
+        self.run_lua('ctx.auto_render=false;ctx.noop_scale=true')
+        self.frame()
+        self.assert_hidden()
+        self.assertEqual(self.value('reticle.status'), 'warmup-scale-readback')
+        self.assertEqual(self.value('reticle.acks'), 0)
+        self.run_lua('ctx.noop_scale=false')
+        self.frame()
+        self.run_lua('draw_widget()')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'placed')
+
+    def test_warmup_rejects_collision_before_enabling_visibility(self):
+        self.run_lua('ctx.auto_render=false;ctx.reject_collision=true')
+        self.frame()
+        self.assert_hidden()
+        self.assertEqual(self.value('reticle.status'), 'warmup-collision-enabled')
+        self.assertEqual(self.value('reticle.acks'), 0)
+
+    def test_slate_binding_on_wrong_mid_parent_cannot_hide_original_hud(self):
+        self.run_lua('ctx.wrong_mid_parent=true;ctx.get_material_returns_instance=true')
+        self.frame()
+        self.assert_hidden()
+        self.assertEqual(self.value('reticle.status'), 'widget-alpha-unavailable')
+        self.assertEqual(self.value('reticle.acks'), 0)
+        self.assertEqual(self.value('ctx.traces'), 0)
+
+    def test_missing_redraw_reflection_keeps_original_hud(self):
+        self.run_lua("ctx.missing_property='bRedrawRequested'")
+        self.frame()
+        self.assert_hidden()
+        self.assertEqual(self.value('reticle.status'), 'glyph-redraw-unavailable')
+        self.assertEqual(self.value('reticle.acks'), 0)
+
+    def test_reset_during_widget_warmup_releases_owned_widget(self):
+        self.run_lua('ctx.render_ready=false')
+        self.frame()
+        self.assertEqual(self.value('reticle.status'), 'glyph-render-pending')
+        self.assertTrue(self.value('part.widget~=nil and part.widget~=cross'))
+        self.run_lua('oldpart=part;reticle:stop();reticle=mod.new(uevr)')
+        self.frame(False)
+        self.assertTrue(self.value('not oldpart.valid and oldpart.widget==nil'))
+        self.assertEqual(self.value('ctx.destroyed'), 1)
+        self.assertEqual(self.value('ctx.journal'), '')
+        self.assertEqual(self.value('image.opacity'), .375)
+        self.assertEqual(self.value('reticle.acks'), 0)
 
     def test_native_visibility_changes_never_leave_world_marker_visible(self):
         for target in ('image','cross','root'):
@@ -618,9 +703,13 @@ widgetclass.find_property=generic.find_property
 crossclass=obj('WidgetBlueprintGeneratedClass /Game/Blueprints/UI/Gameplay_HUD/W_PlayerHUD_Crosshair.W_PlayerHUD_Crosshair_C','crossclass')
 cross.class=crossclass
 crossclass.find_property=generic.find_property
-alpha_material=obj('Material /Engine/EngineMaterials/Widget3DPassThrough_Translucent.Widget3DPassThrough_Translucent','alpha')
-alpha_material.MaterialDomain=0;alpha_material.ShadingModel=0;alpha_material.BlendMode=2
-alpha_material.bDisableDepthTest=false
+alpha_material=obj('MaterialInstanceConstant /Engine/EngineMaterials/Widget3DPassThrough_Translucent.Widget3DPassThrough_Translucent','alpha')
+alpha_parent=obj('Material /Engine/EngineMaterials/Widget3DPassThrough.Widget3DPassThrough','alpha_parent')
+alpha_parent.MaterialDomain=0;alpha_parent.ShadingModels={ShadingModelField=1};alpha_parent.BlendMode=2
+alpha_parent.bDisableDepthTest=false
+overrides={bOverride_BlendMode=true,BlendMode=2,bOverride_ShadingModel=false,ShadingModel=0,
+ bOverride_TwoSided=true,TwoSided=true}
+alpha_material.Parent=alpha_parent;alpha_material.BasePropertyOverrides=overrides
 factory=obj('Class /Script/UMG.WidgetBlueprintLibrary','factory')
 function factory:get_class_default_object()return self end
 function factory:Create(owner,cls,pc)
@@ -661,7 +750,9 @@ end
 target=obj('TextureRenderTarget2D Test.Glyph','target')
 function newpart()
  local o=obj('ProceduralMeshComponent Test.Part','part'..ctx.created,pawn);o.class=partclass
- o.bVisible=false;o.bHiddenInGame=true;o.sections=0;o.TranslucentMaterial=alpha_material
+ o.bVisible=false;o.bHiddenInGame=true;o.sections=0;o.TranslucentMaterial=alpha_material;o.BlendMode=1
+ o.transform={Scale3D={X=1,Y=1,Z=1}};o.visibility_changes=0
+ function o:set_property(k,v)touch('set_property');assert(k=='BlendMode');self[k]=v end
  function o:SetTickWhenOffscreen(v)self.offscreen=v end
  function o:SetWidgetSpace(v)touch('SetWidgetSpace');self.space=v end
  function o:GetWidgetSpace()return self.space end
@@ -681,9 +772,16 @@ function newpart()
   target.SizeX=self.size.X;target.SizeY=self.size.Y;return target
  end
  function o:GetMaterialInstance()touch('GetMaterialInstance');return self.dmi end
- function o:SetHiddenInGame(v,propagate)touch('SetHiddenInGame');assert(propagate==false);self.bHiddenInGame=v end
- function o:SetVisibility(v,propagate)touch('SetVisibility');assert(propagate==false);self.bVisible=v end
- function o:SetCollisionEnabled(v)touch('SetCollisionEnabled');ctx.collision=v end
+ function o:SetHiddenInGame(v,propagate)
+  touch('SetHiddenInGame');assert(propagate==false)
+  if self.bHiddenInGame~=v then self.visibility_changes=self.visibility_changes+1;self.bHiddenInGame=v end
+ end
+ function o:SetVisibility(v,propagate)
+  touch('SetVisibility');assert(propagate==false)
+  if self.bVisible~=v then self.visibility_changes=self.visibility_changes+1;self.bVisible=v end
+ end
+ function o:SetCollisionEnabled(v)touch('SetCollisionEnabled');ctx.collision=ctx.reject_collision and 2 or v end
+ function o:GetCollisionEnabled()touch('GetCollisionEnabled');return ctx.collision end
  function o:SetGenerateOverlapEvents(v)touch('SetGenerateOverlapEvents');ctx.overlaps=v end
  function o:SetMobility(v)touch('SetMobility');ctx.mobility=v end
  function o:SetCastShadow(v)touch('SetCastShadow');ctx.shadow=v end
@@ -695,6 +793,7 @@ function newpart()
   touch('SetMaterial');assert(index==0);ctx.material_creates=ctx.material_creates+1
   if not ctx.reject_material then self.material=material end
   self.dmi=obj('MaterialInstanceDynamic Test.Widget','widgetdmi',self)
+  self.dmi.Parent=ctx.wrong_mid_parent and pickup or self.material
   function self.dmi:K2_GetTextureParameterValue(key)
    touch('K2_GetTextureParameterValue');assert(key=='SlateUI')
    return not ctx.wrong_slate and ctx.render_ready and target or nil
@@ -730,9 +829,15 @@ function newpart()
  end
  function o:K2_DestroyComponent(owner)
   touch('K2_DestroyComponent');assert(owner==pawn and self.outer==pawn)
-  assert(not self.bVisible and self.bHiddenInGame);self.valid=false;ctx.destroyed=ctx.destroyed+1
+  assert(not self.bVisible and self.bHiddenInGame);self.widget=nil;self.valid=false;ctx.destroyed=ctx.destroyed+1
  end
  return o
+end
+function draw_widget()
+ assert(part.bVisible and not part.bHiddenInGame and part.offscreen and ctx.render_ready)
+ local scale=part.transform.Scale3D
+ assert(ctx.collision==0 and scale.X==0 and scale.Y==0 and scale.Z==0)
+ part.bRedrawRequested=false
 end
 function descriptor(names,outputs,call)
  local fields={}
