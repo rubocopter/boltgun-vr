@@ -7,10 +7,8 @@ is not implemented.** Native cursor visibility does not make a VR controller
 move or click that cursor.
 
 The maintainer reported stable menus in the 4 November 2026 revision 22
-session. This confirms that session's panel stability; native cursor interaction
-and a controller ray/click bridge have no separate VR confirmation. The changed
-firearm/chainsword runtimes keep `runtimeVerified` and `verifiedInGame` false
-until the maintainer confirms those specific candidate revisions in VR.
+session. Native cursor interaction still needs targeted VR testing. See
+[current validation](STATUS.md) for coverage across the release.
 
 ## Player guide
 

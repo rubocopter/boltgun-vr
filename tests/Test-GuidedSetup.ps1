@@ -51,7 +51,7 @@ try {
     Assert ($names -contains 'docs/INSTALACION-FACIL.es.md') 'Spanish player instructions missing.'
     Assert ($names -contains 'docs/ARSENAL.md') 'Maintained arsenal guide missing.'
     Assert ($names -contains 'docs/NATIVE-MUZZLE.md') 'Maintained muzzle guide missing.'
-    foreach ($guide in @('RETICLE.md','MENU.md','CANDIDATE-27.md','PENDING.md','COMFORT.md','HANDS.md','EXPERIMENTAL-INTERACTIONS.md')) {
+    foreach ($guide in @('RETICLE.md','MENU.md','RELEASE-1.1.0.md','PENDING.md','COMFORT.md','HANDS.md','EXPERIMENTAL-INTERACTIONS.md')) {
         Assert ($names -contains "docs/$guide") "Interaction guide missing: $guide"
     }
     foreach ($module in @('boltgun_reticle','boltgun_chainsword_contact','boltgun_chainsword_engine','boltgun_blade_sweep','boltgun_comfort','boltgun_hands')) {

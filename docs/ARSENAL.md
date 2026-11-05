@@ -1,6 +1,6 @@
 # Experimental 3D firearm arsenal
 
-The current candidate is **firearm revision 27 / chainsword package 12**.
+Version 1.1.0 ships **firearm revision 27 / chainsword package 12**.
 It replaces the equipped firearm sprite with a tracked original-game pickup
 mesh, loaded from the player's installation. No game mesh or texture is
 redistributed. Released revision 20/package 5 has historical VR confirmation;
@@ -50,7 +50,7 @@ its position relative to the visible weapon.
 
 The packaged default `profile/defaults/bolter3d.default.settings` enables `muzzle_enabled=1` and `recoil_enabled=1`. The model and firing reference use the same grip calibration, but recoil moves **only the visible mesh** after a successful supported native projectile spawn; the invisible reference holds the firing origin steady. A missing `recoil_enabled` key in older customized settings disables recoil. `muzzle_enabled=0` disables origin redirection while leaving the weapon model available. Settings refresh approximately every 250 ms.
 
-The Bolter uses the preserved landmark `(67.81414, 0, 53)` in local Unreal centimetres. The other nine `*_muzzle_x/y/z` landmarks are **estimates** from original pickup geometry, including the midpoint of the Multi-Melta barrels. Each firearm also has a `*_muzzle_enabled` switch. Released revision 20 preserves native direction/spread, game damage and reload logic. The current candidate supports opt-in controller-directed aim: `freeaim_enabled=1` (default `0`) can alter projectile direction, and native ray hooks require an additional opt-in. Pickup meshes do not provide hand-operated reload animation.
+The Bolter uses the preserved landmark `(67.81414, 0, 53)` in local Unreal centimetres. The other nine `*_muzzle_x/y/z` landmarks are **estimates** from original pickup geometry, including the midpoint of the Multi-Melta barrels. Each firearm also has a `*_muzzle_enabled` switch. The default preserves native direction and spread. Game damage and reload logic remain native. Version 1.1.0 supports opt-in controller-directed aim: `freeaim_enabled=1` (default `0`) can alter projectile direction, and native ray hooks require an additional opt-in. Pickup meshes do not provide hand-operated reload animation.
 
 The bridge requires the supported game binary, exact equipped weapon,
 correct owner, fresh mesh lease, active HMD/controllers and engine-thread

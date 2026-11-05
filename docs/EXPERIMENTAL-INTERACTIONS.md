@@ -1,7 +1,6 @@
 # Experimental VR interactions
 
-The current source candidate is **firearm revision 27 / chainsword package 12**.
-The published v1.0.2 runtime remains revision 20/package 5. See
+Version 1.1.0 ships **firearm revision 27 / chainsword package 12**. See
 [STATUS.md](STATUS.md) for the evidence boundary and [PENDING.md](PENDING.md) for
 prioritized tests and implementation work.
 
@@ -17,8 +16,9 @@ post-engine tick. Revision 27 renders the original HUD crosshair brush through
 an owned transparent WidgetComponent. Original HUD suppression waits for valid
 widget rendering, a native ray acknowledgement and checked world placement.
 It is nominal aim, not a random-spread or projectile-impact prediction.
-The new glyph path is installed locally but has no headset confirmation yet.
-See [RETICLE.md](RETICLE.md).
+The 5 November headset feedback identified the Grav-Cannon and Volkite Caliver
+as the remaining aim deviations. Reticle persistence through transitions still
+needs targeted testing. See [RETICLE.md](RETICLE.md).
 
 Exact allowed local muzzle/casing effects have reflected-creation, renderer and
 native pre-activation correction paths. The maintainer observed improvement in
@@ -64,8 +64,8 @@ inherit weapon calibration. Their fixed grip and appearance need VR checks.
 Tracked hands hide on death; there is no 3D death-arm replacement.
 
 The maintainer approved the [peripheral damage halo](COMFORT.md) in candidate 24.
-Its runtime bytes are unchanged in candidate 27. That feature-level feedback
-does not validate the entire candidate or every transition.
+Version 1.1.0 uses the same halo runtime bytes. Its remaining transition checks
+are listed in [PENDING.md](PENDING.md).
 
 All current manifest verification flags remain false. Offline tests cannot
 establish stereo visibility, native damage, real input routing or broad hardware

@@ -2,7 +2,7 @@
 
 ## Project license
 
-Original project-authored code is licensed under **GPL-3.0-or-later**; see the full [LICENSE](../LICENSE) and [copyright and reuse scope](../COPYRIGHT_AND_REUSE.md). This choice is independent of Penumbra. Third-party UEVR, chainsword artwork and game materials retain the licenses and ownership recorded below. The already published v1.0.1 archive is not automatically repackaged by this change.
+Original project-authored code is licensed under **GPL-3.0-or-later**; see the full [LICENSE](../LICENSE) and [copyright and reuse scope](../COPYRIGHT_AND_REUSE.md). This choice is independent of Penumbra. Third-party UEVR, chainsword artwork and game materials retain the licenses and ownership recorded below.
 
 ## UEVR API
 
@@ -39,6 +39,9 @@ The original starter profile is not bundled. Installation backs up the actual
 user files (or records their absence) to a private SHA-256-verified snapshot.
 Lupa/Pillow are installed by developers through pip, not redistributed here.
 
-## Prior open-source research
+## Development and prior open-source research
+
+Development used OpenAI Codex for implementation, testing and documentation.
+The maintainer performed the headset checks recorded in [STATUS.md](STATUS.md).
 
 [RolandWinston/Boltgun-VR](https://github.com/RolandWinston/Boltgun-VR) informed the investigation of weapon aiming, native trace paths, physical melee and UI pointing. The upstream repository provides a GNU GPL version 3 license file; check its copyright and licensing notices before reusing any upstream code. The experimental modules in this repository define local runtime contracts. Private analysis archives and extracted game resources are not redistributed.

@@ -33,7 +33,7 @@
   "model": "10 original Boltgun firearm pickups (8 base game + 2 DLC)",
   "verifiedInGame": false,
   "previousVerifiedRevision": "E8FCCF017E79295FDE5D543AB1F3519DF1DCF4C8069FC44D23EE486561356D66",
-  "verificationScope": "Revision 27 corrects the firearm grip offset basis and handles valid near-muzzle world reticle placements. Revision 26 logged 9074 traces and 7623 placements with intermittent Heavy Bolter failures. The new alignment and visibility need maintainer headset confirmation.",
+  "verificationScope": "The maintainer confirmed hand placement and reach on revision 27 with PS VR2 Sense on 5 November 2026. The Grav-Cannon and Volkite Caliver were the only weapons reported off aim in that session. Stereo reticle persistence, repeated transitions and full weapon and DLC coverage are still open.",
   "pluginSource": "build\\plugins\\boltgun_muzzle.dll",
   "pluginSha256": "8CD4780C31DBE7C0B8AE742938304B782BD893FA1A07BA1F0E291308BDDF8F8A",
   "pluginUpgradeFrom": [

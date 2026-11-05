@@ -1,6 +1,6 @@
 # Tracked chainsword
 
-The optional Kaiser-E model follows the left controller. Released package 5 retains the original game's L2 attacks. **Current package 12 includes the wired physical-contact adapter and imported hands; no additional contact damage has been confirmed in VR.** Deployment checks use temporary profiles; replacing an installed candidate requires maintainer authorization. See [the arsenal](ARSENAL.md) and [validation status](STATUS.md).
+The optional Kaiser-E model follows the left controller and retains the original game's L2 attacks. **Version 1.1.0 ships package 12 with a physical-contact adapter and imported gauntlets. Additional contact damage remains unconfirmed in VR.** Deployment checks use temporary profiles; replacing an installed candidate requires maintainer authorization. See [the arsenal](ARSENAL.md) and [validation status](STATUS.md).
 
 ## Player behavior
 
@@ -58,7 +58,7 @@ The contact tests run the actual Lua owner, sweep and engine adapter against a s
 
 Offline tests cannot establish collision ABI compatibility, game collision-channel coverage, original ability side effects, damage balance, attachment timing or contact alignment in a headset. UEVR's Lua device-matrix getter exposes no authenticated per-device tracking-valid or foreground/focus bit: finite matrices, HMD activity and aim allowance do not prove tracking freshness or focus. The scalar stereo marker is not authenticated XR provenance. If first-eye stereo occurs outside the engine interval, this implementation deliberately drops capture. Verify actual callback timing in VR before changing that restriction.
 
-Keep **`runtimeVerified: false` and `verifiedInGame: false`** for this revision until maintainer confirmation. The historical package 5 validation does not certify package 12 physical contact or hands. Deployment checks must use a temporary profile; do not start SteamVR or inject UEVR during repository maintenance. Package 10 includes the main Lua script, contact/engine helpers, blade-sweep dependency and imported hand payload; validate their exact-byte hashes during packaging.
+The maintainer confirmed the gauntlet position and weapon reach in package 12. The package-wide flag `runtimeVerified` remains false while additional contact damage and lifecycle checks are open. Deployment checks use temporary profiles. Verify the exact-byte hashes of the native plugin, Lua dependencies and sword/hand payloads during packaging.
 
 ## Model and attribution
 

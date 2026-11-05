@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version: 1.0.2" src="https://img.shields.io/badge/version-1.0.2-58744e?style=flat-square">
+  <img alt="Version: 1.1.0" src="https://img.shields.io/badge/version-1.1.0-58744e?style=flat-square">
   <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square">
   <img alt="VR: UEVR and OpenXR" src="https://img.shields.io/badge/VR-UEVR%20%2F%20OpenXR-456779?style=flat-square">
   <img alt="Controllers: PS VR2 Sense" src="https://img.shields.io/badge/controllers-PS%20VR2%20Sense-555555?style=flat-square">
@@ -19,7 +19,7 @@
   optional tracked 3D firearms and a tracked chainsword.
 </p>
 
-Latest release: **v1.0.2** · [Changelog](CHANGELOG.md)
+Latest release: **v1.1.0** · [Changelog](CHANGELOG.md)
 
 <p align="center">
   <a href="docs/EASY-SETUP.md"><b>Get started →</b></a>
@@ -28,19 +28,16 @@ Latest release: **v1.0.2** · [Changelog](CHANGELOG.md)
   &nbsp;·&nbsp; <a href="docs/README.es.md">Español</a>
 </p>
 
-> [!IMPORTANT]
-> **Version 1.0.2 — installer compatibility update (1 November 2026).** If SteamVR generates an incompatible Oculus Touch SystemButton mapping, setup preserves that binding and continues with the rest of the installation. The Sense profile v7 / 3D arsenal revision 20 / chainsword package 5 runtime is unchanged from v1.0.1, which the maintainer validated in VR on 16 October 2026. The new installer fallback has offline test coverage but no new headset confirmation. DLC weapons and other controller mappings are not independently certified. [Download the player package](https://github.com/rubocopter/boltgun-vr/releases/latest).
-
 > [!NOTE]
-> **Unreleased candidate: firearm revision 27 and chainsword package 12.** Candidate 26 rendered the original world glyph intermittently and the maintainer approved the right hand fit. Candidate 27 centers each weapon rig on its controller grip, corrects the left cuff orientation and handles close muzzle hits. Headset confirmation is pending. [Candidate notes](docs/CANDIDATE-27.md).
+> The maintainer confirmed the armored hand fit and reach in VR. The Grav-Cannon and Volkite Caliver were the only weapons reported off aim in that session. See the [release notes](docs/RELEASE-1.1.0.md).
 
 ## What changes in VR
 
 - **Motion controls.** Head-oriented movement, turning, pause/recenter mappings and PS VR2 Sense button assignments.
 - **Weapon wheel.** Hold R3, tilt the right stick towards a weapon group and release. Return to the centre to cancel.
 - **Optional tracked firearms.** Up to ten weapon-specific 3D replacements assembled from meshes already in the installed game; the Multi-Melta and Missile Launcher require the DLC. The mod can fall back to the original sprite when a mesh fails to load.
-- **Optional chainsword.** A separate tracked model on the left controller. Released attacks, damage and sounds use the original game's mechanics; candidate package 12 includes an experimental held-left-Trigger contact adapter whose additional damage remains unconfirmed.
-- **Current candidate presentation.** Native-game world crosshair, imported armored hands, stable menu panels and a peripheral damage halo. The new reticle/hands await VR feedback; the damage appearance was approved. Reduced Codex scale remains available.
+- **Optional chainsword.** A separate tracked model on the left controller. The original attacks remain available. The experimental contact adapter requires the left Trigger and its additional damage remains unconfirmed.
+- **VR presentation.** The original game crosshair at the supported weapons' nominal aim point, armored gauntlets at the tracked grips, stable menu panels and a peripheral red damage halo. Reduced Codex scale remains available.
 
 Firearms have experimental visual recoil and haptics on supported projectile
 spawns. The repository default preserves native orientation; free aim is opt-in.
@@ -52,7 +49,7 @@ See [current evidence](docs/STATUS.md) and [pending work](docs/PENDING.md).
 
 ## Install
 
-The [v1.0.2 release](https://github.com/rubocopter/boltgun-vr/releases/latest) includes a player ZIP with the compiled native plugins, the English menu launcher, license and third-party notices. UEVR and game files are not included. Source and build instructions remain available in this repository.
+The [v1.1.0 release](https://github.com/rubocopter/boltgun-vr/releases/latest) includes a player ZIP with the compiled native plugins, the English menu launcher, license and third-party notices. UEVR and game files are not included. Source and build instructions remain available in this repository.
 
 1. Install your own copy of **Warhammer 40,000: Boltgun** on Windows and set up SteamVR/OpenXR with your PCVR headset and motion controllers.
 2. Get [UEVR from praydog's official releases](https://github.com/praydog/UEVR/releases). Maintainers can compile the two native plugins using [build instructions](docs/BUILD.md), verify their hashes and create a local player ZIP.
@@ -61,24 +58,16 @@ The [v1.0.2 release](https://github.com/rubocopter/boltgun-vr/releases/latest) i
 
 For prerequisites, exact file locations, backups and restoring your previous profile, use the [guided setup](docs/EASY-SETUP.md) or [advanced install/recovery](docs/INSTALL.md). The menu never injects automatically. The only SteamVR binding patched by the installer is the generated Oculus Touch profile used by the supplied PS VR2 Sense setup. If its SystemButton mapping is missing or incompatible, setup warns, leaves the binding unchanged and installs the remaining profile. Options/Create then need manual controller mapping. Other controller profiles have no separate mappings in this package and are not validated.
 
-## Current development status
+## VR validation
 
-The locally installed candidate is **firearm revision 27 / chainsword package 12**.
-It is distinct from the published v1.0.2 runtime. Both current verification flags
-remain false until the maintainer confirms the exact changed revision in VR.
+Version 1.1.0 ships firearm revision **27**, chainsword package **12** and
+Sense profile **v7**. The 5 November PS VR2 Sense session confirmed hand fit
+and reach. The maintainer reported good alignment on the other weapons played
+and remaining deviation on the Grav-Cannon and Volkite Caliver.
 
-| Component | Current evidence | Next step |
-| --- | --- | --- |
-| Native-game world reticle | Candidate 26 placed the native glyph, with intermittent failures | Check glyph, transparency, aim position and persistence in VR |
-| Imported armored hands | Right hand fit confirmed on candidate 26. Left cuff and reach revised in candidate 27 | Check both eyes and fit for every weapon |
-| Damage comfort and menu panels | Maintainer approved the halo and reported stable panels | Check lifecycle regressions; controller hover/click is still unimplemented |
-| Projectiles and emission effects | Shots appear better aligned; some muzzle effects improved | Resolve remaining deviations and zero native-emission redirects |
-| Physical chainsword contact | Adapter loads; additional damage has not been demonstrated | Diagnose Trigger/pose gates and prove real contacts/damage |
-
-The historical revision 20/package 5 runtime was confirmed in the maintainer's
-16 October session. This does not certify all current experiments, DLC variants
-or other hardware. Use [STATUS.md](docs/STATUS.md) for evidence and
-[PENDING.md](docs/PENDING.md) for the prioritized validation/implementation list.
+Additional chainsword contact damage, all DLC and weapon variants, and
+repeated return-to-menu transitions still need testing. See
+[validation and limitations](docs/STATUS.md) and [pending work](docs/PENDING.md).
 
 ## Documentation
 
@@ -90,7 +79,7 @@ or other hardware. Use [STATUS.md](docs/STATUS.md) for evidence and
 | [Installation & restore](docs/INSTALL.md) | [Native muzzle bridge](docs/NATIVE-MUZZLE.md) |
 | [Headset validation & limitations](docs/STATUS.md) | [Pending tests & implementation](docs/PENDING.md) |
 | [Hands & damage comfort](docs/HANDS.md) · [Halo](docs/COMFORT.md) | [Chainsword implementation](docs/CHAINSAW.md) |
-| [World reticle (unreleased)](docs/RETICLE.md) | [Experimental interactions (unreleased)](docs/EXPERIMENTAL-INTERACTIONS.md) |
+| [World reticle](docs/RETICLE.md) | [Experimental interactions](docs/EXPERIMENTAL-INTERACTIONS.md) |
 | [Windows reinstall & backup](docs/REINSTALL.md) | [Source, licensing & credits](docs/SOURCE-AND-NOTICES.md) |
 
 <details>

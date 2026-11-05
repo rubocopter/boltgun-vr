@@ -1,8 +1,8 @@
 # Guided setup: Boltgun VR (Windows)
 
-The published player release is **v1.0.2**. A ZIP built from the current source
-contains **candidate 27 / package 12**, including unverified reticle/hand changes;
-see [status](STATUS.md) and [pending tests](PENDING.md). UEVR is a separate
+The published player release is **v1.1.0** with firearm revision 27, chainsword
+package 12 and Sense profile v7. See [release notes](RELEASE-1.1.0.md) for
+headset feedback and the Grav-Cannon and Volkite Caliver limits. UEVR is a separate
 dependency: the ZIP contains no UEVR executable, game assets or automatic
 third-party download. You need a legitimately installed **Warhammer 40,000:
 Boltgun**, a working PCVR/OpenXR setup and motion controllers. Controls were

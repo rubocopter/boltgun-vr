@@ -1,25 +1,25 @@
 # Pending validation and implementation
 
-Updated 5 November 2026. Applies to **firearm revision 27 / chainsword package 12**.
+Updated 5 November 2026. Applies to **v1.1.0**, firearm revision 27 / chainsword package 12.
 [STATUS.md](STATUS.md) records what exists and what the maintainer has observed.
 An unchecked item below is not an implementation or verification claim.
 
 ## Next headset checks
 
-Use one exact candidate revision for a session. Record the weapon/variant, game
+Use one exact runtime revision for a session. Record the weapon/variant, game
 build, headset/controllers, relevant settings, reproduction steps and bounded log
 excerpts. Keep recordings and full logs in ignored local archives.
 
 | ID | Priority | Check | Acceptance / evidence needed |
 | --- | --- | --- | --- |
 | V1 | High | Native reticle appearance and persistence | Original game glyph, transparent background, correct tint/scale; no white dot or duplicate centered image. Follow the actual aiming destination at near/far surfaces and in empty space; survive weapon switches, save loads, pause and script reload. |
-| V2 | High | Imported hand appearance and grip | Blue armor, dark glove and gold trim render correctly in both eyes. Fingers/thumb wrap the actual grips without floating or severe clipping. At equal arm extension compare the two grips with the controller poses. Rotate the sword to check the cuff faces the wrist. Then check the remaining weapons and record their offsets. |
-| V3 | High | Remaining weapon effect deviation | Record projectiles, muzzle flashes, smoke, casing ejection and impact effects separately for each weapon. Compare the emission origin to its projectile muzzle. Capture reflected-hook, renderer and native-emission counters. Partial improvement is not a pass for all effects. |
+| V2 | Medium | Gauntlet regression and weapon coverage | Hand fit and arm reach passed the 5 November PS VR2 Sense check. Verify both eyes, clipping and grip offsets across weapon variants and after transitions. |
+| V3 | High | Muzzle effects by weapon | Record projectiles, muzzle flashes, smoke, casing ejection and impact effects separately for each weapon. Compare the emission origin to its projectile muzzle. Capture reflected-hook, renderer and native-emission counters. Partial improvement is not a pass for all effects. |
 | V4 | High | Physical chainsword damage | Hold left Trigger and contact an enemy from outside the native attack aim where possible, so the existing normal cutting target does not mask the adapter. Confirm samples, sweeps, real contacts and applied-damage counters advance, and that damage is additional to original L2 attacks. Test stationary repeat, release, walls and the 500 ms per-target cooldown. |
 | V5 | High | Return to main menu and reload | Load a save, inspect both hands, then return to the main menu and reload the save. Repeat with the 3D previews active. Check death, respawn and pause as separate transitions. Capture the latest crash context if an access violation recurs. |
 | V6 | Medium | Confirmed damage halo regression | Preserve the approved appearance through repeated hits, low health, death, menus and `comfort.mode=off`/reload. The current halo files match the approved candidate; broader lifecycle coverage remains open. |
 | V7 | Medium | Menu and input regression | Panel stays stationary while moving the right controller; Options/Create and existing native mouse/game navigation work. Controller hover/laser/trigger-click is not an implemented feature to accept yet. |
-| V8 | Medium | Firing modes and optional feedback | Check native-aim defaults and explicitly opted-in free aim, recoil, firing haptics, close-range collision and fallback after stale tracking. Run experimental Volkite/Gravgun hooks only in a separate opt-in session. |
+| V8 | High | Grav-Cannon and Volkite Caliver aim | Reproduce both deviations with release defaults. Compare the displayed muzzle, damage ray, beam visual and reticle fallback. Evaluate experimental hooks in a separate opt-in session. |
 | V9 | Later | Compatibility matrix | All ten weapons, Machine Spirit variants, owned DLC, repeated save-load sessions and other controller/headset mappings. Report tested combinations individually. |
 
 Do not set either manifest verification flag merely because the candidate loads,
@@ -27,6 +27,10 @@ one feature looks correct or automated tests pass. Confirm the exact revision an
 record the scope in STATUS.md before promoting runtime verification.
 
 ## Fixes and implementation work
+
+- [ ] **Grav-Cannon and Volkite Caliver aim.** Use V8 to establish how each
+  native ray and beam visual diverges from the tracked muzzle. Validate both
+  aim and rendered beam before enabling any correction by default.
 
 - [ ] **I1 — Finish effect alignment.** Identify why the guarded native emission
   hook receives calls but has not redirected the inspected live requests.
@@ -56,9 +60,8 @@ record the scope in STATUS.md before promoting runtime verification.
   additional controller mappings; assess other executable versions separately.
   Do not bypass the current executable/signature and ownership checks.
 
-Reticle and imported hands are already implemented; do not recreate their old
-prototypes while waiting for V1/V2. Two-hand aim and scoped beams already exist
-as opt-in experiments, with additional validation pending.
+The original world reticle and imported gauntlets are included in v1.1.0.
+Two-hand aim and scoped beam hooks are available for separate opt-in testing.
 
 ## Before another candidate or release
 

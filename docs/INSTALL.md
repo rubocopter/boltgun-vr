@@ -49,13 +49,13 @@ launcher settings. The launcher opens Steam and UEVR; injection remains manual.
 Both commands accept `-ProfileRoot`, verify package hashes, back up affected files and
 reject unknown replacements. Arsenal upgrades preserve custom calibration. Chainsword
 defaults are created only if settings are absent. Calibration lives in the installed
-`data/bolter3d.settings` and `data/chainsword3d.settings`. In the current source
-candidate, Bolter3D also installs the [native world reticle](RETICLE.md), and
+`data/bolter3d.settings` and `data/chainsword3d.settings`. Bolter3D also
+installs the [native world reticle](RETICLE.md), and
 Chainsword3D includes the [imported hands](HANDS.md) and contact adapter. Hand
 trims use `data/hands3d.settings`; `hands3d.mode=off` hides those hands
 independently. The base presentation bootstrap controls [damage comfort](COMFORT.md)
-through `comfort.mode`. Consult [current validation](STATUS.md) before treating
-these candidate features as verified.
+through `comfort.mode`. See [current validation](STATUS.md) for headset
+feedback and remaining checks.
 
 Start the game and inject UEVR normally. See [STATUS.md](STATUS.md) for validation limits.
 

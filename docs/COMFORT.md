@@ -2,14 +2,14 @@
 
 Replace the native blood rectangle with a quiet red peripheral effect. This is
 a feature whose appearance the maintainer approved on 5 November 2026 in
-candidate 24. Its runtime files are unchanged through candidate 27. The complete
+candidate 24. Its runtime files are unchanged in v1.1.0. The complete
 revision 27/package 12 retains false verification flags; that approval does not
 certify unrelated features or every lifecycle path.
 The runtime module does not install, deploy, launch the game, or start VR.
 
 ## For players
 
-The candidate uses an existing game postprocess shader with a dark-center
+The effect uses an existing game postprocess shader with a dark-center
 vignette mask. It creates no world billboard, UI rectangle, or mesh. The halo
 responds to the game's damage pulse, active blood splashes, and health below 35.
 Its shader strength is capped at 0.08; this is a material parameter, not a
@@ -20,13 +20,13 @@ available.
 Menus, loading, pause, an inactive HMD, and disabling the feature remove the
 owned postprocess component and restore the recorded native effect opacity.
 The presentation bootstrap controls activation through `comfort.mode`; `off`
-disables the candidate on its next engine tick. Death-arm handling belongs to
+disables the effect on its next engine tick. Death-arm handling belongs to
 the separate hands module.
 
 The reported session approved the damage appearance. Broader stereo settings,
 repeated damage/low-health transitions, disable/reload and recovery still need
 coverage. See V6 in [PENDING.md](PENDING.md). A successful Lua test alone does not
-establish these properties or validate the complete candidate.
+establish these properties or validate the complete runtime.
 
 ## For developers
 
@@ -92,7 +92,7 @@ write and the color write are read back before native widget suppression.
 It allocates an owned, unbound `PostProcessComponent` on the local pawn and
 adds only that private instance through `AddOrUpdateBlendable`. Existing camera
 settings, game material instances, and game blendable lists are never edited.
-Unbound scope is appropriate to this local single-player candidate; additional
+Unbound scope is appropriate to this local single-player release; additional
 simultaneous cameras have not been verified.
 
 The archived UEVR `ScriptUtility.cpp` explicitly marshals Lua strings into

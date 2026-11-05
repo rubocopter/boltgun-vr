@@ -1,7 +1,7 @@
 # Troubleshooting
 
 Start with [STATUS.md](STATUS.md) to distinguish the published release from
-candidate 27/package 12. [PENDING.md](PENDING.md) tracks unresolved behavior.
+v1.1.0 (firearm revision 27 / chainsword package 12). [PENDING.md](PENDING.md) tracks unresolved behavior.
 
 ## Installation and input
 

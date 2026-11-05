@@ -1,6 +1,6 @@
 # Native muzzle bridge and firing feedback
 
-Current candidate: **firearm revision 27**. The plugin supports ten exact
+Version 1.1.0 ships **firearm revision 27**. The plugin supports ten exact
 firearm classes and their relevant Machine Spirit variants. Its supported game
 executable SHA-256 is:
 
@@ -109,7 +109,9 @@ Later sessions supplied partial alignment/menu/damage feedback, not full
 revision 27 validation. Native harnesses and Python/Lua tests cover policy,
 ABI, lifecycle and ownership contracts. They do not prove live effect coverage,
 reticle visibility or every weapon's collision behavior. Keep
-`verifiedInGame: false` for the current candidate.
+`verifiedInGame: false` for the full revision 27 runtime. The 5 November
+headset session identified the Grav-Cannon and Volkite Caliver as the remaining
+aim deviations.
 
 The plugin uses the vendored MIT UEVR API header. Game assets, executable,
 reverse-engineering archives and the UEVR injector are not redistributed.

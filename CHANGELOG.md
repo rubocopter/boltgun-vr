@@ -1,34 +1,23 @@
 # Changelog
 
-## Unreleased candidate 27 / chainsword package 12
+## v1.1.0 — 5 November 2026
 
-- Anchor both weapon rigs at their tracked grips and turn the left gauntlet around the sword handle.
-- Keep near-muzzle reticle hits on the firing ray and withhold the centered HUD glyph during initial overlap.
+- Place the original game's crosshair in the world on supported firing rays.
+  Handle valid close hits and suppress the crosshair when the muzzle starts
+  inside an obstacle.
+- Add fixed-grip armored gauntlets. Seat both weapons at their tracked grips
+  and turn the left cuff toward the wrist. The maintainer confirmed the hand
+  placement and reach with PS VR2 Sense.
+- Stabilize native menu panels, add a peripheral red damage halo and suppress
+  the original death-arm sprites. Keep native menu navigation.
+- Extend local muzzle effect correction and avoid queuing pose restoration
+  on owned weapon meshes during map travel.
+- Include an experimental held-left-Trigger chainsword contact adapter.
+  Additional damage remains unconfirmed and original attacks remain available.
+- Record the remaining Grav-Cannon and Volkite Caliver aim deviation. Their
+  experimental beam hooks remain disabled by default.
 
-## Unreleased candidate 26 / chainsword package 11 — 5 November 2026
-
-- Correct the cooked widget material and render readiness checks so the native
-  crosshair can follow the production firing ray.
-- Mount the imported hands on the displayed weapon models. Remove separate
-  hand tracking and prevent queued pose restoration on the owned weapon
-  previews during map travel.
-- Document the candidate 25 return-to-menu crash and the headset replay needed
-  to verify the fixes.
-
-## Unreleased candidate 25 / chainsword package 10 — 5 November 2026
-
-- Consolidate current runtime evidence and the prioritized test/implementation
-  backlog. Retire superseded candidate 24 and revision 16/17 development notes
-  from current guides and the player ZIP; keep their history in Git.
-
-- Render the native HUD crosshair brush, color and transform at the production
-  aiming destination through an owned transparent world widget.
-- Replace white cuboid hands with imported CC0 gauntlets, a curled grip pose,
-  blue armor, dark gloves and gold trim. Inherit the weapon grip calibration.
-- Preserve the damage comfort effect confirmed by the maintainer, stable menu
-  behavior and current muzzle corrections. New hand/reticle changes require VR
-  confirmation; runtime verification flags remain false.
-
+See the [v1.1.0 release notes](docs/RELEASE-1.1.0.md) for the validation scope.
 
 ## v1.0.2 — 1 November 2026
 

@@ -6,17 +6,17 @@ opcionales para diez armas de fuego y la espada sierra.
 
 ## Estado actual
 
-El candidato instalado localmente el **5 de noviembre de 2026** es el **arsenal
-revisión 27 / chainsword paquete 12**, con perfil Sense v7. No es una nueva
-versión publicada. Sus indicadores globales de validación en VR siguen en falso.
+La versión **v1.1.0** incluye el arsenal 3D revisión **27**, la espada sierra
+paquete **12** y el perfil Sense **v7**. En la sesión del 5 de noviembre, el
+mantenedor confirmó en visor el agarre de ambas manos y el alcance de las armas.
 
 | Función | Estado real |
 | --- | --- |
-| Retícula del propio juego en el punto de apuntado | La revisión 26 colocó la mira en el mundo, pero el vídeo muestra pérdidas intermitentes. La 27 admite impactos válidos muy cerca del cañón y evita la mira centrada si el disparo parte dentro de un obstáculo. Pendiente de comprobar en VR. |
-| Manos blindadas azules, negras y doradas | El usuario aprobó el encaje derecho. El guante izquierdo gira sobre el mango de la espada. Ambos conjuntos se centran en el agarre de su mando. Falta comprobar el alcance y la orientación en visor. |
-| Halo rojo al recibir daño | Aspecto aprobado por el mantenedor en el candidato 24; esos archivos se conservan en el candidato 26. Quedan transiciones y recuperación por comprobar. |
+| Retícula del propio juego en el punto de apuntado | Sigue la trayectoria nominal de disparo en armas compatibles. Admite impactos válidos cerca del cañón. Quedan por comprobar la visibilidad en ambos ojos y la recuperación en las transiciones. |
+| Manos blindadas azules, negras y doradas | Ambas manos se ajustan al agarre de su arma y a la posición del mando. Se confirmaron la colocación y la distancia con PS VR2 Sense. |
+| Halo rojo al recibir daño | Aspecto aprobado por el mantenedor en el candidato 24; esos archivos se conservan en v1.1.0. Quedan transiciones y recuperación por comprobar. |
 | Menús estables | Estabilidad comunicada por el mantenedor. El puente para apuntar, pasar por encima y pulsar con un mando no está implementado. |
-| Disparos y efectos | Mejor alineación comunicada y algunos fogonazos corregidos; siguen efectos desviados. No se considera resuelto para todas las armas. |
+| Disparos y efectos | El **cañón grav** y el **arcabuz volkite** fueron las únicas armas que se desviaron en la última partida. Mejoraron algunos fogonazos en pruebas anteriores. Queda por comprobar el origen de cada efecto por separado. |
 | Daño físico de la espada | Adaptador conectado, pero no se ha demostrado daño adicional. Exige mantener el gatillo izquierdo; los últimos diagnósticos inspeccionados no avanzaban de esa condición. Los ataques L2 originales siguen activos. |
 | Volver al menú | La sesión registrada de la revisión 26 terminó normalmente. Falta repetir la transición de forma controlada. |
 | Muerte | Se ocultan los antiguos sprites de brazos y también las manos 3D. No existe una presentación de manos/brazos 3D al morir. |
@@ -27,13 +27,11 @@ adaptador. El apuntado desde el arma y el modo a dos manos son opciones
 experimentales desactivadas por defecto; los rayos de Volkite/Gravgun tienen
 una activación independiente.
 
-La versión publicada **v1.0.2** conserva el runtime de **revisión 20 / paquete 5**,
-validado en las partidas con PS VR2 Sense del 16 de octubre. Su cambio de
-instalador permite continuar si SteamVR genera un SystemButton incompatible,
-conservando ese binding y dejando Options/Create para asignar manualmente.
-Esa validación histórica no certifica los cambios nuevos ni todo el DLC/otros
-mandos. El [paquete publicado](https://github.com/rubocopter/boltgun-vr/releases/latest)
-no incluye el juego ni UEVR.
+La validación cubre las funciones observadas con PS VR2 Sense. Quedan
+pendientes el daño por contacto, las transiciones repetidas y la cobertura
+completa de variantes, DLC y otros mandos. El
+[paquete publicado](https://github.com/rubocopter/boltgun-vr/releases/latest)
+requiere una instalación propia del juego y UEVR.
 
 ## Instalación y documentación
 

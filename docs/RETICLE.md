@@ -1,15 +1,9 @@
 # Native world reticle
 
-Candidate 25 displayed the original HUD fallback in the 5 November headset
-session. It rejected the widget material before the first firing-ray request
-and reported zero world placements. Candidate 26 checks the cooked material
-instance and lets the widget prepare its texture before enabling world
-placement. The original crosshair remains the glyph source. Its next headset
-session recorded 9,074 acknowledged firing traces and 7,623 placements, with
-intermittent `marker-invalid` reports during Heavy Bolter use. The video shows
-the Heavy Bolter glyph both present and absent and the original Shotgun glyph
-away from the center of the capture. Those counters record component placement,
-so they cannot confirm that the glyph was visible in either eye.
+Version 1.1.0 draws the game's own HUD crosshair in the world for supported
+firearms. The 5 November headset session reported remaining aim deviation on
+the Grav-Cannon and Volkite Caliver. Stereo visibility and reticle persistence
+through weapon switches and transitions remain on the [test list](PENDING.md).
 
 ## For players
 
@@ -19,7 +13,7 @@ Lua traces up to **10,000 Unreal centimetres** from that muzzle. A valid blockin
 
 The marker requires an owned equipped weapon, an active tracked 3D firearm and a valid native muzzle lease. The original HUD crosshair image is suppressed during valid world placement, including when cover occludes the marker. If a valid firing trace starts inside a blocker, both crosshair glyphs stay hidden for that frame. If sampling or placement fails, or a menu opens, the module hides the world marker and restores the original HUD glyph when its owner is still valid.
 
-**Volkite and Gravgun:** these paths bypass the projectile helper. Their world marker is suppressed unless the experimental beam hooks are successfully registered (`g_beam_hooked`) **and** a fresh aimed pose passes the free-aim gate. The process-start environment variable `BOLTGUN_EXPERIMENTAL_BEAM_HOOKS=1` permits registration; it does not prove registration or accepted aim. Legacy beam firing has no world-marker guarantee. These hooks and their visuals need independent VR confirmation.
+**Volkite Caliver and Grav-Cannon:** these paths bypass the projectile helper. Their world marker is suppressed unless the experimental beam hooks are successfully registered (`g_beam_hooked`) **and** a fresh aimed pose passes the free-aim gate. The process-start environment variable `BOLTGUN_EXPERIMENTAL_BEAM_HOOKS=1` permits registration; it does not prove registration or accepted aim. Legacy beam firing has no world-marker guarantee. These hooks and their visuals need independent VR confirmation.
 
 ## For developers
 

@@ -1,7 +1,6 @@
 # Tracked armored hands
 
-Candidate 25 replaces the white cuboid prototype with an imported, fixed-grip
-armored glove. The source is [Gauntlet by Grab3D](https://grab3d.com/models/weapons/gauntlet/),
+Version 1.1.0 includes an imported, fixed-grip armored glove. The source is [Gauntlet by Grab3D](https://grab3d.com/models/weapons/gauntlet/),
 released under CC0. The prepared model has 12,776 vertices and 14,926 source
 triangles per hand, supplied double-sided to preserve the source's appearance.
 It uses cobalt-blue armor and forearm cuff, a charcoal glove and brass trim.
@@ -13,9 +12,9 @@ armored gloves, not extracted Ultramarine character assets. There is no finger
 animation in this revision. [Asset credits](../assets/hands/CREDITS.txt) retain
 the source, license, pinned download hash and conversion details.
 
-This revision has automated boundary tests. Controller alignment, appearance,
-occlusion and death transitions still require the maintainer's VR check.
-`runtimeVerified` and `verifiedInGame` must remain false until that check.
+The maintainer confirmed both hand positions and arm reach in the 5 November
+PS VR2 Sense session. Stereo occlusion, per-weapon fit and repeated transitions
+remain on the [validation checklist](PENDING.md).
 
 ## Player settings
 
@@ -44,8 +43,8 @@ size. The approved firearm hand retains its +3/+2.5/−2 cm geometry fit.
 The left hand source turns the mirrored gauntlet 180° around the handle's
 local Z axis, so the cuff extends toward the wrist with the sword's default
 180° yaw. The center of the curl sits at the measured sword handle landmark,
-approximately `(2.4, 0, 0)` cm in sword mesh coordinates. This fit is pending
-headset validation. Existing trims keep their axis convention and rotate
+approximately `(2.4, 0, 0)` cm in sword mesh coordinates. Existing trims keep
+their axis convention and rotate
 about the published grip. Invalid or out-of-range values use their defaults.
 
 ```ini

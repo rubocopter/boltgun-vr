@@ -2,7 +2,7 @@
   "version": 12,
   "runtimeVerified": false,
   "previousVerifiedVersion": 5,
-  "verificationScope": "Package 12 seats the measured sword handle at the left controller grip and turns the left gauntlet cuff about the handle axis. The approved right-hand geometry is retained. The revised arm reach and grip need headset validation. Package 5 is the last fully confirmed runtime.",
+  "verificationScope": "The maintainer confirmed hand placement and reach on package 12 with PS VR2 Sense on 5 November 2026. Additional physical contact damage and repeated transitions still require confirmation. Package 5 is the last fully confirmed runtime.",
   "files": [
     {
       "source": "src\\lua\\boltgun_chainsword.lua",
