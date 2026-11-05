@@ -1,8 +1,8 @@
 {
-  "version": 9,
+  "version": 10,
   "runtimeVerified": false,
   "previousVerifiedVersion": 5,
-  "verificationScope": "Package 9: original procedural fixed-grip gauntlets with shared white palette and exact death-arm sprite suppression, plus the package 8 physical-contact adapter. The last session loaded contact but diagnostics stayed gated at the left Trigger. New hand alignment, death presentation and contact damage still require headset confirmation; package 5 remains the last fully confirmed runtime.",
+  "verificationScope": "Package 10: imported CC0 blue/charcoal/brass fixed-grip gauntlets with dedicated atlas and calibrated weapon grip frames. Candidate 24 damage comfort was confirmed; new hands and original-glyph reticle remain unverified in VR. Contact damage remains unchanged and needs independent confirmation; package 5 remains the last fully confirmed chainsword runtime.",
   "files": [
     {
       "source": "src\\lua\\boltgun_chainsword.lua",
@@ -21,14 +21,15 @@
     {
       "source": "build\\plugins\\boltgun_chainsword.dll",
       "target": "plugins\\boltgun_chainsword.dll",
-      "sha256": "FF119908E177E57EF64DF07364DD4F36C06DDF9E145E6FF6457E8046C90A9D33",
+      "sha256": "76095EEF478BEEE79BE749000B2D203B04BDE49221EF9AA48A8F57D775E6A317",
       "upgradeFrom": [
         "680BD5A67DBD4F78E55D35A00FFECCBED051BEFCB12776F2BF498622366A52BF",
         "299AA89DA0BFA3594BC07935A7FBCACA553F515C78884A42813505D1B818F409",
         "A907A3762A2CEE60FA6B03792F68558052E3AE14A4D0E1B708D2B0D2ACAFC46A",
         "9CEA66F61F16B67DE5BAA89C652B9D501FA5D1B2965436499C57F53A2528F8A9",
         "5EA8CF04692245EA1E1BD6CE8AD92DAB12D1EA261CCB7C9BF8E74E2E91CECEE9",
-        "FEF06E3C4AFDFFBB32C8001C9B9017BBE8224A05BB59C19CCC336A3AB2767CD7"
+        "FEF06E3C4AFDFFBB32C8001C9B9017BBE8224A05BB59C19CCC336A3AB2767CD7",
+        "FF119908E177E57EF64DF07364DD4F36C06DDF9E145E6FF6457E8046C90A9D33"
       ]
     },
     {
@@ -70,7 +71,27 @@
     {
       "source": "src\\lua\\boltgun_hands.lua",
       "target": "scripts\\boltgun_hands.lua",
-      "sha256": "806075FC9449CFFAF64A82AFE91AA9561299DD63BE094CCAF955595167810FE8"
+      "sha256": "35ED945F42DF97903B3BC983FEC1295354E98D84C4630C54C6EF1C92BD65A0AF"
+    },
+    {
+      "source": "assets\\hands\\right_grip.bgmesh",
+      "target": "data\\hands3d\\right_grip.bgmesh",
+      "sha256": "38284D970A9DF11ADDA2408E98726D025793F3DBD09D9974CB60F03D0F803652"
+    },
+    {
+      "source": "assets\\hands\\hands_color.png",
+      "target": "data\\hands3d\\hands_color.png",
+      "sha256": "ED744C2AD279189DFDBB0796D3A1846722AED2A1DDD2F213FBF3F74D6AEF7760"
+    },
+    {
+      "source": "assets\\hands\\CREDITS.txt",
+      "target": "data\\hands3d\\CREDITS.txt",
+      "sha256": "0FB690842E2CAF6804C9FE26159AD58234CC72F3383081858110C74E1B897C2E"
+    },
+    {
+      "source": "assets\\hands\\LICENSE.txt",
+      "target": "data\\hands3d\\LICENSE.txt",
+      "sha256": "01908A56D6CADA52704B20C5094C2AA16C9D8BE6F124349C986764067ABFD921"
     }
   ],
   "settingsSource": "profile\\defaults\\chainsword3d.default.settings",

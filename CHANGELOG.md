@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased candidate 25 / chainsword package 10 — 5 November 2026
+
+- Render the native HUD crosshair brush, color and transform at the production
+  aiming destination through an owned transparent world widget.
+- Replace white cuboid hands with imported CC0 gauntlets, a curled grip pose,
+  blue armor, dark gloves and gold trim. Inherit the weapon grip calibration.
+- Preserve the damage comfort effect confirmed by the maintainer, stable menu
+  behavior and current muzzle corrections. New hand/reticle changes require VR
+  confirmation; runtime verification flags remain false.
+
+
 ## v1.0.2 — 1 November 2026
 
 - Keep guided installation working when SteamVR generates an Oculus Touch

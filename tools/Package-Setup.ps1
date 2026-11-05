@@ -21,7 +21,7 @@ $scriptFiles=@('Install.ps1','Restore.ps1','Setup-BoltgunVR.ps1','Menu.ps1',
     'Play-BoltgunVR.ps1','Bolter3D.ps1','Chainsword3D.ps1','Comprobar-perfil.ps1')
 $toolFiles=@('Paths.ps1','Check-Repository.ps1','Snapshots.ps1')
 $guideFiles=@('ARCHITECTURE.md','ARSENAL.md','BUILD.md','CHAINSAW.md',
-    'CONTROLS.md','CANDIDATE-24.md','COMFORT.md','HANDS.md','EASY-SETUP.md','EXPERIMENTAL-INTERACTIONS.md','INSTALACION-FACIL.es.md','INSTALL.md',
+    'CONTROLS.md','CANDIDATE-24.md','CANDIDATE-25.md','COMFORT.md','HANDS.md','EASY-SETUP.md','EXPERIMENTAL-INTERACTIONS.md','INSTALACION-FACIL.es.md','INSTALL.md',
     'NATIVE-MUZZLE.md','RETICLE.md','MENU.md','README.es.md','REINSTALL.md','REPOSITORY.md',
     'SOURCE-AND-NOTICES.md','STATUS.md','TROUBLESHOOTING.md')
 
@@ -80,7 +80,7 @@ try {
     Add-Type -AssemblyName System.IO.Compression
     $zip=[IO.Compression.ZipFile]::OpenRead($output)
     try {
-        foreach ($required in @('LICENSE','COPYRIGHT_AND_REUSE.md','docs/SOURCE-AND-NOTICES.md','assets/chainsword/CREDITS.txt')) {
+        foreach ($required in @('LICENSE','COPYRIGHT_AND_REUSE.md','docs/SOURCE-AND-NOTICES.md','assets/chainsword/CREDITS.txt','assets/hands/CREDITS.txt','assets/hands/LICENSE.txt')) {
             if (@($zip.Entries | Where-Object { $_.FullName.Replace('\\','/') -ceq $required }).Count -ne 1) {
                 throw "Required license/provenance file missing from ZIP: $required"
             }

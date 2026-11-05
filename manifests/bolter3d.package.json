@@ -1,5 +1,5 @@
 {
-  "version": 24,
+  "version": 25,
   "source": "src\\lua\\boltgun_bolter3d.lua",
   "sha256": "7E2F4BBA0D12C100EF9D1A9D3AD63700B92737787124D8C04A7BE4875A4691F9",
   "upgradeFrom": [
@@ -31,9 +31,9 @@
   "model": "10 original Boltgun firearm pickups (8 base game + 2 DLC)",
   "verifiedInGame": false,
   "previousVerifiedRevision": "E8FCCF017E79295FDE5D543AB1F3519DF1DCF4C8069FC44D23EE486561356D66",
-  "verificationScope": "Revision 24: native pre-activation emission origin hook, expanded bounded renderer search, checked reticle transform readback and unlit white material fallback with stage diagnostics. The maintainer reported revision 23 reticle disappearance and offset effects in the 4 November video. This new exact runtime requires headset confirmation. Both the contact/comfort/hands changes and visual alignment remain unverified.",
+  "verificationScope": "Revision 25: native HUD crosshair brush/color/transform rendered by a transparent world widget on the unchanged production aiming ray, with asynchronous render readiness and original HUD fallback. Candidate 24 damage effect and partial muzzle improvements were confirmed; this new reticle and imported hand presentation need maintainer VR confirmation.",
   "pluginSource": "build\\plugins\\boltgun_muzzle.dll",
-  "pluginSha256": "FF957166AC1601F916927724D5E809C7D0AFC16EE7356E864C52F703F75B1439",
+  "pluginSha256": "5BC20BCE6628A479A3D881796BD1EB9FA5AD05868DB2D0900560AF4C870FBF36",
   "pluginUpgradeFrom": [
     "5880999425A29702D883ACC8F9B74C8FF155C5229C2D745F76B18A25D6253452",
     "0C6D16486FB1F284E8E07A8E791E197A37147E31AAF85C1B0D9F330A696A06E7",
@@ -52,17 +52,19 @@
     "A000792799105C1BB69AE182886F506E380BC7A0EA7EEAE5CC669C9A7E212584",
     "4AF11D77AE320DE1AE6082AF1E90182D8DA548099B37A05F156D0E8151861EE4",
     "E4AEEF30956DB8D2D011B15133A8EDCD9A1051C3EC6D9F7361112686A18607DB",
-    "B4E6B53B5E3046A2B7CA27B8EC9DAC051D5B90AD3EFF0608CC8506B64DB1F693"
+    "B4E6B53B5E3046A2B7CA27B8EC9DAC051D5B90AD3EFF0608CC8506B64DB1F693",
+    "FF957166AC1601F916927724D5E809C7D0AFC16EE7356E864C52F703F75B1439"
   ],
   "supportedGameSha256": "BD32AECB2EF6FEB3FD2EDFB0095B7E534176C92C01D5FA5CCC43A0DDC639B01A",
   "files": [
     {
       "source": "src\\lua\\boltgun_reticle.lua",
       "target": "scripts\\boltgun_reticle.lua",
-      "sha256": "38E473B5451EE027DDC30D99442AF05ABE23EAB32D826AA76F33275C7879AF7E",
+      "sha256": "FB66E6CD7C983732577FEB6C214857E93ADE6BCB49F129652903AF066826B53C",
       "upgradeFrom": [
         "A7ABC512BA8CE543229FACEC17AAF673FB2CE485DF75EC3DDBA55BF3DFA0949A",
-        "61DD1E5D376867A45A224848ECBDE820B75640BA59C5F473494995525D2F8F1E"
+        "61DD1E5D376867A45A224848ECBDE820B75640BA59C5F473494995525D2F8F1E",
+        "38E473B5451EE027DDC30D99442AF05ABE23EAB32D826AA76F33275C7879AF7E"
       ]
     }
   ]

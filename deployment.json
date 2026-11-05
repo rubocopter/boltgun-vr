@@ -81,7 +81,7 @@
   {
     "source": "build\\plugins\\boltgun_muzzle.dll",
     "target": "${ProfileRoot}\\plugins\\boltgun_muzzle.dll",
-    "sha256": "FF957166AC1601F916927724D5E809C7D0AFC16EE7356E864C52F703F75B1439",
+    "sha256": "5BC20BCE6628A479A3D881796BD1EB9FA5AD05868DB2D0900560AF4C870FBF36",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional exact-build ten-firearm muzzle bridge; installed only by Bolter3D.ps1; included for original-profile restoration"
@@ -97,7 +97,7 @@
   {
     "source": "build\\plugins\\boltgun_chainsword.dll",
     "target": "${ProfileRoot}\\plugins\\boltgun_chainsword.dll",
-    "sha256": "FF119908E177E57EF64DF07364DD4F36C06DDF9E145E6FF6457E8046C90A9D33",
+    "sha256": "76095EEF478BEEE79BE749000B2D203B04BDE49221EF9AA48A8F57D775E6A317",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional external Chainsword; installed by Chainsword3D.ps1"
@@ -145,7 +145,7 @@
   {
     "source": "src\\lua\\boltgun_reticle.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_reticle.lua",
-    "sha256": "38E473B5451EE027DDC30D99442AF05ABE23EAB32D826AA76F33275C7879AF7E",
+    "sha256": "FB66E6CD7C983732577FEB6C214857E93ADE6BCB49F129652903AF066826B53C",
     "originalSha256": null,
     "disabled": true,
     "note": "Optional runtime dependency; installed with its 3D module and included in profile restoration inventory"
@@ -191,9 +191,41 @@
   {
     "source": "src\\lua\\boltgun_hands.lua",
     "target": "${ProfileRoot}\\scripts\\boltgun_hands.lua",
-    "sha256": "806075FC9449CFFAF64A82AFE91AA9561299DD63BE094CCAF955595167810FE8",
+    "sha256": "35ED945F42DF97903B3BC983FEC1295354E98D84C4630C54C6EF1C92BD65A0AF",
     "originalSha256": null,
-    "note": "Optional original procedural hands and exact native death-arm suppression; installed with Chainsword3D.ps1",
+    "note": "Optional imported armored hands in calibrated weapon grip frames and exact native death-arm suppression; installed with Chainsword3D.ps1",
     "disabled": true
+  },
+  {
+    "source": "assets\\hands\\right_grip.bgmesh",
+    "target": "${ProfileRoot}\\data\\hands3d\\right_grip.bgmesh",
+    "sha256": "38284D970A9DF11ADDA2408E98726D025793F3DBD09D9974CB60F03D0F803652",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional imported CC0 hand asset; installed with Chainsword3D.ps1 and included in restoration inventory"
+  },
+  {
+    "source": "assets\\hands\\hands_color.png",
+    "target": "${ProfileRoot}\\data\\hands3d\\hands_color.png",
+    "sha256": "ED744C2AD279189DFDBB0796D3A1846722AED2A1DDD2F213FBF3F74D6AEF7760",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional imported CC0 hand asset; installed with Chainsword3D.ps1 and included in restoration inventory"
+  },
+  {
+    "source": "assets\\hands\\CREDITS.txt",
+    "target": "${ProfileRoot}\\data\\hands3d\\CREDITS.txt",
+    "sha256": "0FB690842E2CAF6804C9FE26159AD58234CC72F3383081858110C74E1B897C2E",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional imported CC0 hand asset; installed with Chainsword3D.ps1 and included in restoration inventory"
+  },
+  {
+    "source": "assets\\hands\\LICENSE.txt",
+    "target": "${ProfileRoot}\\data\\hands3d\\LICENSE.txt",
+    "sha256": "01908A56D6CADA52704B20C5094C2AA16C9D8BE6F124349C986764067ABFD921",
+    "originalSha256": null,
+    "disabled": true,
+    "note": "Optional imported CC0 hand asset; installed with Chainsword3D.ps1 and included in restoration inventory"
   }
 ]
